@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -26,16 +26,19 @@ import { SupabaseService } from '../lib/supabaseService';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
+  const navigate = useNavigate();
   const [game, setGame] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [publicRsvps, setPublicRsvps] = useState<any[]>([]);
-  const [rsvpData, setRsvpData] = useState({
+  const [rsvpForm, setRsvpForm] = useState({
     name: '',
     email: '',
     phone: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [rsvpSuccess, setRsvpSuccess] = useState(false);
+  const [hasRsvped, setHasRsvped] = useState(false);
+  const [userRsvp, setUserRsvp] = useState<any>(null);
 
   useEffect(() => {
     const loadGameData = async () => {
@@ -70,7 +73,7 @@ export default function PublicGamePage() {
     setSubmitting(true);
     
     try {
-      await SupabaseService.createPublicRSVP(gameId, rsvpData);
+      await SupabaseService.createPublicRSVP(gameId, rsvpForm);
       
       setRsvpSuccess(true);
       toast.success('RSVP submitted successfully!');
@@ -80,24 +83,12 @@ export default function PublicGamePage() {
       setPublicRsvps(updatedRsvps);
       
       // Reset form
-      setRsvpData({ name: '', email: '', phone: '' });
+      setRsvpForm({ name: '', email: '', phone: '' });
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to submit RSVP. Please try again.';
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
-    }
-  };
-      if (existingRsvp) {
-        setHasRsvped(true);
-        setUserRsvp(existingRsvp);
-      }
-      
-    } catch (error) {
-      console.error('Error loading game data:', error);
-      toast.error('Failed to load game details');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -123,7 +114,10 @@ export default function PublicGamePage() {
       toast.success('RSVP confirmed! You\'ll receive updates via email.');
       
       // Reload RSVPs
-      await loadGameData();
+      if (gameId) {
+        const updatedRsvps = await SupabaseService.getPublicRSVPs(gameId);
+        setPublicRsvps(updatedRsvps);
+      }
       
     } catch (error) {
       console.error('Error submitting RSVP:', error);
@@ -259,7 +253,7 @@ export default function PublicGamePage() {
                 <Users className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">
-                    {rsvps.length + (game.currentPlayers || 0)}/{game.maxPlayers} players
+                    {publicRsvps.length + (game.currentPlayers || 0)}/{game.maxPlayers} players
                   </p>
                   <p className="text-sm text-muted-foreground">Capacity</p>
                 </div>
@@ -360,14 +354,14 @@ export default function PublicGamePage() {
         )}
 
         {/* RSVPs List */}
-        {rsvps.length > 0 && (
+        {publicRsvps.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Who's Coming ({rsvps.length})</CardTitle>
+              <CardTitle>Who's Coming ({publicRsvps.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {rsvps.map((rsvp) => (
+                {publicRsvps.map((rsvp) => (
                   <div key={rsvp.id} className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-primary">

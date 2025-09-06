@@ -1,0 +1,143 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Settings, Trophy, Calendar, MapPin } from 'lucide-react';
+import { useAppStore } from '../store/appStore';
+
+export function UserProfile() {
+  const navigate = useNavigate();
+  const { user } = useAppStore();
+
+  // Default values if user data is not available
+  const userStats = [
+    { label: 'Games Played', value: '0', icon: Calendar },
+    { label: 'Games Hosted', value: '0', icon: MapPin },
+    { label: 'Achievements', value: '0', icon: Trophy },
+  ];
+
+  const recentGames: any[] = [];
+
+  // Get user data with fallbacks
+  const displayName = user?.name || 'User Profile';
+  const displayUsername = user?.username ? `@${user.username}` : '@user';
+  const displayBio = user?.bio || 'Sports enthusiast • Always up for a game!';
+  const displayAvatar = user?.avatar || '';
+  const displaySports = user?.preferences?.sports || ['Basketball', 'Soccer', 'Tennis', 'Volleyball'];
+  const needsCompletion = !(user?.name && user?.email);
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-12 pb-6">
+        <h1 className="text-xl font-semibold">Profile</h1>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
+          <Settings className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div className="px-4 space-y-6">
+        {/* Profile Info */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4 mb-6">
+              <Avatar className="w-16 h-16">
+                {displayAvatar ? (
+                  <img src={displayAvatar} alt={displayName} />
+                ) : (
+                  <AvatarFallback className="text-xl">
+                    {displayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">{displayName}</h2>
+                <p className="text-muted-foreground">{displayUsername}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {displayBio}
+                </p>
+              </div>
+            </div>
+
+            <Button variant="outline" className="w-full" onClick={() => navigate('/profile/edit')}>
+              Edit Profile
+            </Button>
+            {needsCompletion && (
+              <Button variant="outline" className="w-full mt-2" onClick={() => navigate('/onboarding')}>
+                Complete Profile
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stats */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              {userStats.map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <div className="flex justify-center mb-2">
+                    <stat.icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-2xl font-semibold">{stat.value}</div>
+                  <div className="text-xs text-muted-foreground">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sports Preferences */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sports I Play</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {displaySports.map((sport) => (
+                <Badge key={sport} variant="secondary">
+                  {sport}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Games */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Games</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentGames.length > 0 ? (
+                recentGames.map((game, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">{game.title}</div>
+                      <div className="text-sm text-muted-foreground">{game.date}</div>
+                    </div>
+                    <Badge variant="outline">{game.sport}</Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No recent games</p>
+                  <p className="text-sm">Join your first game to see it here!</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default UserProfile;

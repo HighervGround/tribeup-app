@@ -27,7 +27,7 @@ import { useGameActions } from '../hooks/useGameActions';
 import { useDeepLinks } from '../hooks/useDeepLinks';
 import { useCustomShortcuts } from '../hooks/useKeyboardShortcuts';
 import { QuickJoinModal } from './QuickJoinModal';
-import { InviteModal } from './InviteModal';
+import { ShareGameModal } from './ShareGameModal';
 import { toast } from 'sonner';
 import { WeatherService, WeatherData } from '../lib/weatherService';
 import { SupabaseService } from '../lib/supabaseService';
@@ -299,20 +299,29 @@ export function GameDetails() {
       <div className="px-4 py-6 space-y-6" id="main-content">
         {/* Hero Image & Basic Info */}
         <Card>
-          <div className="relative">
-            <div className="aspect-video overflow-hidden rounded-t-lg">
-              <ImageWithFallback
-                src={game.imageUrl}
-                alt={`${game.sport} game`}
-                className="w-full h-full object-cover"
-              />
+          {game.imageUrl && (
+            <div className="relative">
+              <div className="aspect-video overflow-hidden rounded-t-lg">
+                <ImageWithFallback
+                  src={game.imageUrl}
+                  alt={`${game.sport} game`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="absolute top-4 right-4">
+                <Badge className={`${game.sportColor} text-white border-none`}>
+                  {game.sport}
+                </Badge>
+              </div>
             </div>
-            <div className="absolute top-4 right-4">
+          )}
+          {!game.imageUrl && (
+            <div className="p-4 border-b">
               <Badge className={`${game.sportColor} text-white border-none`}>
                 {game.sport}
               </Badge>
             </div>
-          </div>
+          )}
           
           <CardContent className="p-6">
             {/* Game Info Grid */}
@@ -401,16 +410,28 @@ export function GameDetails() {
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
                 {game.latitude && game.longitude ? (
                   <iframe
-                    src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY || ''}&q=${game.latitude},${game.longitude}&zoom=15`}
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${game.longitude - 0.01},${game.latitude - 0.01},${game.longitude + 0.01},${game.latitude + 0.01}&layer=mapnik&marker=${game.latitude},${game.longitude}`}
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
                     className="rounded-lg"
                     title="Game location map"
                   />
+                ) : game.location ? (
+                  <div className="p-6 text-center">
+                    <MapPin className="w-8 h-8 mx-auto mb-3 text-primary" />
+                    <div className="text-sm font-medium mb-2">Location</div>
+                    <div className="text-muted-foreground mb-4">{game.location}</div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleDirections}
+                      className="gap-2"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      Get Directions
+                    </Button>
+                  </div>
                 ) : (
                   <div className="text-center text-muted-foreground">
                     <MapPin className="w-8 h-8 mx-auto mb-2" />
@@ -589,16 +610,11 @@ export function GameDetails() {
         onJoinSuccess={handleQuickJoinSuccess}
       />
 
-      {/* Invite Modal */}
-      <InviteModal
+      {/* Share Game Modal */}
+      <ShareGameModal
         isOpen={showInvite}
         onClose={() => setShowInvite(false)}
-        gameTitle={game.title}
-        gameId={game.id}
-        gameDate={calendarInfo.date}
-        gameTime={calendarInfo.time}
-        gameLocation={game.location}
-        sport={game.sport}
+        game={game}
       />
     </div>
   );

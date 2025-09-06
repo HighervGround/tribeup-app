@@ -28,6 +28,7 @@ const AppContent = lazy(() => import('./AppContent').then(module => ({ default: 
 const NavigationTest = lazy(() => import('./NavigationTest').then(module => ({ default: module.NavigationTest })));
 const Auth = lazy(() => import('./Auth').then(module => ({ default: module.Auth })));
 const AuthCallback = lazy(() => import('../pages/AuthCallback').then(module => ({ default: module.AuthCallback })));
+const PublicGamePage = lazy(() => import('./PublicGamePage').then(module => ({ default: module.PublicGamePage })));
 
 // Wrapper component to handle Onboarding completion
 const OnboardingWrapper = () => {
@@ -212,6 +213,15 @@ export function AppRouter() {
                 element={<OnboardingWrapper />}
               />
 
+              {/* Public Game Page - accessible without authentication */}
+              <Route
+                path="public/game/:gameId"
+                element={
+                  <Suspense fallback={<RouteLoader text="Loading game..." />}>
+                    <PublicGamePage />
+                  </Suspense>
+                }
+              />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -9,10 +9,25 @@ import { useAppStore } from '../store/appStore';
 
 // Simple GameCard component
 function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
+  const { joinGame, leaveGame } = useAppStore();
+
+  const handleJoinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (game.isJoined) {
+      leaveGame(game.id);
+    } else {
+      joinGame(game.id);
+    }
+  };
+
+  const handleCardClick = () => {
+    onSelect();
+  };
+
   return (
     <div 
       className="bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md transition-shadow"
-      onClick={onSelect}
+      onClick={handleCardClick}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 pr-4">
@@ -46,13 +61,26 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
       
       <p className="text-sm text-muted-foreground mt-3">{game.description}</p>
       
-      {game.isJoined && (
-        <div className="mt-3">
+      <div className="flex items-center justify-between mt-3">
+        {game.isJoined ? (
           <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
             Joined
           </span>
-        </div>
-      )}
+        ) : (
+          <div></div>
+        )}
+        
+        <button
+          onClick={handleJoinClick}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            game.isJoined 
+              ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
+        >
+          {game.isJoined ? 'Leave' : 'Join'}
+        </button>
+      </div>
     </div>
   );
 }

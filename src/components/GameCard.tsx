@@ -63,13 +63,21 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
         onClick={handleCardClick}
       >
         <div className="relative overflow-hidden">
-          <div className={`aspect-video ${compact ? 'aspect-[4/3]' : ''} overflow-hidden`}>
-            <ImageWithFallback
-              src={game.imageUrl}
-              alt={game.sport}
-              className="w-full h-full object-cover transition-transform duration-300 ease-out"
-            />
-          </div>
+          {game.imageUrl ? (
+            <div className={`aspect-video ${compact ? 'aspect-[4/3]' : ''} overflow-hidden`}>
+              <ImageWithFallback
+                src={game.imageUrl}
+                alt={game.sport}
+                className="w-full h-full object-cover transition-transform duration-300 ease-out"
+              />
+            </div>
+          ) : (
+            <div className="h-16 bg-gradient-to-r from-blue-50 to-purple-50 flex items-center justify-center">
+              <Badge variant="secondary" className="text-sm">
+                {game.sport}
+              </Badge>
+            </div>
+          )}
           
           {/* Gradient overlay on hover */}
           <div

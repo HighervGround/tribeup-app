@@ -315,7 +315,7 @@ export class SupabaseService {
       const { data: gamesData, error } = await supabase
         .from('games')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
-        .order('date', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) throw error;

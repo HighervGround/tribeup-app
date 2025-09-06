@@ -18,11 +18,30 @@ export function useLocationSearch() {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Simple geocoding using browser's built-in APIs or fallback
+  const GOOGLE_API_KEY = (import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY || 'AIzaSyATPbnuTvpYDDY0vLrKy0IoS80A27rpq-4';
+
+  // Simple geocoding using Google Places API or fallback
   const geocodeLocation = useCallback(async (address: string): Promise<Coordinates | null> => {
     try {
-      // For now, we'll use a simple approach with OpenStreetMap Nominatim
-      // In production, you'd want to use Google Places API or similar
+      // Try Google Geocoding API first
+      if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key') {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.results && data.results.length > 0) {
+            const location = data.results[0].geometry.location;
+            return {
+              lat: location.lat,
+              lng: location.lng
+            };
+          }
+        }
+      }
+      
+      // Fallback to OpenStreetMap
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
       );
@@ -42,7 +61,7 @@ export function useLocationSearch() {
       console.error('Geocoding error:', error);
       return null;
     }
-  }, []);
+  }, [GOOGLE_API_KEY]);
 
   // Search for location suggestions with proximity bias
   const searchLocations = useCallback(async (query: string, userLat?: number, userLng?: number) => {
@@ -53,10 +72,36 @@ export function useLocationSearch() {
 
     setLoading(true);
     try {
-      // Use OpenStreetMap Nominatim for real location search
+      // Try Google Places Autocomplete API first
+      if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key') {
+        let placesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}&types=establishment|geocode`;
+        
+        if (userLat && userLng) {
+          placesUrl += `&location=${userLat},${userLng}&radius=50000`;
+        }
+        
+        const response = await fetch(placesUrl);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.predictions && data.predictions.length > 0) {
+            const suggestions: LocationSuggestion[] = data.predictions.map((prediction: any) => ({
+              place_id: prediction.place_id,
+              description: prediction.description,
+              structured_formatting: {
+                main_text: prediction.structured_formatting.main_text,
+                secondary_text: prediction.structured_formatting.secondary_text || ''
+              }
+            }));
+            setSuggestions(suggestions);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      
+      // Fallback to OpenStreetMap
       let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
       
-      // Add proximity bias if user location is available
       if (userLat && userLng) {
         searchUrl += `&lat=${userLat}&lon=${userLng}&bounded=1&viewbox=${userLng-0.1},${userLat+0.1},${userLng+0.1},${userLat-0.1}`;
       }
@@ -107,7 +152,7 @@ export function useLocationSearch() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [GOOGLE_API_KEY]);
 
   return {
     suggestions,

@@ -72,8 +72,48 @@ export function useLocationSearch() {
 
     setLoading(true);
     try {
-      // Skip Google Places API due to CORS - use OpenStreetMap instead
-      // Google Places requires server-side proxy to avoid CORS issues
+      // Try Google Places API (New) first
+      if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key') {
+        let placesUrl = `https://places.googleapis.com/v1/places:autocomplete`;
+        
+        const requestBody = {
+          input: query,
+          ...(userLat && userLng && {
+            locationBias: {
+              circle: {
+                center: { latitude: userLat, longitude: userLng },
+                radius: 50000 // 50km radius
+              }
+            }
+          })
+        };
+
+        const response = await fetch(placesUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': GOOGLE_API_KEY
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.suggestions && data.suggestions.length > 0) {
+            const suggestions: LocationSuggestion[] = data.suggestions.map((place: any, index: number) => ({
+              place_id: place.placePrediction?.placeId || `google-${index}`,
+              description: place.placePrediction?.text?.text || '',
+              structured_formatting: {
+                main_text: place.placePrediction?.structuredFormat?.mainText?.text || '',
+                secondary_text: place.placePrediction?.structuredFormat?.secondaryText?.text || ''
+              }
+            }));
+            setSuggestions(suggestions);
+            setLoading(false);
+            return;
+          }
+        }
+      }
       
       // Fallback to OpenStreetMap
       let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;

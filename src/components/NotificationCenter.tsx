@@ -201,7 +201,6 @@ export function NotificationCenter() {
             {[
               { key: 'all', label: 'All', count: notifications.length },
               { key: 'unread', label: 'Unread', count: unreadCount },
-              { key: 'messages', label: 'Messages', count: notifications.filter(n => n.type === 'new_message').length },
               { key: 'games', label: 'Games', count: notifications.filter(n => ['game_reminder', 'game_update', 'join_request'].includes(n.type)).length },
             ].map((tab) => (
               <button

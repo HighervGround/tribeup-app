@@ -47,7 +47,6 @@ export interface UserPreferences {
     push: boolean;
     email: boolean;
     gameReminders: boolean;
-    messages: boolean;
   };
   privacy: {
     locationSharing: boolean;
@@ -124,7 +123,6 @@ const defaultPreferences: UserPreferences = {
     push: true,
     email: false,
     gameReminders: true,
-    messages: true,
   },
   privacy: {
     locationSharing: true,

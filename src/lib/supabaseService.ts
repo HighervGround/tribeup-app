@@ -8,74 +8,6 @@ type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
-  // Cache for session data to avoid repeated calls
-  private static sessionCache: { session: any; timestamp: number } | null = null;
-  private static readonly SESSION_CACHE_TTL = 30000; // 30 seconds
-  
-  // Get cached session or fetch new one - Non-blocking approach
-  private static async getCachedSession() {
-    const now = Date.now();
-    
-    // Return cached session if still valid
-    if (this.sessionCache && (now - this.sessionCache.timestamp) < this.SESSION_CACHE_TTL) {
-      return this.sessionCache.session;
-    }
-    
-    // If cache is stale but exists, return it and refresh in background
-    if (this.sessionCache) {
-      // Don't await - fire and forget background refresh
-      this.refreshSessionCache().catch(() => {}); // Silently ignore errors
-      return this.sessionCache.session;
-    }
-    
-    // No cache exists, try to get session synchronously but with short timeout
-    try {
-      const { data } = await Promise.race([
-        supabase.auth.getSession(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Initial session timeout')), 1500)
-        )
-      ]) as any;
-      
-      // Cache the result
-      this.sessionCache = {
-        session: data.session,
-        timestamp: now
-      };
-      
-      return data.session;
-    } catch {
-      // If initial fetch fails, return null and try background refresh
-      this.refreshSessionCache().catch(() => {});
-      return null;
-    }
-  }
-  
-  // Background session refresh - silent and resilient
-  private static async refreshSessionCache() {
-    try {
-      const { data } = await Promise.race([
-        supabase.auth.getSession(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 2000)
-        )
-      ]) as any;
-      
-      // Update cache
-      this.sessionCache = {
-        session: data.session,
-        timestamp: Date.now()
-      };
-    } catch {
-      // Silently fail - don't log warnings for background refreshes
-      // Keep existing cache if refresh fails
-    }
-  }
-  
-  // Clear session cache (call on sign out)
-  private static clearSessionCache() {
-    this.sessionCache = null;
-  }
 
   // Authentication methods
   static async signUp(email: string, password: string, userData: Partial<User>) {
@@ -112,7 +44,6 @@ export class SupabaseService {
 
   static async signOut() {
     const { error } = await supabase.auth.signOut();
-    this.clearSessionCache(); // Clear cache on sign out
     if (error) throw error;
   }
 
@@ -357,9 +288,9 @@ export class SupabaseService {
 
   static async getNearbyGames(latitude?: number, longitude?: number, radius: number = 25): Promise<Game[]> {
     try {
-      // Use cached session for better performance
-      const session = await this.getCachedSession();
-      const userId = session?.user?.id;
+      // Get current user directly without caching
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
 
       let query = supabase
         .from('games')
@@ -407,6 +338,8 @@ export class SupabaseService {
     title: string;
     sport: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
     date: string;
     time: string;
     cost: string;
@@ -462,7 +395,7 @@ export class SupabaseService {
         latitude: gameData.latitude,
         longitude: gameData.longitude,
         cost: gameData.cost,
-        max_players: parseInt(gameData.maxPlayers, 10),
+        max_players: gameData.maxPlayers,
         current_players: 1, // Creator is automatically a participant
         description: gameData.description,
         creator_id: currentUser.id
@@ -687,9 +620,9 @@ export class SupabaseService {
     priceRange?: { min: number; max: number };
   }): Promise<Game[]> {
     try {
-      // Use cached session for better performance
-      const session = await this.getCachedSession();
-      const userId = session?.user?.id;
+      // Get current user directly without caching
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
 
       let query = supabase
         .from('games')
@@ -745,8 +678,8 @@ export class SupabaseService {
         preferred = preferredOverride.filter((s): s is string => typeof s === 'string' && s.length > 0);
       } else {
         // Try to get user preferences from database
-        const session = await this.getCachedSession();
-        const userId = session?.user?.id;
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
         
         if (!userId) {
           console.timeEnd?.(timeLabel);
@@ -769,8 +702,8 @@ export class SupabaseService {
       }
 
       // Get session for join status
-      const session = await this.getCachedSession();
-      const userId = session?.user?.id;
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
 
       // Optimized query with join for Pro tier
       if (userId) {

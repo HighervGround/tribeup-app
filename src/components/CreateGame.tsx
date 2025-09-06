@@ -78,16 +78,57 @@ export function CreateGame() {
 
   // Auto-populate location when GPS is available and location field is empty
   useEffect(() => {
-    if (userLat && userLng && !formData.location && !formData.latitude) {
+    console.log('Location effect triggered:', { 
+      userLat, 
+      userLng, 
+      location: formData.location, 
+      latitude: formData.latitude,
+      geoError 
+    });
+    
+    // Only auto-fill if we have GPS coordinates and no location is set yet
+    if (userLat && userLng && !formData.location.trim()) {
+      console.log('Auto-filling location with GPS coordinates');
+      
       // Auto-fill with coordinates and try to get address
       const autoFillLocation = async () => {
         try {
+          console.log('Fetching reverse geocoding for:', userLat, userLng);
           const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1`
           );
-          const data = await response.json();
-          const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
           
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Reverse geocoding response:', data);
+          
+          // Create a more readable address
+          let address = '';
+          if (data.address) {
+            const parts: string[] = [];
+            if (data.address.house_number && data.address.road) {
+              parts.push(`${data.address.house_number} ${data.address.road}`);
+            } else if (data.address.road) {
+              parts.push(data.address.road);
+            }
+            if (data.address.city || data.address.town || data.address.village) {
+              parts.push(data.address.city || data.address.town || data.address.village);
+            }
+            if (data.address.state) {
+              parts.push(data.address.state);
+            }
+            address = parts.join(', ');
+          }
+          
+          // Fallback to display_name if address parsing fails
+          if (!address) {
+            address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+          }
+          
+          console.log('Setting location to:', address);
           setFormData(prev => ({
             ...prev,
             location: address,
@@ -95,10 +136,14 @@ export function CreateGame() {
             longitude: userLng
           }));
         } catch (error) {
+          console.error('Reverse geocoding failed:', error);
           // Fallback to coordinates if reverse geocoding fails
+          const fallbackLocation = `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+          console.log('Using fallback location:', fallbackLocation);
+          
           setFormData(prev => ({
             ...prev,
-            location: `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
+            location: fallbackLocation,
             latitude: userLat,
             longitude: userLng
           }));
@@ -107,7 +152,7 @@ export function CreateGame() {
       
       autoFillLocation();
     }
-  }, [userLat, userLng, formData.location, formData.latitude]);
+  }, [userLat, userLng, geoError]);
 
   const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));

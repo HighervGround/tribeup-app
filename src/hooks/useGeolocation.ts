@@ -22,7 +22,10 @@ export function useGeolocation(options: GeolocationOptions = {}) {
   });
 
   useEffect(() => {
+    console.log('useGeolocation hook initializing...');
+    
     if (!navigator.geolocation) {
+      console.log('Geolocation not supported');
       setState(prev => ({
         ...prev,
         error: 'Geolocation is not supported by this browser',
@@ -32,6 +35,7 @@ export function useGeolocation(options: GeolocationOptions = {}) {
     }
 
     const handleSuccess = (position: GeolocationPosition) => {
+      console.log('GPS location obtained:', position.coords.latitude, position.coords.longitude);
       setState({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -55,6 +59,7 @@ export function useGeolocation(options: GeolocationOptions = {}) {
           break;
       }
 
+      console.log('GPS error:', errorMessage, error);
       setState(prev => ({
         ...prev,
         error: errorMessage,
@@ -68,6 +73,7 @@ export function useGeolocation(options: GeolocationOptions = {}) {
       maximumAge: options.maximumAge ?? 300000, // 5 minutes
     };
 
+    console.log('Requesting GPS permission with options:', geoOptions);
     navigator.geolocation.getCurrentPosition(handleSuccess, handleError, geoOptions);
   }, [options.enableHighAccuracy, options.timeout, options.maximumAge]);
 

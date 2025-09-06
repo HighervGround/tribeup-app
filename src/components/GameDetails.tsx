@@ -29,10 +29,66 @@ import { useCustomShortcuts } from '../hooks/useKeyboardShortcuts';
 import { QuickJoinModal } from './QuickJoinModal';
 import { InviteModal } from './InviteModal';
 import { toast } from 'sonner';
+import { WeatherService, WeatherData } from '../lib/weatherService';
 import { SupabaseService } from '../lib/supabaseService';
 import { formatEventHeader, formatCalendarInfo } from '../lib/dateUtils';
 
 
+
+// Weather Info Component
+function WeatherInfo({ game }: { game: any }) {
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (game.latitude && game.longitude) {
+      const gameDateTime = new Date(`${game.date} ${game.time}`);
+      WeatherService.getGameWeather(game.latitude, game.longitude, gameDateTime)
+        .then(setWeather)
+        .finally(() => setLoading(false));
+    }
+  }, [game.latitude, game.longitude, game.date, game.time]);
+
+  if (loading) {
+    return <div className="text-sm text-muted-foreground">Loading weather...</div>;
+  }
+
+  if (!weather) {
+    return <div className="text-sm text-muted-foreground">Weather unavailable</div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{weather.icon}</span>
+          <div>
+            <div className="font-medium">{weather.temperature}°F</div>
+            <div className="text-sm text-muted-foreground">{weather.description}</div>
+          </div>
+        </div>
+        <div className="text-right text-sm text-muted-foreground">
+          <div>Humidity: {weather.humidity}%</div>
+          <div>Wind: {weather.windSpeed} mph</div>
+        </div>
+      </div>
+      
+      {weather.alerts && weather.alerts.length > 0 && (
+        <div className="space-y-1">
+          {weather.alerts.map((alert, index) => (
+            <div key={index} className="text-xs bg-yellow-50 text-yellow-800 p-2 rounded">
+              {alert}
+            </div>
+          ))}
+        </div>
+      )}
+      
+      <div className="text-xs text-muted-foreground">
+        {WeatherService.getWeatherRecommendation(weather)}
+      </div>
+    </div>
+  );
+}
 
 export function GameDetails() {
   const navigate = useNavigate();
@@ -353,6 +409,7 @@ export function GameDetails() {
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                     className="rounded-lg"
+                    title="Game location map"
                   />
                 ) : (
                   <div className="text-center text-muted-foreground">
@@ -375,6 +432,20 @@ export function GameDetails() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Weather */}
+        {game.latitude && game.longitude && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                ☀️ Weather Forecast
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WeatherInfo game={game} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Description */}
         <Card>

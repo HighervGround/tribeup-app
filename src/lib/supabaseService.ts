@@ -244,7 +244,7 @@ export class SupabaseService {
       const queryStart = performance.now();
       const { data: gamesData, error } = await supabase
         .from('games')
-        .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
       
@@ -254,21 +254,7 @@ export class SupabaseService {
       if (error) throw error;
       
       const transformStart = performance.now();
-      const games = (gamesData || []).map((game: any) => ({
-        id: game.id,
-        title: game.title,
-        sport: game.sport,
-        date: game.date,
-        time: game.time,
-        location: game.location,
-        cost: game.cost,
-        maxPlayers: game.max_players,
-        currentPlayers: game.current_players,
-        description: game.description,
-        imageUrl: game.image_url,
-        creatorId: game.creator_id,
-        isJoined: false
-      }));
+      const games = (gamesData || []).map((game: any) => transformGameFromDB(game, false));
       
       const transformTime = performance.now() - transformStart;
       const totalTime = performance.now() - startTime;
@@ -464,6 +450,54 @@ export class SupabaseService {
     if (error) throw error;
   }
 
+  // Public RSVP methods
+  static async getPublicRSVPs(gameId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('public_rsvps')
+      .select('*')
+      .eq('game_id', gameId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async createPublicRSVP(gameId: string, rsvpData: { name: string; email: string; phone?: string }): Promise<void> {
+    // Check if email already RSVPed for this game
+    const { data: existing } = await supabase
+      .from('public_rsvps')
+      .select('id')
+      .eq('game_id', gameId)
+      .eq('email', rsvpData.email)
+      .single();
+
+    if (existing) {
+      throw new Error('This email has already RSVPed for this game');
+    }
+
+    const { error } = await supabase
+      .from('public_rsvps')
+      .insert({
+        game_id: gameId,
+        name: rsvpData.name,
+        email: rsvpData.email,
+        phone: rsvpData.phone
+      });
+
+    if (error) throw error;
+  }
+
+  static async getGameById(gameId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+
+    if (error) throw error;
+    return transformGameFromDB(data, false);
+  }
+
   // Notifications methods
   static async getNotifications(): Promise<any[]> {
     const currentUser = await this.getCurrentUser();
@@ -583,11 +617,23 @@ export class SupabaseService {
   // Subscribe to all games (INSERT) to keep the home feed fresh
   static subscribeToAllGames(callback: (payload: any) => void) {
     return supabase
-      .channel('games:all')
+      .channel('all_games')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'games'
+      }, callback)
+      .subscribe();
+  }
+
+  static subscribeToPublicRSVPs(gameId: string, callback: (payload: any) => void) {
+    return supabase
+      .channel(`public_rsvps:${gameId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'public_rsvps',
+        filter: `game_id=eq.${gameId}`
       }, callback)
       .subscribe();
   }

@@ -55,6 +55,8 @@ export const transformGameFromDB = (dbGame: Database['public']['Tables']['games'
   date: dbGame.date,
   time: dbGame.time,
   location: dbGame.location,
+  latitude: dbGame.latitude,
+  longitude: dbGame.longitude,
   cost: dbGame.cost,
   maxPlayers: dbGame.max_players,
   currentPlayers: dbGame.current_players,

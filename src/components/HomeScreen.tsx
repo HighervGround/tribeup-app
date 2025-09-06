@@ -71,33 +71,33 @@ export function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedMode]);
 
-  // Realtime: refresh list when a new game is inserted (debounced)
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    const sub = SupabaseService.subscribeToAllGames((payload) => {
-      console.log('[Realtime] games INSERT received', payload?.new?.id || '');
-      
-      // Debounce realtime updates to avoid excessive API calls
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        try {
-          const data = feedMode === 'recommended'
-            ? await SupabaseService.getRecommendedGames(userPreferredSports)
-            : await SupabaseService.getGames();
-          await setGames(data);
-        } catch (e) {
-          console.warn('Realtime refresh failed:', e);
-        }
-      }, 1000); // 1 second debounce
-    });
-    
-    return () => {
-      clearTimeout(timeoutId);
-      try { sub.unsubscribe(); } catch {}
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedMode, setGames, userPreferredSports.join?.('|') ?? '']);
+  // Disabled realtime to prevent WebSocket connection issues
+  // useEffect(() => {
+  //   let timeoutId: NodeJS.Timeout;
+  //   
+  //   const sub = SupabaseService.subscribeToAllGames((payload) => {
+  //     console.log('[Realtime] games INSERT received', payload?.new?.id || '');
+  //     
+  //     // Debounce realtime updates to avoid excessive API calls
+  //     clearTimeout(timeoutId);
+  //     timeoutId = setTimeout(async () => {
+  //       try {
+  //         const data = feedMode === 'recommended'
+  //           ? await SupabaseService.getRecommendedGames(userPreferredSports)
+  //           : await SupabaseService.getGames();
+  //         setGames(data);
+  //       } catch (error) {
+  //         console.error('[Realtime] Failed to refresh games:', error);
+  //       }
+  //     }, 1000);
+  //   });
+  //   
+  //   return () => {
+  //     clearTimeout(timeoutId);
+  //     try { sub.unsubscribe(); } catch {}
+  //   };
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [feedMode, userPreferredSports.join?.('|') ?? '']);
 
   // Safety: clear global loading if this screen unmounts mid-request
   useEffect(() => {

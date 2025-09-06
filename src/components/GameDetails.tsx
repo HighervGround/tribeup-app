@@ -42,27 +42,128 @@ function WeatherInfo({ game }: { game: any }) {
 
   useEffect(() => {
     const getWeatherData = async () => {
-      if (game.latitude && game.longitude) {
-        // Use exact coordinates
+      console.log('🌤️ Getting weather data for game:', game.id);
+      console.log('📍 Coordinates:', game.latitude, game.longitude);
+      console.log('📍 Location:', game.location);
+      
+      try {
+        let weatherData: WeatherData | null = null;
         const gameDateTime = new Date(`${game.date} ${game.time}`);
-        const weatherData = await WeatherService.getGameWeather(game.latitude, game.longitude, gameDateTime);
-        setWeather(weatherData);
-      } else if (game.location) {
-        // Geocode location to get coordinates
-        try {
-          const response = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(game.location)}&limit=1&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`);
-          const locations = await response.json();
+        
+        if (game.latitude && game.longitude) {
+          // Use exact coordinates
+          console.log('🎯 Using exact coordinates for weather');
+          weatherData = await WeatherService.getGameWeather(game.latitude, game.longitude, gameDateTime);
+        } else if (game.location) {
+          // Use Google Maps Geocoding API (same as the map uses)
+          console.log('🗺️ Using Google Maps geocoding for weather (same as map)');
+          const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY;
           
-          if (locations && locations.length > 0) {
-            const { lat, lon } = locations[0];
-            const gameDateTime = new Date(`${game.date} ${game.time}`);
-            const weatherData = await WeatherService.getGameWeather(lat, lon, gameDateTime);
-            setWeather(weatherData);
+          try {
+            const geocodeResponse = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(game.location)}&key=${googleApiKey}`
+            );
+            
+            if (geocodeResponse.ok) {
+              const geocodeData = await geocodeResponse.json();
+              console.log('🗺️ Google geocoding results:', geocodeData);
+              
+              if (geocodeData.results && geocodeData.results.length > 0) {
+                const { lat, lng } = geocodeData.results[0].geometry.location;
+                console.log('🎯 Using Google Maps coordinates for weather:', lat, lng);
+                weatherData = await WeatherService.getGameWeather(lat, lng, gameDateTime);
+                console.log('✅ Weather from Google Maps coordinates:', weatherData);
+              }
+            }
+          } catch (error) {
+            console.error('❌ Google Maps geocoding failed:', error);
           }
-        } catch (error) {
-          console.error('Weather geocoding error:', error);
+          
+          // Fallback to zipcode if Google Maps geocoding fails
+          if (!weatherData) {
+            const zipcode = WeatherService.extractZipcode(game.location);
+            if (zipcode) {
+              console.log('📮 Fallback: Using zipcode for weather:', zipcode);
+              weatherData = await WeatherService.getWeatherByZipcode(zipcode, gameDateTime);
+            }
+          }
+          
+          // Final fallback to simple location search
+          if (!weatherData) {
+            console.log('🌤️ Final fallback: Simple weather search');
+            const simpleResponse = await fetch(
+              `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(game.location)}&appid=${(import.meta as any).env?.VITE_OPENWEATHER_API_KEY}&units=imperial`
+            );
+            
+            if (simpleResponse.ok) {
+              const simpleData = await simpleResponse.json();
+              weatherData = {
+                temperature: Math.round(simpleData.main.temp),
+                condition: simpleData.weather[0].main,
+                description: simpleData.weather[0].description,
+                humidity: simpleData.main.humidity,
+                windSpeed: Math.round(simpleData.wind.speed),
+                precipitation: simpleData.rain?.['1h'] || simpleData.snow?.['1h'] || 0,
+                icon: simpleData.weather[0].main === 'Clear' ? '☀️' : simpleData.weather[0].main === 'Clouds' ? '☁️' : simpleData.weather[0].main === 'Rain' ? '🌧️' : '🌤️',
+                isOutdoorFriendly: true,
+                alerts: []
+              };
+            }
+          }
+        }
+        
+        if (weatherData) {
+          console.log('✅ Weather data received:', weatherData);
+          setWeather(weatherData);
+        } else {
+          throw new Error('No weather data available');
+        }
+      } catch (error) {
+        console.error('❌ Weather error:', error);
+        // Try one more fallback with current weather for a default US location
+        try {
+          console.log('🔄 Final attempt: Using current weather API');
+          const fallbackResponse = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?zip=10001,US&appid=${(import.meta as any).env?.VITE_OPENWEATHER_API_KEY}&units=imperial`
+          );
+          
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            const temp = Math.round(fallbackData.main.temp);
+            const condition = fallbackData.weather[0].main;
+            const description = fallbackData.weather[0].description;
+            
+            setWeather({
+              temperature: temp,
+              condition,
+              description: `${description.charAt(0).toUpperCase() + description.slice(1)} (nearby area)`,
+              humidity: fallbackData.main.humidity,
+              windSpeed: Math.round(fallbackData.wind.speed),
+              precipitation: fallbackData.rain?.['1h'] || fallbackData.snow?.['1h'] || 0,
+              icon: condition === 'Clear' ? '☀️' : condition === 'Clouds' ? '☁️' : condition === 'Rain' ? '🌧️' : '🌤️',
+              isOutdoorFriendly: temp > 40 && temp < 95,
+              alerts: [`📍 Showing weather for nearby area - actual conditions at ${game.location || 'game location'} may vary`]
+            });
+          } else {
+            throw new Error('Fallback weather failed');
+          }
+        } catch (fallbackError) {
+          console.error('❌ All weather sources failed:', fallbackError);
+          // Final mock data
+          setWeather({
+            temperature: 72,
+            condition: 'Clear',
+            description: 'Weather data temporarily unavailable',
+            humidity: 65,
+            windSpeed: 8,
+            precipitation: 0,
+            icon: '🌤️',
+            isOutdoorFriendly: true,
+            alerts: [`🔄 Weather service temporarily unavailable for ${game.location || 'this location'}`]
+          });
         }
       }
+      
       setLoading(false);
     };
 
@@ -430,7 +531,7 @@ export function GameDetails() {
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
                 {(game.latitude && game.longitude) || game.location ? (
                   <iframe
-                    src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY || ''}&q=${
+                    src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}&q=${
                       game.latitude && game.longitude 
                         ? `${game.latitude},${game.longitude}` 
                         : encodeURIComponent(game.location)

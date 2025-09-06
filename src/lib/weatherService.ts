@@ -48,9 +48,12 @@ export class WeatherService {
     }
   }
 
-  // Get weather forecast for game time
+  // Get weather forecast for game time with 4-hour window analysis
   static async getGameWeather(lat: number, lng: number, gameDateTime: Date): Promise<WeatherData | null> {
     try {
+      console.log(`🌤️ Fetching weather for coordinates: ${lat}, ${lng}`);
+      console.log(`🕐 Game time: ${gameDateTime.toISOString()}`);
+      
       const response = await fetch(
         `${this.BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
       );
@@ -60,46 +63,192 @@ export class WeatherService {
       }
 
       const data = await response.json();
+      console.log(`📊 Received ${data.list.length} forecast entries`);
       
-      // Find forecast closest to game time
+      // Define 4-hour window around game time (2 hours before to 2 hours after)
       const gameTime = gameDateTime.getTime();
-      let closestForecast = data.list[0];
-      let smallestDiff = Math.abs(new Date(closestForecast.dt * 1000).getTime() - gameTime);
-
-      for (const forecast of data.list) {
-        const forecastTime = new Date(forecast.dt * 1000).getTime();
-        const diff = Math.abs(forecastTime - gameTime);
+      const windowStart = gameTime - (2 * 60 * 60 * 1000); // 2 hours before
+      const windowEnd = gameTime + (2 * 60 * 60 * 1000);   // 2 hours after
+      
+      console.log(`🕐 Weather window: ${new Date(windowStart).toISOString()} to ${new Date(windowEnd).toISOString()}`);
+      
+      // Find all forecasts within the 4-hour window
+      const windowForecasts = data.list.filter((forecast: any) => {
+        const forecastTime = forecast.dt * 1000;
+        return forecastTime >= windowStart && forecastTime <= windowEnd;
+      });
+      
+      console.log(`📈 Found ${windowForecasts.length} forecasts in 4-hour window`);
+      
+      let selectedForecast;
+      
+      if (windowForecasts.length > 0) {
+        // Use the forecast closest to game time within the window
+        selectedForecast = windowForecasts.reduce((closest: any, current: any) => {
+          const currentDiff = Math.abs((current.dt * 1000) - gameTime);
+          const closestDiff = Math.abs((closest.dt * 1000) - gameTime);
+          return currentDiff < closestDiff ? current : closest;
+        });
         
-        if (diff < smallestDiff) {
-          smallestDiff = diff;
-          closestForecast = forecast;
-        }
+        console.log(`🎯 Selected forecast: ${new Date(selectedForecast.dt * 1000).toISOString()}`);
+      } else {
+        // Fallback: find the closest forecast to game time (even outside window)
+        selectedForecast = data.list.reduce((closest: any, current: any) => {
+          const currentDiff = Math.abs((current.dt * 1000) - gameTime);
+          const closestDiff = Math.abs((closest.dt * 1000) - gameTime);
+          return currentDiff < closestDiff ? current : closest;
+        });
+        
+        console.log(`⚠️ No forecasts in window, using closest: ${new Date(selectedForecast.dt * 1000).toISOString()}`);
       }
 
-      return this.transformWeatherData(closestForecast);
+      // Analyze conditions across the window for better insights
+      const weatherSummary = this.analyzeWeatherWindow(windowForecasts, selectedForecast);
+      
+      return this.transformWeatherData(selectedForecast, weatherSummary);
     } catch (error) {
       console.error('Error fetching game weather:', error);
       return this.getMockWeatherData();
     }
   }
 
+  // Get weather by zipcode (more reliable for US locations)
+  static async getWeatherByZipcode(zipcode: string, gameDateTime: Date): Promise<WeatherData | null> {
+    try {
+      console.log(`🌤️ Fetching weather for zipcode: ${zipcode}`);
+      console.log(`🕐 Game time: ${gameDateTime.toISOString()}`);
+      
+      const response = await fetch(
+        `${this.BASE_URL}/forecast?zip=${zipcode},US&appid=${this.API_KEY}&units=imperial`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`📊 Received ${data.list.length} forecast entries for ${zipcode}`);
+      
+      // Define 4-hour window around game time (2 hours before to 2 hours after)
+      const gameTime = gameDateTime.getTime();
+      const windowStart = gameTime - (2 * 60 * 60 * 1000); // 2 hours before
+      const windowEnd = gameTime + (2 * 60 * 60 * 1000);   // 2 hours after
+      
+      console.log(`🕐 Weather window: ${new Date(windowStart).toISOString()} to ${new Date(windowEnd).toISOString()}`);
+      
+      // Find all forecasts within the 4-hour window
+      const windowForecasts = data.list.filter((forecast: any) => {
+        const forecastTime = forecast.dt * 1000;
+        return forecastTime >= windowStart && forecastTime <= windowEnd;
+      });
+      
+      console.log(`📈 Found ${windowForecasts.length} forecasts in 4-hour window`);
+      
+      let selectedForecast;
+      
+      if (windowForecasts.length > 0) {
+        // Use the forecast closest to game time within the window
+        selectedForecast = windowForecasts.reduce((closest: any, current: any) => {
+          const currentDiff = Math.abs((current.dt * 1000) - gameTime);
+          const closestDiff = Math.abs((closest.dt * 1000) - gameTime);
+          return currentDiff < closestDiff ? current : closest;
+        });
+        
+        console.log(`🎯 Selected forecast: ${new Date(selectedForecast.dt * 1000).toISOString()}`);
+      } else {
+        // Fallback: find the closest forecast to game time (even outside window)
+        selectedForecast = data.list.reduce((closest: any, current: any) => {
+          const currentDiff = Math.abs((current.dt * 1000) - gameTime);
+          const closestDiff = Math.abs((closest.dt * 1000) - gameTime);
+          return currentDiff < closestDiff ? current : closest;
+        });
+        
+        console.log(`⚠️ No forecasts in window, using closest: ${new Date(selectedForecast.dt * 1000).toISOString()}`);
+      }
+
+      // Analyze conditions across the window for better insights
+      const weatherSummary = this.analyzeWeatherWindow(windowForecasts, selectedForecast);
+      
+      return this.transformWeatherData(selectedForecast, weatherSummary);
+    } catch (error) {
+      console.error('Error fetching weather by zipcode:', error);
+      return null;
+    }
+  }
+
+  // Extract zipcode from location string
+  static extractZipcode(location: string): string | null {
+    // Match 5-digit zipcode (with optional +4)
+    const zipcodeMatch = location.match(/\b(\d{5}(?:-\d{4})?)\b/);
+    return zipcodeMatch ? zipcodeMatch[1].split('-')[0] : null; // Return just the 5-digit part
+  }
+  
+  // Analyze weather conditions across the 4-hour window
+  private static analyzeWeatherWindow(windowForecasts: any[], primaryForecast: any) {
+    if (windowForecasts.length === 0) {
+      return { alerts: [], windowSummary: '' };
+    }
+    
+    const temps = windowForecasts.map(f => f.main.temp);
+    const conditions = windowForecasts.map(f => f.weather[0].main);
+    const precipitations = windowForecasts.map(f => f.rain?.['3h'] || f.snow?.['3h'] || 0);
+    
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
+    const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const maxPrecip = Math.max(...precipitations);
+    
+    const alerts: string[] = [];
+    let windowSummary = '';
+    
+    // Temperature variation alert
+    if (maxTemp - minTemp > 10) {
+      alerts.push(`🌡️ Temperature will vary ${Math.round(minTemp)}°F to ${Math.round(maxTemp)}°F during game time`);
+    }
+    
+    // Precipitation alert
+    if (maxPrecip > 0.1) {
+      alerts.push(`🌧️ Possible precipitation during game window`);
+    }
+    
+    // Condition changes
+    const uniqueConditions = [...new Set(conditions)];
+    if (uniqueConditions.length > 1) {
+      alerts.push(`🌤️ Weather conditions may change: ${uniqueConditions.join(', ')}`);
+    }
+    
+    // Create window summary
+    if (windowForecasts.length > 1) {
+      windowSummary = `4-hour forecast: ${Math.round(minTemp)}-${Math.round(maxTemp)}°F, ${uniqueConditions.join('/')}`;
+    }
+    
+    return { alerts, windowSummary };
+  }
+
   // Transform API response to our weather data format
-  private static transformWeatherData(apiData: any): WeatherData {
+  private static transformWeatherData(apiData: any, weatherSummary?: { alerts: string[], windowSummary: string }): WeatherData {
     const temp = Math.round(apiData.main.temp);
     const condition = apiData.weather[0].main;
     const description = apiData.weather[0].description;
     const precipitation = apiData.rain?.['1h'] || apiData.snow?.['1h'] || 0;
     
+    // Combine standard alerts with window-specific alerts
+    const standardAlerts = this.generateWeatherAlerts(condition, temp, precipitation, apiData.wind.speed);
+    const allAlerts = weatherSummary ? [...standardAlerts, ...weatherSummary.alerts] : standardAlerts;
+    
+    // Use window summary as description if available
+    const finalDescription = weatherSummary?.windowSummary || this.capitalizeWords(description);
+    
     return {
       temperature: temp,
       condition,
-      description: this.capitalizeWords(description),
+      description: finalDescription,
       humidity: apiData.main.humidity,
       windSpeed: Math.round(apiData.wind.speed), // Already in mph from imperial units
       precipitation,
       icon: this.getWeatherIcon(condition),
       isOutdoorFriendly: this.isOutdoorFriendly(condition, temp, precipitation, apiData.wind.speed),
-      alerts: this.generateWeatherAlerts(condition, temp, precipitation, apiData.wind.speed)
+      alerts: allAlerts
     };
   }
 

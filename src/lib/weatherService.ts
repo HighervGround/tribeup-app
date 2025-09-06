@@ -17,14 +17,23 @@ export interface WeatherForecast {
 }
 
 export class WeatherService {
-  private static readonly API_KEY = process.env.VITE_OPENWEATHER_API_KEY || 'demo_key';
+  private static readonly API_KEY = (import.meta as any).env?.VITE_OPENWEATHER_API_KEY || '***REMOVED***';
   private static readonly BASE_URL = 'https://api.openweathermap.org/data/2.5';
+  
+  // Weather configuration
+  private static readonly CONFIG = {
+    temperatureUnit: 'fahrenheit',
+    updateInterval: 3600,
+    includeHourlyForecast: true,
+    rainThreshold: 0.1,
+    windThreshold: 15
+  };
 
   // Get current weather for coordinates
   static async getCurrentWeather(lat: number, lng: number): Promise<WeatherData | null> {
     try {
       const response = await fetch(
-        `${this.BASE_URL}/weather?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=metric`
+        `${this.BASE_URL}/weather?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
       );
 
       if (!response.ok) {
@@ -43,7 +52,7 @@ export class WeatherService {
   static async getGameWeather(lat: number, lng: number, gameDateTime: Date): Promise<WeatherData | null> {
     try {
       const response = await fetch(
-        `${this.BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=metric`
+        `${this.BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
       );
 
       if (!response.ok) {
@@ -86,7 +95,7 @@ export class WeatherService {
       condition,
       description: this.capitalizeWords(description),
       humidity: apiData.main.humidity,
-      windSpeed: Math.round(apiData.wind.speed * 3.6), // Convert m/s to km/h
+      windSpeed: Math.round(apiData.wind.speed), // Already in mph from imperial units
       precipitation,
       icon: this.getWeatherIcon(condition),
       isOutdoorFriendly: this.isOutdoorFriendly(condition, temp, precipitation, apiData.wind.speed),
@@ -96,14 +105,14 @@ export class WeatherService {
 
   // Determine if weather is suitable for outdoor activities
   private static isOutdoorFriendly(condition: string, temp: number, precipitation: number, windSpeed: number): boolean {
-    // Too cold (below 5°C) or too hot (above 35°C)
-    if (temp < 5 || temp > 35) return false;
+    // Too cold (below 40°F) or too hot (above 95°F)
+    if (temp < 40 || temp > 95) return false;
     
-    // Heavy rain or snow
-    if (precipitation > 2) return false;
+    // Heavy rain or snow (using custom threshold)
+    if (precipitation > this.CONFIG.rainThreshold) return false;
     
-    // Strong winds (over 10 m/s = 36 km/h)
-    if (windSpeed > 10) return false;
+    // Strong winds (using custom threshold in mph)
+    if (windSpeed > this.CONFIG.windThreshold) return false;
     
     // Severe weather conditions
     const severeConditions = ['Thunderstorm', 'Tornado', 'Squall'];
@@ -116,17 +125,17 @@ export class WeatherService {
   private static generateWeatherAlerts(condition: string, temp: number, precipitation: number, windSpeed: number): string[] {
     const alerts: string[] = [];
     
-    if (temp < 10) {
-      alerts.push('🧥 Dress warmly - temperature below 10°C');
-    } else if (temp > 30) {
+    if (temp < 50) {
+      alerts.push('🧥 Dress warmly - temperature below 50°F');
+    } else if (temp > 85) {
       alerts.push('☀️ Stay hydrated - high temperature expected');
     }
     
-    if (precipitation > 0.5) {
+    if (precipitation > this.CONFIG.rainThreshold) {
       alerts.push('🌧️ Rain expected - consider indoor backup plan');
     }
     
-    if (windSpeed > 7) {
+    if (windSpeed > 12) {
       alerts.push('💨 Windy conditions - secure loose items');
     }
     
@@ -162,7 +171,7 @@ export class WeatherService {
   // Mock weather data for development/fallback
   private static getMockWeatherData(): WeatherData {
     return {
-      temperature: 22,
+      temperature: 72,
       condition: 'Clear',
       description: 'Clear Sky',
       humidity: 65,
@@ -185,9 +194,9 @@ export class WeatherService {
       return 'Weather conditions may not be ideal for outdoor activities. Consider rescheduling or moving indoors.';
     }
     
-    if (weather.temperature < 15) {
+    if (weather.temperature < 60) {
       return 'Cool weather - dress in layers and bring warm clothing.';
-    } else if (weather.temperature > 25) {
+    } else if (weather.temperature > 80) {
       return 'Warm weather - bring water and sun protection.';
     }
     

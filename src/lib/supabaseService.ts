@@ -4,7 +4,6 @@ import type { Game, User, UserPreferences } from '../store/appStore';
 // Types for database operations
 type GameRow = Database['public']['Tables']['games']['Row'];
 type UserRow = Database['public']['Tables']['users']['Row'];
-type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
 type NotificationRow = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
@@ -465,46 +464,6 @@ export class SupabaseService {
     if (error) throw error;
   }
 
-  // Chat methods
-  static async getChatMessages(gameId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select(`
-        *,
-        user:users!chat_messages_user_id_fkey(id, full_name, username, avatar_url)
-      `)
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-
-    return data.map(msg => ({
-      id: msg.id,
-      message: msg.message,
-      createdAt: msg.created_at,
-      user: {
-        id: (msg as any).user?.id ?? 'unknown',
-        name: (msg as any).user?.full_name || (msg as any).user?.username || 'Unknown User',
-        avatar: (msg as any).user?.avatar_url || ''
-      }
-    }));
-  }
-
-  static async sendMessage(gameId: string, message: string): Promise<void> {
-    const currentUser = await this.getCurrentUser();
-    if (!currentUser) throw new Error('User not authenticated');
-
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({
-        game_id: gameId,
-        user_id: currentUser.id,
-        message
-      });
-
-    if (error) throw error;
-  }
-
   // Notifications methods
   static async getNotifications(): Promise<any[]> {
     const currentUser = await this.getCurrentUser();
@@ -522,7 +481,7 @@ export class SupabaseService {
       id: notification.id,
       type: notification.type,
       title: notification.title,
-      message: notification.message,
+      content: notification.message,
       read: notification.read,
       data: notification.data,
       createdAt: notification.created_at

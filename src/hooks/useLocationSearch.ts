@@ -72,32 +72,8 @@ export function useLocationSearch() {
 
     setLoading(true);
     try {
-      // Try Google Places Autocomplete API first
-      if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key') {
-        let placesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}&types=establishment|geocode`;
-        
-        if (userLat && userLng) {
-          placesUrl += `&location=${userLat},${userLng}&radius=50000`;
-        }
-        
-        const response = await fetch(placesUrl);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.predictions && data.predictions.length > 0) {
-            const suggestions: LocationSuggestion[] = data.predictions.map((prediction: any) => ({
-              place_id: prediction.place_id,
-              description: prediction.description,
-              structured_formatting: {
-                main_text: prediction.structured_formatting.main_text,
-                secondary_text: prediction.structured_formatting.secondary_text || ''
-              }
-            }));
-            setSuggestions(suggestions);
-            setLoading(false);
-            return;
-          }
-        }
-      }
+      // Skip Google Places API due to CORS - use OpenStreetMap instead
+      // Google Places requires server-side proxy to avoid CORS issues
       
       // Fallback to OpenStreetMap
       let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;

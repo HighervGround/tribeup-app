@@ -84,7 +84,6 @@ export const transformUserFromDB = (dbUser: Database['public']['Tables']['users'
       push: true,
       email: false,
       gameReminders: true,
-      messages: true,
     },
     privacy: {
       locationSharing: true,

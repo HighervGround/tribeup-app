@@ -22,6 +22,8 @@ export interface Game {
   date: string;
   time: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   currentPlayers: number;
   maxPlayers: number;
   cost: string;

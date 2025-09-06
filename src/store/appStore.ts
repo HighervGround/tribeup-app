@@ -90,7 +90,7 @@ export interface AppActions {
   initializeAuth: () => Promise<void>;
   
   // Games actions
-  setGames: (games?: Game[]) => Promise<void> | void;
+  setGames: (games: Game[]) => void;
   addGame: (game: Game) => void;
   updateGame: (gameId: string, updates: Partial<Game>) => void;
   joinGame: (gameId: string) => void;
@@ -257,24 +257,15 @@ export const useAppStore = create<AppState & AppActions>()(
       },
       
       // Games actions
-      setGames: async (prefetched?: Game[]) => {
-        const { setLoading, setError } = get();
-        const willFetch = !prefetched;
-        try {
-          if (willFetch) setLoading(true);
-          const games = prefetched ?? await SupabaseService.getGames();
-          set((state) => {
-            state.games = games;
-            // Update derived state
-            const userId = state.user?.id;
-            state.myGames = games.filter(game => game.createdBy === userId || game.isJoined);
-            state.nearbyGames = games.slice(0, 10); // Simplified nearby logic
-          });
-        } catch (error) {
-          setError(error instanceof Error ? error.message : 'Failed to load games');
-        } finally {
-          if (willFetch) setLoading(false);
-        }
+      setGames: (games: Game[]) => {
+        set((state) => {
+          state.games = games;
+          state.isLoading = false;
+          // Update derived state
+          const userId = state.user?.id;
+          state.myGames = games.filter(game => game.createdBy === userId || game.isJoined);
+          state.nearbyGames = games.slice(0, 10); // Simplified nearby logic
+        });
       },
       
       addGame: async (gameData) => {

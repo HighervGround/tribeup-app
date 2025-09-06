@@ -1,16 +1,51 @@
-// Service Worker for Push Notifications
-const CACHE_NAME = 'tribeup-v1';
+// Service Worker - Cache busting version
+const CACHE_NAME = 'tribeup-v' + Date.now();
+const urlsToCache = [
+  '/',
+];
 
-// Install event
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing');
+  // Skip waiting to activate immediately
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
 });
 
-// Activate event
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating');
-  event.waitUntil(self.clients.claim());
+  // Clear old caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  // Only cache GET requests and skip API calls
+  if (event.request.method === 'GET' && !event.request.url.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Always fetch fresh, only cache as backup
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => cache.put(event.request, responseClone));
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache only if network fails
+          return caches.match(event.request);
+        })
+    );
+  }
 });
 
 // Push event - handle incoming push notifications

@@ -26,45 +26,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const DEBUG = typeof window !== 'undefined' && localStorage.getItem('DEBUG_AUTH') === '1';
-    let watchdog: number | undefined;
 
-    // Get initial session
     const getInitialSession = async () => {
+      DEBUG && console.log('[Auth] bootstrap:loading=true');
+      
       try {
-        DEBUG && console.log('[Auth] Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
           return;
         }
-        
+
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
-          // Load user profile in background, don't block loading
+          DEBUG && console.log('[Auth] Found session, loading profile...');
+          
+          // Load user profile in background - don't block auth completion
           SupabaseService.getUserProfile(session.user.id)
-            .then(userProfile => {
-              if (userProfile) {
-                setAppUser(userProfile);
+            .then(profile => {
+              if (profile) {
+                DEBUG && console.log('[Auth] Profile loaded:', profile.id);
+                setAppUser(profile);
               }
             })
-            .catch(async (error) => {
-              console.error('Error loading user profile:', error);
-              // If profile doesn't exist, create one
-              try {
-                await SupabaseService.createUserProfile(session.user.id, {
-                  email: session.user.email,
-                  name: session.user.user_metadata?.full_name || 'User'
-                });
-                const newProfile = await SupabaseService.getUserProfile(session.user.id);
-                if (newProfile) {
-                  setAppUser(newProfile);
-                }
-              } catch (profileError) {
-                console.error('Error creating user profile:', profileError);
-              }
+            .catch(error => {
+              console.error('Error loading profile:', error);
+              // Create a basic user object from auth data
+              setAppUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.full_name || session.user.email || '',
+                username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+                avatar: session.user.user_metadata?.avatar_url || '',
+                preferences: { 
+                  sports: [], 
+                  notifications: { push: true, email: true, gameReminders: true },
+                  theme: 'light',
+                  highContrast: false,
+                  largeText: false,
+                  reducedMotion: false,
+                  keyboardNavigation: false
+                },
+                createdAt: new Date().toISOString(),
+              });
             });
         }
       } catch (error) {
@@ -73,15 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         DEBUG && console.log('[Auth] bootstrap:loading=false');
       }
-    };
-
-    // Watchdog: ensure we never hang
-    watchdog = window.setTimeout(() => {
-      if (loading) {
-        console.warn('[Auth] Watchdog clearing loading due to timeout');
-        setLoading(false);
-      }
-    }, 10000); // Increased timeout to 10 seconds
+    }; 
 
     getInitialSession();
 
@@ -149,7 +148,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       subscription.unsubscribe();
-      if (watchdog) window.clearTimeout(watchdog);
     };
   }, [setAppUser]);
 

@@ -630,38 +630,22 @@ export class SupabaseService {
   }
 
   static subscribeToNotifications(callback: (payload: any) => void) {
-    return supabase
-      .channel('notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications'
-      }, callback)
-      .subscribe();
+    // Temporarily disabled to prevent WebSocket connection failures
+    console.log('Realtime subscriptions disabled to prevent WebSocket failures');
+    return { unsubscribe: () => {} };
   }
 
   // Subscribe to all games (INSERT) to keep the home feed fresh
   static subscribeToAllGames(callback: (payload: any) => void) {
-    return supabase
-      .channel('all_games')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'games'
-      }, callback)
-      .subscribe();
+    // Temporarily disabled to prevent WebSocket connection failures
+    console.log('Realtime subscriptions disabled to prevent WebSocket failures');
+    return { unsubscribe: () => {} };
   }
 
   static subscribeToPublicRSVPs(gameId: string, callback: (payload: any) => void) {
-    return supabase
-      .channel(`public_rsvps:${gameId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'public_rsvps',
-        filter: `game_id=eq.${gameId}`
-      }, callback)
-      .subscribe();
+    // Temporarily disabled to prevent WebSocket connection failures
+    console.log('Realtime subscriptions disabled to prevent WebSocket failures');
+    return { unsubscribe: () => {} };
   }
 
   // Utility methods

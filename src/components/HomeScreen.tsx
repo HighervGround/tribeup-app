@@ -93,9 +93,19 @@ export function HomeScreen() {
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
   const [feedMode, setFeedMode] = useState<'all' | 'recommended'>('all');
 
-  // Load games from Supabase on component mount and when feed mode changes
+  // Load games only once on mount, prevent multiple calls
   useEffect(() => {
-    loadGames();
+    if (games.length === 0 && !isLoading) {
+      loadGames();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle feed mode changes separately
+  useEffect(() => {
+    if (games.length > 0) {
+      loadGames();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedMode]);
 
@@ -135,26 +145,23 @@ export function HomeScreen() {
   }, [setLoading]);
 
   const loadGames = async () => {
-    const label = `Home loadGames (${feedMode}) ${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+    if (isLoading) {
+      console.log('Already loading games, skipping duplicate call');
+      return;
+    }
+    
     setTimedOut(false);
-    console.time?.(label);
+    setLoading(true);
     
     try {
-      setLoading(true);
-      
-      // Direct call without additional timeout - service handles its own timeouts now
       const gamesData = feedMode === 'recommended'
         ? await SupabaseService.getRecommendedGames(userPreferredSports)
         : await SupabaseService.getGames();
-      await setGames(gamesData);
+      setGames(gamesData);
     } catch (error) {
       console.error('Error loading games:', error);
       setTimedOut(true);
-      // Don't clear games - let service fallback handle it
-      await setGames([]);
-    } finally {
-      console.timeEnd?.(label);
-      setLoading(false);
+      setGames([]);
     }
   };
 

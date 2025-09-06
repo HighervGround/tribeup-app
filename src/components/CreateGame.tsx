@@ -44,9 +44,9 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'Game Details', fields: ['sport', 'title', 'description'] },
-  { id: 2, title: 'Date & Time', fields: ['date', 'time', 'duration'] },
-  { id: 3, title: 'Location & Players', fields: ['location', 'maxPlayers', 'cost', 'requirements'] },
+  { id: 1, title: 'Game Details', fields: ['sport', 'title'] },
+  { id: 2, title: 'Date & Time', fields: ['date', 'time'] },
+  { id: 3, title: 'Location & Players', fields: ['location', 'maxPlayers', 'cost'] },
 ];
 
 export function CreateGame() {
@@ -61,19 +61,17 @@ export function CreateGame() {
   const { latitude: userLat, longitude: userLng, error: geoError } = useGeolocation();
   const { suggestions, loading: locationLoading, searchLocations, geocodeLocation } = useLocationSearch();
   
-  const [formData, setFormData] = useState<FormData>({
-    sport: '',
+  const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    sport: '',
     date: '',
     time: '',
-    duration: '',
     location: '',
-    latitude: null,
-    longitude: null,
+    latitude: null as number | null,
+    longitude: null as number | null,
     maxPlayers: '',
-    cost: '',
-    requirements: '',
+    cost: 'Free',
+    imageUrl: ''
   });
 
   // Auto-populate location when GPS is available and location field is empty
@@ -186,7 +184,6 @@ export function CreateGame() {
     if (currentStep === 1) {
       if (!formData.sport) stepErrors.sport = 'Please select a sport.';
       if (!formData.title.trim()) stepErrors.title = 'Game title is required.';
-      if (!formData.description.trim()) stepErrors.description = 'Description is required.';
     }
     if (currentStep === 2) {
       if (!formData.date) stepErrors.date = 'Please choose a date.';
@@ -237,13 +234,17 @@ export function CreateGame() {
       const gameData = {
         title: formData.title,
         sport: formData.sport,
-        location: formData.location,
         date: formData.date,
         time: formData.time,
+        location: formData.location,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        max_players: parseInt(formData.maxPlayers),
         cost: formData.cost || 'Free',
-        maxPlayers: parseInt(formData.maxPlayers),
-        description: formData.description,
-        creatorId: user.id,
+        description: '', // Default empty description
+        requirements: '', // Default empty requirements
+        image_url: formData.imageUrl,
+        creator_id: user.id
       };
       console.log('[CreateGame] creating game with data =', gameData);
       await SupabaseService.createGame(gameData as any);
@@ -366,7 +367,6 @@ export function CreateGame() {
               <CardContent className="space-y-6">
                 {renderField('sport', 'Sport', 'select', sportOptions)}
                 {renderField('title', 'Game Title')}
-                {renderField('description', 'Description', 'textarea')}
               </CardContent>
             </Card>
           </div>
@@ -386,13 +386,6 @@ export function CreateGame() {
               <CardContent className="space-y-6">
                 {renderField('date', 'Date', 'date')}
                 {renderField('time', 'Time', 'time')}
-                {renderField('duration', 'Duration', 'select', [
-                  { value: '30min', label: '30 minutes' },
-                  { value: '1hr', label: '1 hour' },
-                  { value: '1.5hr', label: '1.5 hours' },
-                  { value: '2hr', label: '2 hours' },
-                  { value: '3hr', label: '3 hours' },
-                ])}
               </CardContent>
             </Card>
           </div>
@@ -411,7 +404,7 @@ export function CreateGame() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Enhanced Location Field with GPS */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <label className="text-sm font-medium">Location</label>
                   <div className="relative">
                     <Input

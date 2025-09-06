@@ -31,24 +31,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        DEBUG && console.log('[Auth] getSession:start');
-        const { data: { session } } = await supabase.auth.getSession();
+        DEBUG && console.log('[Auth] Getting initial session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
-        DEBUG && console.log('[Auth] getSession:end', !!session);
         
         if (session?.user) {
-          // Load user profile and initialize app
-          try {
-            const userProfile = await SupabaseService.getUserProfile(session.user.id);
-                            if (userProfile) {
-              setAppUser(userProfile);
-              // Don't call initializeAuth here as it might cause a loop
-            }
-          } catch (error) {
-            console.error('Error loading user profile:', error);
-            // If profile doesn't exist, create one
-            if (session.user) {
+          // Load user profile in background, don't block loading
+          SupabaseService.getUserProfile(session.user.id)
+            .then(userProfile => {
+              if (userProfile) {
+                setAppUser(userProfile);
+              }
+            })
+            .catch(async (error) => {
+              console.error('Error loading user profile:', error);
+              // If profile doesn't exist, create one
               try {
                 await SupabaseService.createUserProfile(session.user.id, {
                   email: session.user.email,
@@ -61,8 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               } catch (profileError) {
                 console.error('Error creating user profile:', profileError);
               }
-            }
-          }
+            });
         }
       } catch (error) {
         console.error('Error getting initial session:', error);
@@ -78,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('[Auth] Watchdog clearing loading due to timeout');
         setLoading(false);
       }
-    }, 5000);
+    }, 10000); // Increased timeout to 10 seconds
 
     getInitialSession();
 

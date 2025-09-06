@@ -15,6 +15,18 @@ export class PhotoService {
   private static readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private static readonly ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+  // One-click upload - no validation needed, auto-compress
+  static async quickUpload(gameId: string, file: File): Promise<GamePhoto | null> {
+    try {
+      // Auto-compress and upload in one step
+      const compressedFile = await this.compressImage(file);
+      return await this.uploadGamePhoto(gameId, compressedFile);
+    } catch (error) {
+      console.error('Quick upload failed:', error);
+      return null;
+    }
+  }
+
   // Upload photo for a game
   static async uploadGamePhoto(
     gameId: string, 
@@ -22,8 +34,9 @@ export class PhotoService {
     caption?: string
   ): Promise<GamePhoto | null> {
     try {
-      // Validate file
-      if (!this.validateFile(file)) {
+      // Auto-validate and compress
+      const processedFile = this.validateFile(file) ? file : await this.compressImage(file);
+      if (!processedFile) {
         throw new Error('Invalid file type or size');
       }
 

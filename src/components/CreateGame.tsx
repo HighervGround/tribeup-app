@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -60,6 +60,7 @@ export function CreateGame() {
   // Location hooks
   const { latitude: userLat, longitude: userLng, error: geoError } = useGeolocation();
   const { suggestions, loading: locationLoading, searchLocations, geocodeLocation } = useLocationSearch();
+  
   const [formData, setFormData] = useState<FormData>({
     sport: '',
     title: '',
@@ -74,6 +75,39 @@ export function CreateGame() {
     cost: '',
     requirements: '',
   });
+
+  // Auto-populate location when GPS is available and location field is empty
+  useEffect(() => {
+    if (userLat && userLng && !formData.location && !formData.latitude) {
+      // Auto-fill with coordinates and try to get address
+      const autoFillLocation = async () => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
+          );
+          const data = await response.json();
+          const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+          
+          setFormData(prev => ({
+            ...prev,
+            location: address,
+            latitude: userLat,
+            longitude: userLng
+          }));
+        } catch (error) {
+          // Fallback to coordinates if reverse geocoding fails
+          setFormData(prev => ({
+            ...prev,
+            location: `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
+            latitude: userLat,
+            longitude: userLng
+          }));
+        }
+      };
+      
+      autoFillLocation();
+    }
+  }, [userLat, userLng, formData.location, formData.latitude]);
 
   const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -324,7 +358,7 @@ export function CreateGame() {
                       onChange={(e) => {
                         handleInputChange('location', e.target.value);
                         if (e.target.value.length > 2) {
-                          searchLocations(e.target.value);
+                          searchLocations(e.target.value, userLat || undefined, userLng || undefined);
                           setShowLocationSuggestions(true);
                         } else {
                           setShowLocationSuggestions(false);
@@ -413,14 +447,21 @@ export function CreateGame() {
                   
                   {/* Location Status */}
                   {formData.latitude && formData.longitude && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm text-green-600">
                       <MapPin className="w-3 h-3" />
-                      <span>Location coordinates saved</span>
+                      <span>📍 Location coordinates saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
+                    </div>
+                  )}
+                  
+                  {userLat && userLng && !formData.latitude && (
+                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <Navigation className="w-3 h-3" />
+                      <span>🎯 Your location detected - use GPS button to auto-fill</span>
                     </div>
                   )}
                   
                   {geoError && (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-amber-600">
                       📍 {geoError}
                     </div>
                   )}

@@ -44,8 +44,8 @@ export function useLocationSearch() {
     }
   }, []);
 
-  // Search for location suggestions
-  const searchLocations = useCallback(async (query: string) => {
+  // Search for location suggestions with proximity bias
+  const searchLocations = useCallback(async (query: string, userLat?: number, userLng?: number) => {
     if (!query.trim()) {
       setSuggestions([]);
       return;
@@ -53,8 +53,30 @@ export function useLocationSearch() {
 
     setLoading(true);
     try {
-      // For demo purposes, we'll create mock suggestions
-      // In production, integrate with Google Places API
+      // Use OpenStreetMap Nominatim for real location search
+      let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+      
+      // Add proximity bias if user location is available
+      if (userLat && userLng) {
+        searchUrl += `&lat=${userLat}&lon=${userLng}&bounded=1&viewbox=${userLng-0.1},${userLat+0.1},${userLng+0.1},${userLat-0.1}`;
+      }
+      
+      const response = await fetch(searchUrl);
+      const data = await response.json();
+      
+      const suggestions: LocationSuggestion[] = data.map((place: any, index: number) => ({
+        place_id: place.place_id || `osm-${index}`,
+        description: place.display_name,
+        structured_formatting: {
+          main_text: place.name || place.display_name.split(',')[0],
+          secondary_text: place.display_name.split(',').slice(1, 3).join(',').trim()
+        }
+      }));
+
+      setSuggestions(suggestions);
+    } catch (error) {
+      console.error('Location search error:', error);
+      // Fallback to mock suggestions
       const mockSuggestions: LocationSuggestion[] = [
         {
           place_id: '1',
@@ -81,13 +103,7 @@ export function useLocationSearch() {
           }
         }
       ];
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
       setSuggestions(mockSuggestions);
-    } catch (error) {
-      console.error('Location search error:', error);
-      setSuggestions([]);
     } finally {
       setLoading(false);
     }

@@ -41,13 +41,33 @@ function WeatherInfo({ game }: { game: any }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (game.latitude && game.longitude) {
-      const gameDateTime = new Date(`${game.date} ${game.time}`);
-      WeatherService.getGameWeather(game.latitude, game.longitude, gameDateTime)
-        .then(setWeather)
-        .finally(() => setLoading(false));
-    }
-  }, [game.latitude, game.longitude, game.date, game.time]);
+    const getWeatherData = async () => {
+      if (game.latitude && game.longitude) {
+        // Use exact coordinates
+        const gameDateTime = new Date(`${game.date} ${game.time}`);
+        const weatherData = await WeatherService.getGameWeather(game.latitude, game.longitude, gameDateTime);
+        setWeather(weatherData);
+      } else if (game.location) {
+        // Geocode location to get coordinates
+        try {
+          const response = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(game.location)}&limit=1&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`);
+          const locations = await response.json();
+          
+          if (locations && locations.length > 0) {
+            const { lat, lon } = locations[0];
+            const gameDateTime = new Date(`${game.date} ${game.time}`);
+            const weatherData = await WeatherService.getGameWeather(lat, lon, gameDateTime);
+            setWeather(weatherData);
+          }
+        } catch (error) {
+          console.error('Weather geocoding error:', error);
+        }
+      }
+      setLoading(false);
+    };
+
+    getWeatherData();
+  }, [game.latitude, game.longitude, game.location, game.date, game.time]);
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">Loading weather...</div>;
@@ -408,30 +428,22 @@ export function GameDetails() {
               </div>
               
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                {game.latitude && game.longitude ? (
+                {(game.latitude && game.longitude) || game.location ? (
                   <iframe
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${game.longitude - 0.01},${game.latitude - 0.01},${game.longitude + 0.01},${game.latitude + 0.01}&layer=mapnik&marker=${game.latitude},${game.longitude}`}
+                    src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY || ''}&q=${
+                      game.latitude && game.longitude 
+                        ? `${game.latitude},${game.longitude}` 
+                        : encodeURIComponent(game.location)
+                    }&zoom=15`}
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
                     className="rounded-lg"
                     title="Game location map"
                   />
-                ) : game.location ? (
-                  <div className="p-6 text-center">
-                    <MapPin className="w-8 h-8 mx-auto mb-3 text-primary" />
-                    <div className="text-sm font-medium mb-2">Location</div>
-                    <div className="text-muted-foreground mb-4">{game.location}</div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleDirections}
-                      className="gap-2"
-                    >
-                      <Navigation className="w-4 h-4" />
-                      Get Directions
-                    </Button>
-                  </div>
                 ) : (
                   <div className="text-center text-muted-foreground">
                     <MapPin className="w-8 h-8 mx-auto mb-2" />
@@ -455,7 +467,7 @@ export function GameDetails() {
         </Card>
 
         {/* Weather */}
-        {game.latitude && game.longitude && (
+        {((game.latitude && game.longitude) || game.location) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

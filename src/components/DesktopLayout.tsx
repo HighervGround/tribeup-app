@@ -149,7 +149,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         {/* User Profile */}
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3">
-            <Avatar>
+            <Avatar className="cursor-pointer" onClick={() => navigate('/profile')}>
               <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             {!sidebarCollapsed && (

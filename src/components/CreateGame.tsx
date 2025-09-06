@@ -94,9 +94,20 @@ export function CreateGame() {
       const autoFillLocation = async () => {
         try {
           console.log('Fetching reverse geocoding for:', userLat, userLng);
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1`
-          );
+          
+          // Try Google Geocoding API first if available
+          const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY;
+          let response;
+          
+          if (googleApiKey) {
+            response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${userLat},${userLng}&key=${googleApiKey}`
+            );
+          } else {
+            response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1`
+            );
+          }
           
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -107,7 +118,12 @@ export function CreateGame() {
           
           // Create a more readable address
           let address = '';
-          if (data.address) {
+          
+          if (googleApiKey && data.results && data.results.length > 0) {
+            // Google Geocoding API response
+            address = data.results[0].formatted_address;
+          } else if (data.address) {
+            // OpenStreetMap response
             const parts: string[] = [];
             if (data.address.house_number && data.address.road) {
               parts.push(`${data.address.house_number} ${data.address.road}`);

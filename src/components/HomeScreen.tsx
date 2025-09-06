@@ -162,6 +162,8 @@ export function HomeScreen() {
       console.error('Error loading games:', error);
       setTimedOut(true);
       setGames([]);
+    } finally {
+      setLoading(false);
     }
   };
 

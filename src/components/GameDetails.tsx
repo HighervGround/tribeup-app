@@ -84,16 +84,6 @@ export function GameDetails() {
       disabled: !game || isLoading
     },
     {
-      key: 'm',
-      description: 'Open group chat',
-      action: () => {
-        if (game) {
-          handleChat();
-        }
-      },
-      disabled: !game
-    },
-    {
       key: 'u',
       description: 'Share game',
       action: () => {
@@ -243,7 +233,6 @@ export function GameDetails() {
               Shortcuts:
             </span>
             <span>J = Join/Leave</span>
-            <span>M = Chat</span>
             <span>U = Share</span>
             <span>L = Directions</span>
             <span>? = All shortcuts</span>
@@ -354,11 +343,23 @@ export function GameDetails() {
               </div>
               
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <ImageWithFallback
-                  src="https://images.unsplash.com/photo-1694928850410-b209896782a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwY2FtcHVzJTIwbWFwfGVufDF8fHx8MTc1NjIyMjUxOXww&ixlib=rb-4.1.0&q=80&w=1080"
-                  alt="Location map"
-                  className="w-full h-full object-cover rounded-lg"
-                />
+                {game.latitude && game.longitude ? (
+                  <iframe
+                    src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY || ''}&q=${game.latitude},${game.longitude}&zoom=15`}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="rounded-lg"
+                  />
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    <MapPin className="w-8 h-8 mx-auto mb-2" />
+                    <p>Map not available</p>
+                  </div>
+                )}
               </div>
               
               <Button 
@@ -452,16 +453,6 @@ export function GameDetails() {
           <CardHeader>
             <div className="flex items-center justify-between">
                               <CardTitle>Players ({players.length}/{game.maxPlayers})</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleChat}
-                data-action="group-chat"
-                title="Open group chat (M)"
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Group Chat
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -512,7 +503,7 @@ export function GameDetails() {
         {game.isJoined && (
           <Alert className="border-success text-success-foreground">
             <AlertDescription>
-              You're joined! Check the group chat for updates and coordinate with other players.
+              You're joined! See you on the field!
             </AlertDescription>
           </Alert>
         )}

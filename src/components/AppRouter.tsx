@@ -16,7 +16,6 @@ const UserProfile = lazy(() => import('./UserProfile').then(module => ({ default
 const EditProfile = lazy(() => import('./EditProfile').then(module => ({ default: module.EditProfile })));
 const Onboarding = lazy(() => import('./Onboarding').then(module => ({ default: module.Onboarding })));
 const GameDetails = lazy(() => import('./GameDetails').then(module => ({ default: module.GameDetails })));
-const ChatMessaging = lazy(() => import('./ChatMessaging').then(module => ({ default: module.ChatMessaging })));
 const OtherUserProfile = lazy(() => import('./OtherUserProfile').then(module => ({ default: module.OtherUserProfile })));
 const NotificationCenter = lazy(() => import('./NotificationCenter').then(module => ({ default: module.NotificationCenter })));
 const Settings = lazy(() => import('./Settings').then(module => ({ default: module.Settings })));
@@ -168,8 +167,6 @@ export function AppRouter() {
                 {/* Game Routes */}
                 <Route path="game/:gameId" element={<GameDetails />} />
 
-                {/* Chat Routes */}
-                <Route path="chat/:type/:id" element={<ChatMessaging />} />
 
                 {/* User Profile Routes */}
                 <Route path="user/:userId" element={<OtherUserProfile />} />

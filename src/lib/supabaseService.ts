@@ -238,30 +238,51 @@ export class SupabaseService {
 
   // Games methods - Ultra-fast direct query
   static async getGames(): Promise<Game[]> {
-    const timeLabel = `SupabaseService.getGames ${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
-    console.time?.(timeLabel);
+    const startTime = performance.now();
+    console.log('🚀 Starting getGames...');
     
     try {
-      // Skip session check entirely for speed - just get games
+      const queryStart = performance.now();
       const { data: gamesData, error } = await supabase
         .from('games')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
         .order('created_at', { ascending: false })
         .limit(20);
+      
+      const queryTime = performance.now() - queryStart;
+      console.log(`📊 Supabase query took: ${queryTime.toFixed(2)}ms`);
 
       if (error) throw error;
       
-      // Transform without join status for speed
-      const games = (gamesData || []).map((game: any) => transformGameFromDB(game, false));
+      const transformStart = performance.now();
+      const games = (gamesData || []).map((game: any) => ({
+        id: game.id,
+        title: game.title,
+        sport: game.sport,
+        date: game.date,
+        time: game.time,
+        location: game.location,
+        cost: game.cost,
+        maxPlayers: game.max_players,
+        currentPlayers: game.current_players,
+        description: game.description,
+        imageUrl: game.image_url,
+        creatorId: game.creator_id,
+        isJoined: false
+      }));
       
-      console.log(`✅ Loaded ${games.length} games in`, timeLabel);
+      const transformTime = performance.now() - transformStart;
+      const totalTime = performance.now() - startTime;
+      
+      console.log(`⚡ Transform took: ${transformTime.toFixed(2)}ms`);
+      console.log(`✅ Total getGames took: ${totalTime.toFixed(2)}ms`);
+      console.log(`📦 Returned ${games.length} games`);
+      
       return games;
       
     } catch (error) {
-      console.error('[SupabaseService.getGames] Error:', error);
+      console.error('❌ getGames error:', error);
       return this.getMockGames();
-    } finally {
-      console.timeEnd?.(timeLabel);
     }
   }
 

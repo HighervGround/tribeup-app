@@ -204,12 +204,6 @@ export function AccessibilitySettings() {
       icon: MousePointer,
       items: [
         {
-          key: 'keyboardNavigation' as const,
-          label: 'Enhanced Keyboard Navigation',
-          description: 'Improved keyboard shortcuts and navigation',
-          type: 'switch' as const,
-        },
-        {
           key: 'focusIndicators' as const,
           label: 'Enhanced Focus Indicators',
           description: 'More visible focus outlines',
@@ -446,9 +440,6 @@ export function AccessibilitySettings() {
                   </Button>
                   <Button variant="outline" size="sm">
                     Accessibility Guide
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Keyboard Shortcuts
                   </Button>
                 </div>
               </div>

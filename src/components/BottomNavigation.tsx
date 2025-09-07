@@ -75,7 +75,7 @@ export function BottomNavigation() {
       </div>
       
       {/* Bottom safe area for mobile devices */}
-      <div className="h-safe-area-inset-bottom bg-background/95" />
+      <div className="pb-safe bg-background/95" />
     </div>
   );
 }

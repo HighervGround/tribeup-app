@@ -44,9 +44,9 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'Game Details', fields: ['sport', 'title'] },
-  { id: 2, title: 'Date & Time', fields: ['date', 'time'] },
-  { id: 3, title: 'Location & Players', fields: ['location', 'maxPlayers', 'cost'] },
+  { id: 1, title: 'When & Where', fields: ['date', 'time', 'location'] },
+  { id: 2, title: 'Game Details', fields: ['sport', 'title'] },
+  { id: 3, title: 'Players & Cost', fields: ['maxPlayers', 'cost'] },
 ];
 
 export function CreateGame() {
@@ -77,7 +77,7 @@ export function CreateGame() {
     latitude: null as number | null,
     longitude: null as number | null,
     maxPlayers: '',
-    cost: 'Free',
+    cost: 'FREE',
     imageUrl: ''
   });
 
@@ -417,12 +417,9 @@ export function CreateGame() {
   const validateCurrentStep = (): boolean => {
     const stepErrors: Record<string, string> = {};
     if (currentStep === 1) {
-      if (!formData.sport) stepErrors.sport = 'Please select a sport.';
-      if (!formData.title.trim()) stepErrors.title = 'Game title is required.';
-    }
-    if (currentStep === 2) {
       if (!formData.date) stepErrors.date = 'Please choose a date.';
       if (!formData.time) stepErrors.time = 'Please choose a time.';
+      if (!formData.location.trim()) stepErrors.location = 'Location is required.';
       if (formData.date) {
         const today = new Date();
         const chosen = new Date(formData.date + 'T00:00:00');
@@ -431,8 +428,11 @@ export function CreateGame() {
         }
       }
     }
+    if (currentStep === 2) {
+      if (!formData.sport) stepErrors.sport = 'Please select a sport.';
+      if (!formData.title.trim()) stepErrors.title = 'Game title is required.';
+    }
     if (currentStep === 3) {
-      if (!formData.location.trim()) stepErrors.location = 'Location is required.';
       const mp = parseInt(formData.maxPlayers, 10);
       if (!formData.maxPlayers) stepErrors.maxPlayers = 'Max players is required.';
       else if (Number.isNaN(mp) || mp <= 0) stepErrors.maxPlayers = 'Enter a valid number greater than 0.';
@@ -636,56 +636,7 @@ export function CreateGame() {
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
                     1
                   </div>
-                  Game Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {renderField('sport', 'Sport', 'select', sportOptions)}
-                
-                {/* Editable Title Field */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Game Title</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (formData.sport && (formData.time || formData.location)) {
-                          const newTitle = generateGameTitle(formData.sport, formData.time, formData.location);
-                          handleInputChange('title', newTitle);
-                        }
-                      }}
-                      className="text-xs text-primary hover:underline"
-                      disabled={!formData.sport}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="Enter game title or let it auto-generate"
-                    className="transition-colors"
-                  />
-                  {formData.title && (
-                    <p className="text-xs text-muted-foreground">
-                      Title will auto-update when you change sport, time, or location
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
-                    2
-                  </div>
-                  Date & Time
+                  When & Where
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -732,6 +683,201 @@ export function CreateGame() {
                   </div>
                   {errors.time && (
                     <p className="text-red-500 dark:text-red-400 text-sm">{errors.time}</p>
+                  )}
+                </div>
+
+                {/* Enhanced Location Field with GPS and Recent Locations */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Location
+                  </label>
+                  
+                  {/* Recent Locations */}
+                  {recentLocations.length > 0 && (
+                    <div className="mb-3">
+                      <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {recentLocations.map((location, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleInputChange('location', location)}
+                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                              formData.location === location
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            {location.split(',')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Location Input Field */}
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Input
+                      value={formData.location}
+                      onChange={(e) => {
+                        handleInputChange('location', e.target.value);
+                        if (e.target.value.length > 2) {
+                          searchLocations(e.target.value, userLat || undefined, userLng || undefined);
+                          setShowLocationSuggestions(true);
+                        } else {
+                          setShowLocationSuggestions(false);
+                        }
+                      }}
+                      placeholder="Enter location or address"
+                      className={errors.location ? 'border-destructive' : ''}
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
+                      {locationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={async () => {
+                          if (userLat && userLng) {
+                            // Use reverse geocoding to get address from coordinates
+                            try {
+                              const response = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
+                              );
+                              const data = await response.json();
+                              const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+                              setFormData(prev => ({
+                                ...prev,
+                                location: address,
+                                latitude: userLat,
+                                longitude: userLng
+                              }));
+                            } catch (error) {
+                              console.error('Reverse geocoding failed:', error);
+                              setFormData(prev => ({
+                                ...prev,
+                                location: `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
+                                latitude: userLat,
+                                longitude: userLng
+                              }));
+                            }
+                          }
+                        }}
+                        disabled={!userLat || !userLng}
+                        title={userLat && userLng ? "Use my current location" : geoError || "Location not available"}
+                      >
+                        <Navigation className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Location Suggestions */}
+                  {showLocationSuggestions && suggestions.length > 0 && (
+                    <div className="border border-border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto">
+                      {suggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.place_id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
+                          onClick={async () => {
+                            setFormData(prev => ({ ...prev, location: suggestion.description }));
+                            setShowLocationSuggestions(false);
+                            
+                            // Try to geocode the selected location
+                            const coords = await geocodeLocation(suggestion.description);
+                            if (coords) {
+                              setFormData(prev => ({
+                                ...prev,
+                                latitude: coords.lat,
+                                longitude: coords.lng
+                              }));
+                            }
+                          }}
+                        >
+                          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <div>
+                            <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
+                            <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {errors.location && (
+                    <p className="text-sm text-destructive">{errors.location}</p>
+                  )}
+                  
+                  {/* Location Status */}
+                  {formData.latitude && formData.longitude && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                      <MapPin className="w-3 h-3" />
+                      <span>📍 Location coordinates saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
+                    </div>
+                  )}
+                  
+                  {userLat && userLng && !formData.latitude && (
+                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                      <Navigation className="w-3 h-3" />
+                      <span>🎯 Your location detected - use GPS button to auto-fill</span>
+                    </div>
+                  )}
+                  
+                  {geoError && (
+                    <div className="text-sm text-amber-600">
+                      📍 {geoError}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
+                    2
+                  </div>
+                  Game Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {renderField('sport', 'Sport', 'select', sportOptions)}
+                
+                {/* Editable Title Field */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Game Title</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (formData.sport && (formData.time || formData.location)) {
+                          const newTitle = generateGameTitle(formData.sport, formData.time, formData.location);
+                          handleInputChange('title', newTitle);
+                        }
+                      }}
+                      className="text-xs text-primary hover:underline"
+                      disabled={!formData.sport}
+                    >
+                      Regenerate
+                    </button>
+                  </div>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    placeholder="Enter game title or let it auto-generate"
+                    className="transition-colors"
+                  />
+                  {formData.title && (
+                    <p className="text-xs text-muted-foreground">
+                      Title will auto-update when you change sport, time, or location
+                    </p>
                   )}
                 </div>
               </CardContent>

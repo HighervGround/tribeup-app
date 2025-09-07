@@ -19,13 +19,11 @@ import {
   Star,
   Navigation,
   Loader2,
-  Keyboard
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useGames, useAppLoading, useAppStore } from '../store/appStore';
 import { useGameActions } from '../hooks/useGameActions';
 import { useDeepLinks } from '../hooks/useDeepLinks';
-import { useCustomShortcuts } from '../hooks/useKeyboardShortcuts';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { toast } from 'sonner';
@@ -248,39 +246,6 @@ export function GameDetails() {
     }
   }, [gameId]);
   
-  // Set up custom keyboard shortcuts for this component
-  useCustomShortcuts([
-    {
-      key: 'j',
-      description: 'Join/Leave game',
-      action: () => {
-        if (game && !isLoading) {
-          handleJoinLeave();
-        }
-      },
-      disabled: !game || isLoading
-    },
-    {
-      key: 'u',
-      description: 'Share game',
-      action: () => {
-        if (game) {
-          handleShare();
-        }
-      },
-      disabled: !game
-    },
-    {
-      key: 'l',
-      description: 'Get directions',
-      action: () => {
-        if (game) {
-          handleDirections();
-        }
-      },
-      disabled: !game
-    }
-  ]);
   
   if (!game) {
     return (
@@ -399,19 +364,6 @@ export function GameDetails() {
           </div>
         </div>
 
-        {/* Keyboard shortcuts hint for desktop */}
-        <div className="hidden lg:block px-4 pb-2">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Keyboard className="w-3 h-3" />
-              Shortcuts:
-            </span>
-            <span>J = Join/Leave</span>
-            <span>U = Share</span>
-            <span>L = Directions</span>
-            <span>? = All shortcuts</span>
-          </div>
-        </div>
       </div>
 
       <div className="px-4 py-6 space-y-6" id="main-content">

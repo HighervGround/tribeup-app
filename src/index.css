@@ -482,6 +482,39 @@
     }
   }
 
+  /* Mobile-first responsive utilities */
+  .xs\:hidden {
+    display: none;
+  }
+
+  .xs\:inline {
+    display: inline;
+  }
+
+  @media (width >= 475px) {
+    .xs\:hidden {
+      display: revert;
+    }
+    
+    .xs\:inline {
+      display: revert;
+    }
+  }
+
+  /* Safe area utilities for mobile devices */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Touch manipulation for better mobile interaction */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, :before, :after {
       transition-duration: .01ms !important;

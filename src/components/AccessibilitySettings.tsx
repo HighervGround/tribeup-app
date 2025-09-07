@@ -28,7 +28,6 @@ interface AccessibilityPreferences {
   largeText: boolean;
   reducedMotion: boolean;
   colorBlindFriendly: boolean;
-  keyboardNavigation: boolean;
   screenReader: boolean;
   focusIndicators: boolean;
   theme: 'light' | 'dark' | 'auto';
@@ -41,7 +40,6 @@ const defaultPreferences: AccessibilityPreferences = {
   largeText: false,
   reducedMotion: false,
   colorBlindFriendly: false,
-  keyboardNavigation: true,
   screenReader: false,
   focusIndicators: true,
   theme: 'auto',

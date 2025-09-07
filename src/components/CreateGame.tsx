@@ -474,34 +474,11 @@ export function CreateGame() {
               <CardContent className="space-y-6">
                 {renderField('date', 'Date', 'date')}
                 
-                {/* Enhanced Location Field with GPS and Recent Locations */}
+                {/* Time field with quick buttons */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Location
+                    Time
                   </label>
-                  
-                  {/* Recent Locations */}
-                  {recentLocations.length > 0 && (
-                    <div className="mb-3">
-                      <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {recentLocations.map((location, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => handleInputChange('location', location)}
-                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                              formData.location === location
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                            }`}
-                          >
-                            {location.split(',')[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   <div className="space-y-3">
                     <input
                       type="time"
@@ -555,9 +532,37 @@ export function CreateGame() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Enhanced Location Field with GPS */}
+                {/* Enhanced Location Field with GPS and Recent Locations */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Location
+                  </label>
+                  
+                  {/* Recent Locations */}
+                  {recentLocations.length > 0 && (
+                    <div className="mb-3">
+                      <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {recentLocations.map((location, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleInputChange('location', location)}
+                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                              formData.location === location
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            {location.split(',')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Location Input Field */}
                 <div className="space-y-4">
-                  <label className="text-sm font-medium">Location</label>
                   <div className="relative">
                     <Input
                       value={formData.location}

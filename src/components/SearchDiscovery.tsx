@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SupabaseService } from '../lib/supabaseService';
+import { useGeolocation } from '../hooks/useGeolocation';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -69,6 +70,7 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
 
 export function SearchDiscovery() {
   const navigate = useNavigate();
+  const { latitude: userLat, longitude: userLng } = useGeolocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -253,7 +255,7 @@ export function SearchDiscovery() {
             {/* Interactive Google Map */}
             <div className="h-96 rounded-lg overflow-hidden bg-muted">
               <iframe
-                src={`https://www.google.com/maps/embed/v1/search?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}&q=sports+facilities+near+me&zoom=12`}
+                src={`https://www.google.com/maps/embed/v1/search?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}&q=sports+facilities+near+me${userLat && userLng ? `&center=${userLat},${userLng}` : ''}&zoom=12`}
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}

@@ -44,7 +44,7 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'Game Details', fields: ['sport', 'title'] },
+  { id: 1, title: 'Game Details', fields: ['sport'] },
   { id: 2, title: 'Date & Time', fields: ['date', 'time'] },
   { id: 3, title: 'Location & Players', fields: ['location', 'maxPlayers', 'cost'] },
 ];
@@ -61,10 +61,17 @@ export function CreateGame() {
   const { latitude: userLat, longitude: userLng, error: geoError } = useGeolocation();
   const { suggestions, loading: locationLoading, searchLocations, geocodeLocation } = useLocationSearch();
   
+  // Smart defaults
+  const getDefaultDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+  
   const [formData, setFormData] = useState({
     title: '',
     sport: '',
-    date: '',
+    date: getDefaultDate(), // Default to tomorrow
     time: '',
     location: '',
     latitude: null as number | null,
@@ -93,10 +100,26 @@ export function CreateGame() {
     crossfit: { maxPlayers: 12 }
   };
 
-  // Popular time slots
-  const popularTimes = [
-    '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
-  ];
+  // Smart time suggestions based on current time and day
+  const getSmartTimes = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    
+    if (isWeekend) {
+      // Weekend: suggest morning and afternoon times
+      return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
+    } else {
+      // Weekday: suggest evening times after work
+      if (currentHour < 17) {
+        return ['17:00', '18:00', '19:00', '20:00', '21:00'];
+      } else {
+        return ['18:00', '19:00', '20:00', '21:00'];
+      }
+    }
+  };
+  
+  const popularTimes = getSmartTimes();
 
   // Recent locations (stored in localStorage)
   const [recentLocations, setRecentLocations] = useState<string[]>(() => {
@@ -258,20 +281,36 @@ export function CreateGame() {
       return newData;
     });
     
-    // Clear error on change
+    // Clear error on change and auto-advance if field is complete
     if (errors[name]) {
       setErrors(prev => {
         const { [name]: _removed, ...rest } = prev;
         return rest;
       });
     }
+    
+    // Auto-advance to next step when current step is complete
+    setTimeout(() => {
+      if (isStepComplete(currentStep)) {
+        if (currentStep < steps.length) {
+          setCurrentStep(currentStep + 1);
+        }
+      }
+    }, 500);
+  };
+  
+  const isStepComplete = (step: number): boolean => {
+    const stepFields = steps[step - 1]?.fields || [];
+    return stepFields.every(field => {
+      const value = formData[field as keyof typeof formData];
+      return value && value.toString().trim() !== '';
+    });
   };
 
   const validateCurrentStep = (): boolean => {
     const stepErrors: Record<string, string> = {};
     if (currentStep === 1) {
       if (!formData.sport) stepErrors.sport = 'Please select a sport.';
-      if (!formData.title.trim()) stepErrors.title = 'Game title is required.';
     }
     if (currentStep === 2) {
       if (!formData.date) stepErrors.date = 'Please choose a date.';
@@ -454,7 +493,6 @@ export function CreateGame() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {renderField('sport', 'Sport', 'select', sportOptions)}
-                {renderField('title', 'Game Title')}
               </CardContent>
             </Card>
           </div>
@@ -487,7 +525,9 @@ export function CreateGame() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                     <div className="flex flex-wrap gap-2">
-                      <span className="text-xs text-gray-500 w-full">Popular times:</span>
+                      <span className="text-xs text-gray-500 w-full">
+                        {new Date().getDay() === 0 || new Date().getDay() === 6 ? 'Weekend times:' : 'Evening times:'}
+                      </span>
                       {popularTimes.map(time => {
                         const hour = parseInt(time.split(':')[0]);
                         const period = hour >= 12 ? 'PM' : 'AM';
@@ -689,47 +729,118 @@ export function CreateGame() {
                 ])}
                 {renderField('requirements', 'Requirements (Optional)', 'textarea')}
               </CardContent>
-            </Card>
+
+<div className="space-y-6">
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
+          3
+        </div>
+        Location & Players
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-6">
+      {/* Enhanced Location Field with GPS and Recent Locations */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Location
+        </label>
+        
+        {/* Recent Locations */}
+        {recentLocations.length > 0 && (
+          <div className="mb-3">
+            <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
+            <div className="flex flex-wrap gap-2">
+              {recentLocations.map((location, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleInputChange('location', location)}
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                    formData.location === location
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  {location.split(',')[0]}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-
-        {/* Sticky Actions */}
-        <div className="sticky bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border px-4 py-4 mt-8">
-          <div className="flex gap-3">
-            <Button 
-              variant="outline" 
-              onClick={handleBack}
-              className="w-auto px-4"
-              disabled={isSubmitting}
-            >
-              {currentStep === 1 ? 'Cancel' : 'Back'}
-            </Button>
-            
-            {currentStep < steps.length ? (
-            <Button onClick={handleNext} className="flex-1" disabled={isSubmitting || Object.keys(errors).length > 0}>
-              Next Step
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating Game...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Create Game
-                </>
-              )}
-            </Button>
-          )}
+        
+        {/* Location Input Field */}
+        <div className="space-y-4">
+          <div className="relative">
+            <Input
+              value={formData.location}
+              onChange={(e) => {
+                handleInputChange('location', e.target.value);
+                if (e.target.value.length > 2) {
+                  searchLocations(e.target.value, userLat || undefined, userLng || undefined);
+                  setShowLocationSuggestions(true);
+                } else {
+                  setShowLocationSuggestions(false);
+                }
+              }}
+              placeholder="Enter location or address"
+              className={errors.location ? 'border-destructive' : ''}
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
+              {locationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={async () => {
+                  if (userLat && userLng) {
+                    try {
+                      const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
+                      );
+                      const data = await response.json();
+                      const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+                      setFormData(prev => ({
+                        ...prev,
+                        location: address,
+                        latitude: userLat,
+                        longitude: userLng
+                      }));
+                    } catch (error) {
+                      console.error('Reverse geocoding failed:', error);
+                      setFormData(prev => ({
+                        ...prev,
+                        location: `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
+                        latitude: userLat,
+                        longitude: userLng
+                      }));
+                    }
+                  }
+                }}
+                disabled={!userLat || !userLng}
+                title={userLat && userLng ? "Use my current location" : geoError || "Location not available"}
+              >
+                <Navigation className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
+          {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
         </div>
+
+        {renderField('maxPlayers', 'Max Players')}
+        {renderField('cost', 'Cost', 'select', [
+          { value: 'Free', label: 'Free' },
+          { value: '$5', label: '$5 per person' },
+          { value: '$10', label: '$10 per person' },
+          { value: '$15', label: '$15 per person' },
+          { value: '$20', label: '$20 per person' },
+        ])}
+      </CardContent>
+    </Card>
+  </div>
+)}
 
         {/* Form Summary (Step 3) */}
         {submitError && (
@@ -751,6 +862,54 @@ export function CreateGame() {
             </Alert>
           </div>
         )}
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center px-4 py-4 border-t border-border bg-background">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 1}
+          >
+            Back
+          </Button>
+          
+          <div className="flex gap-2">
+            {currentStep < steps.length ? (
+              <Button 
+                onClick={handleNext} 
+                disabled={!validateCurrentStep()}
+                className={validateCurrentStep() ? 'bg-green-600 hover:bg-green-700' : ''}
+              >
+                {validateCurrentStep() ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Continue
+                  </>
+                ) : (
+                  'Next'
+                )}
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleSubmit} 
+                disabled={loading || !validateCurrentStep()}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Create Game
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

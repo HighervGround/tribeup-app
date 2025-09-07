@@ -249,23 +249,6 @@ export function SearchDiscovery() {
                 </Button>
               </div>
             )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Interactive Google Map */}
-            <div className="h-96 rounded-lg overflow-hidden bg-muted">
-              <iframe
-                src={`https://www.google.com/maps/embed/v1/search?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}&q=sports+facilities+near+me${userLat && userLng ? `&center=${userLat},${userLng}` : ''}&zoom=12`}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Sports Facilities Map"
-              />
-            </div>
-
             {/* Game List Below Map */}
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">

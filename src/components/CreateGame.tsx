@@ -74,6 +74,39 @@ export function CreateGame() {
     imageUrl: ''
   });
 
+  // Sport-based defaults
+  const sportDefaults = {
+    basketball: { maxPlayers: 10 },
+    soccer: { maxPlayers: 22 },
+    football: { maxPlayers: 22 },
+    tennis: { maxPlayers: 4 },
+    volleyball: { maxPlayers: 12 },
+    baseball: { maxPlayers: 18 },
+    hockey: { maxPlayers: 12 },
+    badminton: { maxPlayers: 4 },
+    pickleball: { maxPlayers: 4 },
+    golf: { maxPlayers: 4 },
+    running: { maxPlayers: 20 },
+    cycling: { maxPlayers: 15 },
+    swimming: { maxPlayers: 8 },
+    yoga: { maxPlayers: 15 },
+    crossfit: { maxPlayers: 12 }
+  };
+
+  // Popular time slots
+  const popularTimes = [
+    '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
+  ];
+
+  // Recent locations (stored in localStorage)
+  const [recentLocations, setRecentLocations] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('recentGameLocations') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   // Auto-populate location when GPS is available and location field is empty
   useEffect(() => {
     console.log('Location effect triggered:', { 
@@ -208,6 +241,18 @@ export function CreateGame() {
           name === 'time' ? value : prev.time,
           name === 'location' ? value : prev.location
         );
+      }
+      
+      // Auto-set max players based on sport
+      if (name === 'sport' && sportDefaults[value.toLowerCase()]) {
+        newData.maxPlayers = sportDefaults[value.toLowerCase()].maxPlayers.toString();
+      }
+      
+      // Save location to recent locations
+      if (name === 'location' && value.trim()) {
+        const updated = [value, ...recentLocations.filter(loc => loc !== value)].slice(0, 5);
+        setRecentLocations(updated);
+        localStorage.setItem('recentGameLocations', JSON.stringify(updated));
       }
       
       return newData;
@@ -428,7 +473,71 @@ export function CreateGame() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {renderField('date', 'Date', 'date')}
-                {renderField('time', 'Time', 'time')}
+                
+                {/* Enhanced Location Field with GPS and Recent Locations */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Location
+                  </label>
+                  
+                  {/* Recent Locations */}
+                  {recentLocations.length > 0 && (
+                    <div className="mb-3">
+                      <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {recentLocations.map((location, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleInputChange('location', location)}
+                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                              formData.location === location
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            {location.split(',')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    <input
+                      type="time"
+                      value={formData.time}
+                      onChange={(e) => handleInputChange('time', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-xs text-gray-500 w-full">Popular times:</span>
+                      {popularTimes.map(time => {
+                        const hour = parseInt(time.split(':')[0]);
+                        const period = hour >= 12 ? 'PM' : 'AM';
+                        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                        const displayTime = `${displayHour}:${time.split(':')[1]} ${period}`;
+                        
+                        return (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => handleInputChange('time', time)}
+                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                              formData.time === time
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            {displayTime}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {errors.time && (
+                    <p className="text-red-500 text-sm">{errors.time}</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -5,8 +5,6 @@ import { DesktopLayout } from './DesktopLayout';
 import { Toaster } from './ui/sonner';
 import { useResponsive } from './ui/use-responsive';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { Button } from './ui/button';
-import { HelpCircle, Keyboard } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AppContent() {
@@ -53,11 +51,6 @@ export function AppContent() {
     document.title = `${title} - TribeUp`;
   }, [location.pathname, announceToScreenReader]);
 
-  const handleShowKeyboardShortcuts = () => {
-    toast.info('Keyboard shortcuts coming soon!', {
-      description: 'This feature will be available in a future update'
-    });
-  };
 
   // Render mobile layout
   if (isMobile) {
@@ -72,16 +65,6 @@ export function AppContent() {
           {/* Bottom navigation */}
           <BottomNavigation />
 
-          {/* Keyboard shortcuts help button for mobile (hidden by default, shown on focus) */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleShowKeyboardShortcuts}
-            className="fixed bottom-20 right-4 opacity-0 focus:opacity-100 transition-opacity z-40 bg-background/80 backdrop-blur-sm border border-border"
-            aria-label="Show keyboard shortcuts help"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </Button>
         </div>
 
         {/* Toast notifications for mobile */}
@@ -106,22 +89,6 @@ export function AppContent() {
           </main>
         </DesktopLayout>
 
-        {/* Desktop keyboard shortcuts help */}
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="flex flex-col gap-2 items-end">
-            {/* Keyboard shortcuts help button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShowKeyboardShortcuts}
-              className="bg-background/95 backdrop-blur-sm border shadow-medium"
-              title="Show keyboard shortcuts (coming soon)"
-            >
-              <Keyboard className="w-4 h-4 mr-2" />
-              Shortcuts
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Toast notifications for desktop */}

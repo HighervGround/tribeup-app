@@ -405,16 +405,20 @@ export function CreateGame() {
   
   const isStepComplete = (step: number): boolean => {
     const stepFields = steps[step - 1]?.fields || [];
-    return stepFields.every(field => {
+    const isComplete = stepFields.every(field => {
       const value = formData[field as keyof typeof formData];
       return value && value.toString().trim() !== '';
     });
+    
+    console.log('[CreateGame] isStepComplete - Step:', step, 'Fields:', stepFields, 'Complete:', isComplete, 'FormData:', formData);
+    return isComplete;
   };
 
   const validateCurrentStep = (): boolean => {
     const stepErrors: Record<string, string> = {};
     if (currentStep === 1) {
       if (!formData.sport) stepErrors.sport = 'Please select a sport.';
+      if (!formData.title.trim()) stepErrors.title = 'Game title is required.';
     }
     if (currentStep === 2) {
       if (!formData.date) stepErrors.date = 'Please choose a date.';
@@ -434,6 +438,8 @@ export function CreateGame() {
       else if (Number.isNaN(mp) || mp <= 0) stepErrors.maxPlayers = 'Enter a valid number greater than 0.';
       if (!formData.cost) stepErrors.cost = 'Please select a cost option.';
     }
+    
+    console.log('[CreateGame] Validation - Step:', currentStep, 'Errors:', stepErrors, 'FormData:', formData);
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   };
@@ -504,9 +510,9 @@ export function CreateGame() {
             value={value} 
             onChange={(e) => handleInputChange(name, e.target.value)}
             className={`w-full p-3 border rounded-lg transition-colors ${
-              error ? 'border-red-500 bg-red-50' : 
-              isValid ? 'border-green-500 bg-green-50' : 
-              'border-gray-300'
+              error ? 'border-red-500 bg-red-50 dark:bg-red-950 dark:border-red-400' : 
+              isValid ? 'border-green-500 bg-green-50 dark:bg-green-950 dark:border-green-400' : 
+              'border-gray-300 dark:border-gray-600 bg-background'
             }`}
           >
             <option value="">Select {label.toLowerCase()}</option>
@@ -516,10 +522,10 @@ export function CreateGame() {
               </option>
             ))}
           </select>
-          {error && <p className="text-sm text-red-500 flex items-center gap-1">
+          {error && <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
             <span>⚠️</span> {error}
           </p>}
-          {isValid && !error && <p className="text-sm text-green-600 flex items-center gap-1">
+          {isValid && !error && <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
             <span>✅</span> Looks good!
           </p>}
         </div>
@@ -566,10 +572,10 @@ export function CreateGame() {
               'border-gray-300'
             }`}
           />
-          {error && <p className="text-sm text-red-500 flex items-center gap-1">
+          {error && <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
             <span>⚠️</span> {error}
           </p>}
-          {isValid && !error && <p className="text-sm text-green-600 flex items-center gap-1">
+          {isValid && !error && <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
             <span>✅</span> Looks good!
           </p>}
         </div>
@@ -601,7 +607,7 @@ export function CreateGame() {
         </div>
       </div>
 
-      <div className="px-4 pb-40 pt-6">
+      <div className="px-4 pb-32 pt-6">
         {/* Selected Sport Preview */}
         {selectedSport && (
           <div className="mb-6">
@@ -725,7 +731,7 @@ export function CreateGame() {
                     </div>
                   </div>
                   {errors.time && (
-                    <p className="text-red-500 text-sm">{errors.time}</p>
+                    <p className="text-red-500 dark:text-red-400 text-sm">{errors.time}</p>
                   )}
                 </div>
               </CardContent>
@@ -871,14 +877,14 @@ export function CreateGame() {
                   
                   {/* Location Status */}
                   {formData.latitude && formData.longitude && (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                       <MapPin className="w-3 h-3" />
                       <span>📍 Location coordinates saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
                     </div>
                   )}
                   
                   {userLat && userLng && !formData.latitude && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                       <Navigation className="w-3 h-3" />
                       <span>🎯 Your location detected - use GPS button to auto-fill</span>
                     </div>
@@ -934,42 +940,113 @@ export function CreateGame() {
         )}
       </div>
 
-      {/* Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-        <div className="flex justify-between items-center px-4 py-4">
-          {currentStep > 1 ? (
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-          ) : (
-            <div />
+      {/* Mobile Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-area-inset-bottom">
+        <div className="px-4 py-3 pb-safe">
+          {/* Step Indicator for Mobile */}
+          <div className="flex justify-center mb-3 sm:hidden">
+            <div className="flex items-center gap-2">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                    currentStep === step.id 
+                      ? 'bg-primary text-primary-foreground' 
+                      : currentStep > step.id 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {currentStep > step.id ? '✓' : step.id}
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`w-8 h-0.5 mx-1 ${
+                      currentStep > step.id ? 'bg-green-500' : 'bg-muted'
+                    }`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center gap-3">
+            {currentStep > 1 ? (
+              <Button 
+                variant="outline" 
+                onClick={handleBack}
+                className="min-h-[44px] px-6 flex-1 max-w-[120px] touch-manipulation"
+                size="lg"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                <span className="hidden xs:inline">Previous</span>
+                <span className="xs:hidden">Back</span>
+              </Button>
+            ) : (
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate(-1)}
+                className="min-h-[44px] px-4 touch-manipulation"
+                size="lg"
+              >
+                Cancel
+              </Button>
+            )}
+            
+            {/* Progress indicator for larger screens */}
+            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+              Step {currentStep} of {steps.length}
+            </div>
+            
+            {currentStep < steps.length ? (
+              <Button 
+                onClick={handleNext}
+                disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate')}
+                className="min-h-[44px] px-6 flex-1 max-w-[120px] touch-manipulation"
+                size="lg"
+              >
+                <span className="hidden xs:inline">Continue</span>
+                <span className="xs:hidden">Next</span>
+                <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleSubmit}
+                disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate') || isSubmitting}
+                className="min-h-[44px] px-6 flex-1 max-w-[140px] touch-manipulation"
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span className="hidden xs:inline">Creating...</span>
+                    <span className="xs:hidden">Wait...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <span className="hidden xs:inline">Create Game</span>
+                    <span className="xs:hidden">Create</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          
+          {/* Validation Status for Mobile */}
+          {!isStepComplete(currentStep) && (
+            <div className="mt-2 text-center">
+              <p className="text-xs text-muted-foreground">
+                Complete required fields to continue
+              </p>
+            </div>
           )}
           
-          {currentStep < steps.length ? (
-            <Button 
-              onClick={handleNext}
-              disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate')}
-            >
-              Next
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSubmit}
-              disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate') || isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Create Game
-                </>
-              )}
-            </Button>
+          {/* Debug Info - Remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-2 text-xs text-muted-foreground text-center">
+              Debug: Step {currentStep} complete: {isStepComplete(currentStep) ? 'Yes' : 'No'} | 
+              Errors: {Object.keys(errors).filter(key => key !== 'duplicate').length} | 
+              Submitting: {isSubmitting ? 'Yes' : 'No'}
+            </div>
           )}
         </div>
       </div>

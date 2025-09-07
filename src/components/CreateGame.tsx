@@ -252,6 +252,48 @@ export function CreateGame() {
     return templates[Math.floor(Math.random() * templates.length)];
   };
 
+  const validateField = (name: string, value: string): string | null => {
+    switch (name) {
+      case 'date':
+        if (!value) return null;
+        const today = new Date();
+        const chosen = new Date(value + 'T00:00:00');
+        if (chosen < new Date(today.toDateString())) {
+          return 'Date cannot be in the past';
+        }
+        return null;
+        
+      case 'time':
+        if (!value) return null;
+        const hour = parseInt(value.split(':')[0]);
+        if (hour < 6 || hour > 23) {
+          return 'Unusual time - games typically happen 6 AM - 11 PM';
+        }
+        if (hour >= 2 && hour <= 5) {
+          return 'Did you mean PM instead of AM?';
+        }
+        return null;
+        
+      case 'maxPlayers':
+        if (!value) return null;
+        const num = parseInt(value);
+        if (num < 2) return 'Need at least 2 players';
+        if (num > 100) return 'That seems like a lot of players - double check?';
+        return null;
+        
+      case 'location':
+        if (!value) return null;
+        if (value.length < 3) return 'Location too short';
+        if (value.toLowerCase().includes('ocean') || value.toLowerCase().includes('sea')) {
+          return 'Are you sure this location is correct?';
+        }
+        return null;
+        
+      default:
+        return null;
+    }
+  };
+
   const handleInputChange = (name: string, value: string) => {
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
@@ -281,17 +323,20 @@ export function CreateGame() {
       return newData;
     });
     
-    // Clear error on change and auto-advance if field is complete
-    if (errors[name]) {
-      setErrors(prev => {
+    // Real-time validation
+    const fieldError = validateField(name, value);
+    setErrors(prev => {
+      if (fieldError) {
+        return { ...prev, [name]: fieldError };
+      } else {
         const { [name]: _removed, ...rest } = prev;
         return rest;
-      });
-    }
+      }
+    });
     
     // Auto-advance to next step when current step is complete
     setTimeout(() => {
-      if (isStepComplete(currentStep)) {
+      if (isStepComplete(currentStep) && !Object.keys(errors).length) {
         if (currentStep < steps.length) {
           setCurrentStep(currentStep + 1);
         }
@@ -387,52 +432,90 @@ export function CreateGame() {
   const progress = (currentStep / steps.length) * 100;
   const selectedSport = sportOptions.find(sport => sport.value === formData.sport);
 
-  const renderField = (name: string, label: string, type: string = 'text', options?: any[]) => {
-    return (
-      <div className="space-y-2">
-        <label className="text-sm font-medium flex items-center gap-2">
-          {label}
-          {steps[currentStep - 1].fields.includes(name) && (
-            <span className="text-destructive">*</span>
-          )}
-        </label>
-        
-        {type === 'select' && options ? (
+  const renderField = (name: string, label: string, type: string = 'text', options?: Array<{ value: string; label: string; icon?: React.ReactNode }>) => {
+    const value = formData[name as keyof typeof formData] as string;
+    const error = errors[name];
+    const isValid = value && !error;
+
+    if (type === 'select') {
+      return (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{label}</label>
           <select 
-            value={formData[name]} 
+            value={value} 
             onChange={(e) => handleInputChange(name, e.target.value)}
-            className={`w-full p-2 border rounded-md ${errors[name] ? 'border-destructive' : ''}`}
+            className={`w-full p-3 border rounded-lg transition-colors ${
+              error ? 'border-red-500 bg-red-50' : 
+              isValid ? 'border-green-500 bg-green-50' : 
+              'border-gray-300'
+            }`}
           >
             <option value="">Select {label.toLowerCase()}</option>
-            {options.map((option) => (
+            {options?.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.icon} {option.label}
+                {option.label}
               </option>
             ))}
           </select>
-        ) : type === 'textarea' ? (
+          {error && <p className="text-sm text-red-500 flex items-center gap-1">
+            <span>⚠️</span> {error}
+          </p>}
+          {isValid && !error && <p className="text-sm text-green-600 flex items-center gap-1">
+            <span>✅</span> Looks good!
+          </p>}
+        </div>
+      );
+    } else if (type === 'textarea') {
+      return (
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            {label}
+            {steps[currentStep - 1].fields.includes(name) && (
+              <span className="text-destructive">*</span>
+            )}
+          </label>
           <Textarea
-            value={formData[name]}
+            value={value}
             onChange={(e) => handleInputChange(name, e.target.value)}
             placeholder={`Enter ${label.toLowerCase()}`}
-            className={`resize-none ${errors[name] ? 'border-destructive' : ''}`}
+            className={`resize-none ${error ? 'border-destructive' : ''}`}
             rows={3}
           />
-        ) : (
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+        </div>
+      );
+    } else {
+      return (
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            {label}
+            {steps[currentStep - 1].fields.includes(name) && (
+              <span className="text-destructive">*</span>
+            )}
+          </label>
           <Input
             type={type}
             value={formData[name]}
             onChange={(e) => handleInputChange(name, e.target.value)}
             placeholder={`Enter ${label.toLowerCase()}`}
             min={type === 'date' ? new Date().toISOString().split('T')[0] : undefined}
-            className={errors[name] ? 'border-destructive' : ''}
+            className={`transition-colors ${
+              error ? 'border-red-500 bg-red-50' : 
+              isValid ? 'border-green-500 bg-green-50' : 
+              'border-gray-300'
+            }`}
           />
-        )}
-        {errors[name] && (
-          <p className="text-sm text-destructive">{errors[name]}</p>
-        )}
-      </div>
-    );
+          {error && <p className="text-sm text-red-500 flex items-center gap-1">
+            <span>⚠️</span> {error}
+          </p>}
+          {isValid && !error && <p className="text-sm text-green-600 flex items-center gap-1">
+            <span>✅</span> Looks good!
+          </p>}
+        </div>
+      );
+    }
   };
 
   return (

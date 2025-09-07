@@ -44,9 +44,17 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'Game Details', fields: ['sport', 'date', 'time'] },
-  { id: 2, title: 'Location', fields: ['location'] },
-  { id: 3, title: 'Players & Cost', fields: ['maxPlayers', 'cost'] },
+  { id: 1, title: 'What & When', fields: ['sport', 'date', 'time'] },
+  { id: 2, title: 'Where & Who', fields: ['location', 'maxPlayers', 'cost'] },
+];
+
+const quickTimes = [
+  '09:00',
+  '12:00', 
+  '15:00',
+  '18:00',
+  '19:00',
+  '20:00'
 ];
 
 export function CreateGame() {
@@ -417,9 +425,9 @@ export function CreateGame() {
   const validateCurrentStep = (): boolean => {
     const stepErrors: Record<string, string> = {};
     if (currentStep === 1) {
+      if (!formData.sport) stepErrors.sport = 'Please select a sport.';
       if (!formData.date) stepErrors.date = 'Please choose a date.';
       if (!formData.time) stepErrors.time = 'Please choose a time.';
-      if (!formData.location.trim()) stepErrors.location = 'Location is required.';
       if (formData.date) {
         const today = new Date();
         const chosen = new Date(formData.date + 'T00:00:00');
@@ -429,10 +437,7 @@ export function CreateGame() {
       }
     }
     if (currentStep === 2) {
-      if (!formData.sport) stepErrors.sport = 'Please select a sport.';
-      if (!formData.title.trim()) stepErrors.title = 'Game title is required.';
-    }
-    if (currentStep === 3) {
+      if (!formData.location.trim()) stepErrors.location = 'Location is required.';
       const mp = parseInt(formData.maxPlayers, 10);
       if (!formData.maxPlayers) stepErrors.maxPlayers = 'Max players is required.';
       else if (Number.isNaN(mp) || mp <= 0) stepErrors.maxPlayers = 'Enter a valid number greater than 0.';
@@ -636,87 +641,97 @@ export function CreateGame() {
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
                     1
                   </div>
-                  When & Where
+                  What & When
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Sport Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Sport
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {sportOptions.map((sport) => (
+                      <button
+                        key={sport.value}
+                        type="button"
+                        onClick={() => handleInputChange('sport', sport.value)}
+                        className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                          formData.sport === sport.value
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <div className="text-2xl mb-1">{sport.icon}</div>
+                        <div className="text-sm font-medium">{sport.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {errors.sport && (
+                    <p className="text-sm text-destructive">{errors.sport}</p>
+                  )}
+                </div>
+
                 {renderField('date', 'Date', 'date')}
                 
-                {/* Time field with quick buttons */}
+                {/* Quick Time Selection */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Time
                   </label>
-                  <div className="space-y-3">
-                    <input
-                      type="time"
-                      value={formData.time}
-                      onChange={(e) => handleInputChange('time', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-xs text-gray-500 w-full">
-                        {new Date().getDay() === 0 || new Date().getDay() === 6 ? 'Weekend times:' : 'Evening times:'}
-                      </span>
-                      {popularTimes.map(time => {
-                        const hour = parseInt(time.split(':')[0]);
-                        const period = hour >= 12 ? 'PM' : 'AM';
-                        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-                        const displayTime = `${displayHour}:${time.split(':')[1]} ${period}`;
-                        
-                        return (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => handleInputChange('time', time)}
-                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                              formData.time === time
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                            }`}
-                          >
-                            {displayTime}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    {quickTimes.map((timeOption) => (
+                      <button
+                        key={timeOption}
+                        type="button"
+                        onClick={() => handleInputChange('time', timeOption)}
+                        className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+                          formData.time === timeOption
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        {/* Convert 24-hour to 12-hour for display */}
+                        {new Date(`2000-01-01T${timeOption}:00`).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </button>
+                    ))}
                   </div>
+                  <Input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => handleInputChange('time', e.target.value)}
+                    className={errors.time ? 'border-destructive' : ''}
+                  />
                   {errors.time && (
-                    <p className="text-red-500 dark:text-red-400 text-sm">{errors.time}</p>
+                    <p className="text-sm text-destructive">{errors.time}</p>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-                {/* Enhanced Location Field with GPS and Recent Locations */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
+                    2
+                  </div>
+                  Where & Who
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Location Input Field */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Location
                   </label>
-                  
-                  {/* Recent Locations */}
-                  {recentLocations.length > 0 && (
-                    <div className="mb-3">
-                      <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {recentLocations.map((location, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => handleInputChange('location', location)}
-                            className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                              formData.location === location
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                            }`}
-                          >
-                            {location.split(',')[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {/* Location Input Field */}
-                <div className="space-y-4">
                   <div className="relative">
                     <Input
                       value={formData.location}
@@ -741,7 +756,6 @@ export function CreateGame() {
                         className="h-6 w-6 p-0"
                         onClick={async () => {
                           if (userLat && userLng) {
-                            // Use reverse geocoding to get address from coordinates
                             try {
                               const response = await fetch(
                                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
@@ -785,7 +799,6 @@ export function CreateGame() {
                             setFormData(prev => ({ ...prev, location: suggestion.description }));
                             setShowLocationSuggestions(false);
                             
-                            // Try to geocode the selected location
                             const coords = await geocodeLocation(suggestion.description);
                             if (coords) {
                               setFormData(prev => ({
@@ -809,94 +822,8 @@ export function CreateGame() {
                   {errors.location && (
                     <p className="text-sm text-destructive">{errors.location}</p>
                   )}
-                  
-                  {/* Location Status */}
-                  {formData.latitude && formData.longitude && (
-                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                      <MapPin className="w-3 h-3" />
-                      <span>📍 Location coordinates saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
-                    </div>
-                  )}
-                  
-                  {userLat && userLng && !formData.latitude && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                      <Navigation className="w-3 h-3" />
-                      <span>🎯 Your location detected - use GPS button to auto-fill</span>
-                    </div>
-                  )}
-                  
-                  {geoError && (
-                    <div className="text-sm text-amber-600">
-                      📍 {geoError}
-                    </div>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
-                    2
-                  </div>
-                  Game Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {renderField('sport', 'Sport', 'select', sportOptions)}
-                
-                {/* Editable Title Field */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Game Title</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (formData.sport && (formData.time || formData.location)) {
-                          const newTitle = generateGameTitle(formData.sport, formData.time, formData.location);
-                          handleInputChange('title', newTitle);
-                        }
-                      }}
-                      className="text-xs text-primary hover:underline"
-                      disabled={!formData.sport}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="Enter game title or let it auto-generate"
-                    className="transition-colors"
-                  />
-                  {formData.title && (
-                    <p className="text-xs text-muted-foreground">
-                      Title will auto-update when you change sport, time, or location
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {currentStep === 3 && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
-                    3
-                  </div>
-                  Players & Cost
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
                 {renderField('maxPlayers', 'Max Players', 'number')}
                 {renderField('cost', 'Cost', 'select', [
                   { value: 'FREE', label: 'Free' },
@@ -906,11 +833,11 @@ export function CreateGame() {
                   { value: '$20', label: '$20 per person' },
                   { value: 'custom', label: 'Custom amount' },
                 ])}
-                {renderField('requirements', 'Requirements (Optional)', 'textarea')}
               </CardContent>
             </Card>
           </div>
         )}
+
 
         {/* Form Summary (Step 3) */}
         {submitError && (

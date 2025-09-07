@@ -14,7 +14,6 @@ import {
   Volume2,
   Zap,
   MousePointer,
-  Keyboard,
   Users,
   Palette,
   Sun,

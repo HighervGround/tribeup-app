@@ -254,20 +254,41 @@ export function SearchDiscovery() {
           <div className="space-y-6">
             {/* Map View Content */}
             <div className="bg-card rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Map View</h3>
+              <h3 className="text-lg font-semibold mb-4">Games Near You</h3>
               {userLat && userLng ? (
-                <img 
-                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${userLat},${userLng}&zoom=13&size=400x300&maptype=roadmap&markers=color:red%7C${userLat},${userLng}&key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}`}
-                  alt="Map showing your location and nearby sports facilities"
-                  className="w-full h-48 object-cover rounded-lg"
-                  loading="lazy"
-                  decoding="async"
-                  width="400"
-                  height="300"
-                />
+                <div className="relative">
+                  <img 
+                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${userLat},${userLng}&zoom=13&size=600x400&maptype=roadmap&markers=color:red%7Clabel:You%7C${userLat},${userLng}${filteredResults.map(game => game.latitude && game.longitude ? `&markers=color:blue%7Clabel:G%7C${game.latitude},${game.longitude}` : '').join('')}&key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}`}
+                    alt="Map showing your location and nearby games"
+                    className="w-full h-64 object-cover rounded-lg border"
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      console.error('Map image failed to load');
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-full h-64 bg-muted rounded-lg flex items-center justify-center border';
+                      fallback.innerHTML = '<p class="text-muted-foreground">Map temporarily unavailable</p>';
+                      target.parentElement?.appendChild(fallback);
+                    }}
+                  />
+                  <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs">
+                    📍 You • 🎮 Games
+                  </div>
+                </div>
               ) : (
-                <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Enable location to see map</p>
+                <div className="w-full h-64 bg-muted rounded-lg flex flex-col items-center justify-center border">
+                  <div className="text-4xl mb-2">📍</div>
+                  <p className="text-muted-foreground text-center">
+                    Allow location access to see games on map
+                  </p>
+                  <button 
+                    onClick={() => navigator.geolocation?.getCurrentPosition(() => window.location.reload())}
+                    className="mt-2 text-sm text-primary hover:underline"
+                  >
+                    Enable Location
+                  </button>
                 </div>
               )}
             </div>

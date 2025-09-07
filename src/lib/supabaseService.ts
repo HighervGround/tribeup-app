@@ -246,7 +246,7 @@ export class SupabaseService {
         .from('games')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50)
       
       const queryTime = performance.now() - queryStart;
       console.log(`📊 Supabase query took: ${queryTime.toFixed(2)}ms`);

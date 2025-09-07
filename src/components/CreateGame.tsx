@@ -168,8 +168,51 @@ export function CreateGame() {
     }
   }, [userLat, userLng, geoError]);
 
+  const generateGameTitle = (sport: string, time: string, location: string) => {
+    if (!sport || !time || !location) return '';
+    
+    const timeFormats = {
+      morning: ['Morning', 'AM', 'Early'],
+      afternoon: ['Afternoon', 'PM', 'Midday'],
+      evening: ['Evening', 'Night', 'Late']
+    };
+    
+    const hour = parseInt(time.split(':')[0]);
+    let timeOfDay = 'Morning';
+    if (hour >= 12 && hour < 17) timeOfDay = 'Afternoon';
+    else if (hour >= 17) timeOfDay = 'Evening';
+    
+    const locationName = location.split(',')[0].trim();
+    const sportName = sport.charAt(0).toUpperCase() + sport.slice(1);
+    
+    const templates = [
+      `${timeOfDay} ${sportName} at ${locationName}`,
+      `${sportName} Game - ${locationName}`,
+      `${timeOfDay} ${sportName} Session`,
+      `${locationName} ${sportName} Meetup`,
+      `${sportName} @ ${locationName}`,
+    ];
+    
+    return templates[Math.floor(Math.random() * templates.length)];
+  };
+
   const handleInputChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // Auto-generate title when sport, time, or location changes
+      if ((name === 'sport' || name === 'time' || name === 'location') && 
+          (!prev.title || prev.title === generateGameTitle(prev.sport, prev.time, prev.location))) {
+        newData.title = generateGameTitle(
+          name === 'sport' ? value : prev.sport,
+          name === 'time' ? value : prev.time,
+          name === 'location' ? value : prev.location
+        );
+      }
+      
+      return newData;
+    });
+    
     // Clear error on change
     if (errors[name]) {
       setErrors(prev => {

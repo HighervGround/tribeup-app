@@ -868,118 +868,9 @@ export function CreateGame() {
                 ])}
                 {renderField('requirements', 'Requirements (Optional)', 'textarea')}
               </CardContent>
-
-<div className="space-y-6">
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
-          3
-        </div>
-        Location & Players
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      {/* Enhanced Location Field with GPS and Recent Locations */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Location
-        </label>
-        
-        {/* Recent Locations */}
-        {recentLocations.length > 0 && (
-          <div className="mb-3">
-            <span className="text-xs text-gray-500 block mb-2">Recent locations:</span>
-            <div className="flex flex-wrap gap-2">
-              {recentLocations.map((location, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleInputChange('location', location)}
-                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                    formData.location === location
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {location.split(',')[0]}
-                </button>
-              ))}
-            </div>
+            </Card>
           </div>
         )}
-        
-        {/* Location Input Field */}
-        <div className="space-y-4">
-          <div className="relative">
-            <Input
-              value={formData.location}
-              onChange={(e) => {
-                handleInputChange('location', e.target.value);
-                if (e.target.value.length > 2) {
-                  searchLocations(e.target.value, userLat || undefined, userLng || undefined);
-                  setShowLocationSuggestions(true);
-                } else {
-                  setShowLocationSuggestions(false);
-                }
-              }}
-              placeholder="Enter location or address"
-              className={errors.location ? 'border-destructive' : ''}
-            />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
-              {locationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={async () => {
-                  if (userLat && userLng) {
-                    try {
-                      const response = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
-                      );
-                      const data = await response.json();
-                      const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
-                      setFormData(prev => ({
-                        ...prev,
-                        location: address,
-                        latitude: userLat,
-                        longitude: userLng
-                      }));
-                    } catch (error) {
-                      console.error('Reverse geocoding failed:', error);
-                      setFormData(prev => ({
-                        ...prev,
-                        location: `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
-                        latitude: userLat,
-                        longitude: userLng
-                      }));
-                    }
-                  }
-                }}
-                disabled={!userLat || !userLng}
-                title={userLat && userLng ? "Use my current location" : geoError || "Location not available"}
-              >
-                <Navigation className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
-        </div>
-
-        {renderField('maxPlayers', 'Max Players')}
-        {renderField('cost', 'Cost', 'select', [
-          { value: 'Free', label: 'Free' },
-          { value: '$5', label: '$5 per person' },
-          { value: '$10', label: '$10 per person' },
-          { value: '$15', label: '$15 per person' },
-          { value: '$20', label: '$20 per person' },
-        ])}
-      </CardContent>
-    </Card>
-  </div>
-)}
 
         {/* Form Summary (Step 3) */}
         {submitError && (
@@ -997,54 +888,57 @@ export function CreateGame() {
               <AlertDescription>
                 Ready to create "{formData.title}" for {formData.maxPlayers} players 
                 on {formData.date} at {formData.time}?
-    </div>
-    <p className="text-sm text-yellow-700 mt-1">{errors.duplicate}</p>
-    <p className="text-xs text-yellow-600 mt-2">You can still create this game if it's intentional.</p>
-  </div>
-)}
+              </AlertDescription>
+            </Alert>
+            {errors.duplicate && (
+              <div className="mt-2">
+                <p className="text-sm text-yellow-700 mt-1">{errors.duplicate}</p>
+                <p className="text-xs text-yellow-600 mt-2">You can still create this game if it's intentional.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-/* Navigation */
-<div className="flex justify-between items-center px-4 py-4 border-t border-border bg-background">
-  {currentStep > 1 ? (
-    <Button variant="outline" onClick={handlePrevious}>
-      <ArrowLeft className="w-4 h-4 mr-2" />
-      Previous
-    </Button>
-  ) : (
-    <div />
-  )}
-  
-  {currentStep < steps.length ? (
-    <Button 
-      onClick={handleNext}
-      disabled={!isStepComplete(currentStep) || (Object.keys(errors).length > 0 && !errors.duplicate)}
-      className={isStepComplete(currentStep) && !Object.keys(errors).filter(k => k !== 'duplicate').length ? 'bg-green-600 hover:bg-green-700' : ''}
-    >
-      {isStepComplete(currentStep) && !Object.keys(errors).filter(k => k !== 'duplicate').length && <Check className="w-4 h-4 mr-2" />}
-      Continue
-    </Button>
-  ) : (
-    <Button 
-      onClick={handleSubmit}
-      disabled={!isStepComplete(currentStep) || (Object.keys(errors).length > 0 && !errors.duplicate) || isSubmitting}
-      className="bg-green-600 hover:bg-green-700"
-    >
-      {isSubmitting ? (
-        <>
-          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          Creating...
-        </>
-      ) : (
-        <>
-          <Check className="w-4 h-4 mr-2" />
-          Create Game
-        </>
-      )}
-    </Button>
-  )}
-</div>
-</div>
-</div>
-</div>
-);
+      {/* Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
+        <div className="flex justify-between items-center px-4 py-4">
+          {currentStep > 1 ? (
+            <Button variant="outline" onClick={handleBack}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+          ) : (
+            <div />
+          )}
+          
+          {currentStep < steps.length ? (
+            <Button 
+              onClick={handleNext}
+              disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate')}
+            >
+              Next
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleSubmit}
+              disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate') || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Create Game
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

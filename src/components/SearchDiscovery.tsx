@@ -249,6 +249,29 @@ export function SearchDiscovery() {
                 </Button>
               </div>
             )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Map View Content */}
+            <div className="bg-card rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Map View</h3>
+              {userLat && userLng ? (
+                <img 
+                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${userLat},${userLng}&zoom=13&size=400x300&maptype=roadmap&markers=color:red%7C${userLat},${userLng}&key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}`}
+                  alt="Map showing your location and nearby sports facilities"
+                  className="w-full h-48 object-cover rounded-lg"
+                  loading="lazy"
+                  decoding="async"
+                  width="400"
+                  height="300"
+                />
+              ) : (
+                <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center">
+                  <p className="text-muted-foreground">Enable location to see map</p>
+                </div>
+              )}
+            </div>
+            
             {/* Game List Below Map */}
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">

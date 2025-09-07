@@ -250,17 +250,27 @@ export function SearchDiscovery() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Simple Map Placeholder */}
-            <div className="h-96 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl mb-4">🗺️</div>
-                <h3 className="text-lg font-semibold mb-2">Map View</h3>
-                <p className="text-muted-foreground">Interactive map coming soon</p>
-              </div>
+            {/* Interactive Google Map */}
+            <div className="h-96 rounded-lg overflow-hidden bg-muted">
+              <iframe
+                src={`https://www.google.com/maps/embed/v1/search?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}&q=sports+facilities+near+me&zoom=12`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Sports Facilities Map"
+              />
             </div>
 
             {/* Game List Below Map */}
             <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {filteredResults.length} games in map area
+                </h3>
+              </div>
               {filteredResults.map((game) => (
                 <SimpleGameCard
                   key={game.id}

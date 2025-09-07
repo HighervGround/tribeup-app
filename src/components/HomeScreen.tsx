@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, MapPin, Clock, Users } from 'lucide-react';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 
@@ -44,12 +44,12 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
       
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">📍</span>
+          <MapPin className="w-4 h-4 text-muted-foreground" />
           <span>{game.location}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">🕒</span>
-          <span>{game.date} at {game.time}</span>
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
         </div>
         {game.distance && (
           <div className="flex items-center gap-2">
@@ -57,6 +57,10 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
             <span>{game.distance}</span>
           </div>
         )}
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <span>{game.date} at {game.time}</span>
+        </div>
       </div>
       
       <p className="text-sm text-muted-foreground mt-3">{game.description}</p>

@@ -327,9 +327,6 @@ export function GameDetails() {
     navigateToChat('game', gameId!);
   };
 
-  const handleDirectMessage = (playerId: string, playerName: string) => {
-    navigateToChat('direct', playerId);
-  };
 
   const handleShare = async () => {
     setShowInvite(true);
@@ -635,13 +632,6 @@ export function GameDetails() {
                   </div>
                 </button>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleDirectMessage('host1', game.createdBy || 'Host')}
-              >
-                Message
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -680,15 +670,6 @@ export function GameDetails() {
                         </div>
                       </div>
                     </div>
-                    {!player.isHost && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDirectMessage(player.id, player.name)}
-                      >
-                        Message
-                      </Button>
-                    )}
                   </div>
                   {index < players.length - 1 && <Separator className="mt-3" />}
                 </div>

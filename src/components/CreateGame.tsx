@@ -44,7 +44,7 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'Game Details', fields: ['sport'] },
+  { id: 1, title: 'Game Details', fields: ['sport', 'title'] },
   { id: 2, title: 'Date & Time', fields: ['date', 'time'] },
   { id: 3, title: 'Location & Players', fields: ['location', 'maxPlayers', 'cost'] },
 ];
@@ -340,14 +340,17 @@ export function CreateGame() {
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
       
-      // Auto-generate title when sport, time, or location changes
+      // Auto-generate title when sport, time, or location changes (only if title is empty or matches previous auto-generated title)
+      const currentAutoTitle = generateGameTitle(prev.sport, prev.time, prev.location);
+      const newAutoTitle = generateGameTitle(
+        name === 'sport' ? value : prev.sport,
+        name === 'time' ? value : prev.time,
+        name === 'location' ? value : prev.location
+      );
+      
       if ((name === 'sport' || name === 'time' || name === 'location') && 
-          (!prev.title || prev.title === generateGameTitle(prev.sport, prev.time, prev.location))) {
-        newData.title = generateGameTitle(
-          name === 'sport' ? value : prev.sport,
-          name === 'time' ? value : prev.time,
-          name === 'location' ? value : prev.location
-        );
+          (!prev.title || prev.title === currentAutoTitle) && newAutoTitle) {
+        newData.title = newAutoTitle;
       }
       
       // Auto-set max players based on sport
@@ -632,6 +635,37 @@ export function CreateGame() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {renderField('sport', 'Sport', 'select', sportOptions)}
+                
+                {/* Editable Title Field */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Game Title</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (formData.sport && (formData.time || formData.location)) {
+                          const newTitle = generateGameTitle(formData.sport, formData.time, formData.location);
+                          handleInputChange('title', newTitle);
+                        }
+                      }}
+                      className="text-xs text-primary hover:underline"
+                      disabled={!formData.sport}
+                    >
+                      Regenerate
+                    </button>
+                  </div>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    placeholder="Enter game title or let it auto-generate"
+                    className="transition-colors"
+                  />
+                  {formData.title && (
+                    <p className="text-xs text-muted-foreground">
+                      Title will auto-update when you change sport, time, or location
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

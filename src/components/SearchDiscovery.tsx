@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
+import { MapView } from './MapView';
 
 
 
@@ -257,21 +258,28 @@ export function SearchDiscovery() {
               <h3 className="text-lg font-semibold mb-4">Games Near You</h3>
               {userLat && userLng ? (
                 <div className="relative">
-                  <img 
-                    src={`https://maps.googleapis.com/maps/api/staticmap?center=${userLat},${userLng}&zoom=13&size=600x400&maptype=roadmap&markers=color:red%7Clabel:You%7C${userLat},${userLng}${filteredResults.map(game => game.latitude && game.longitude ? `&markers=color:blue%7Clabel:G%7C${game.latitude},${game.longitude}` : '').join('')}&key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY}`}
-                    alt="Map showing your location and nearby games"
-                    className="w-full h-64 object-cover rounded-lg border"
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => {
-                      console.error('Map image failed to load');
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = document.createElement('div');
-                      fallback.className = 'w-full h-64 bg-muted rounded-lg flex items-center justify-center border';
-                      fallback.innerHTML = '<p class="text-muted-foreground">Map temporarily unavailable</p>';
-                      target.parentElement?.appendChild(fallback);
-                    }}
+                  <MapView
+                    games={filteredResults.map(game => ({
+                      id: game.id,
+                      title: game.title,
+                      sport: game.sport,
+                      location: {
+                        latitude: game.latitude || userLat + (Math.random() - 0.5) * 0.01,
+                        longitude: game.longitude || userLng + (Math.random() - 0.5) * 0.01
+                      },
+                      locationName: game.location,
+                      date: game.date,
+                      time: game.time,
+                      players: game.players,
+                      maxPlayers: game.maxPlayers,
+                      cost: game.cost,
+                      difficulty: game.difficulty
+                    }))}
+                    center={{ latitude: userLat, longitude: userLng }}
+                    zoom={13}
+                    className="h-64"
+                    showCurrentLocation={true}
+                    showGameMarkers={true}
                   />
                   <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs">
                     📍 You • 🎮 Games

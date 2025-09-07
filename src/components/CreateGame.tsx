@@ -52,9 +52,11 @@ const quickTimes = [
   '09:00',
   '12:00', 
   '15:00',
+  '17:00',
   '18:00',
   '19:00',
-  '20:00'
+  '20:00',
+  '21:00'
 ];
 
 export function CreateGame() {
@@ -84,7 +86,7 @@ export function CreateGame() {
     location: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    maxPlayers: '',
+    maxPlayers: '10',
     cost: 'FREE',
     imageUrl: ''
   });
@@ -481,7 +483,7 @@ export function CreateGame() {
         location: formData.location,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        max_players: parseInt(formData.maxPlayers),
+        max_players: parseInt(formData.maxPlayers) || 10,
         cost: formData.cost || 'Free',
         description: '', // Default empty description
         requirements: '', // Default empty requirements
@@ -514,10 +516,10 @@ export function CreateGame() {
           <select 
             value={value} 
             onChange={(e) => handleInputChange(name, e.target.value)}
-            className={`w-full p-3 border rounded-lg transition-colors ${
+            className={`w-full p-3 border rounded-lg transition-colors bg-background text-foreground ${
               error ? 'border-red-500 bg-red-50 dark:bg-red-950 dark:border-red-400' : 
               isValid ? 'border-green-500 bg-green-50 dark:bg-green-950 dark:border-green-400' : 
-              'border-gray-300 dark:border-gray-600 bg-background'
+              'border-gray-300 dark:border-gray-600'
             }`}
           >
             <option value="">Select {label.toLowerCase()}</option>
@@ -589,19 +591,21 @@ export function CreateGame() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
-        <div className="flex items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={handleBack}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold">Create Game</h1>
-              <p className="text-sm text-muted-foreground">
-                {steps[currentStep - 1].title}
-              </p>
+    <div className="min-h-screen bg-background pb-32 sm:pb-24">
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={handleBack}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold">Create Game</h1>
+                <p className="text-sm text-muted-foreground">
+                  {steps[currentStep - 1].title}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -650,20 +654,20 @@ export function CreateGame() {
                   <label className="block text-sm font-medium text-gray-700">
                     Sport
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {sportOptions.map((sport) => (
                       <button
                         key={sport.value}
                         type="button"
                         onClick={() => handleInputChange('sport', sport.value)}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                        className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                           formData.sport === sport.value
                             ? 'border-primary bg-primary/5 text-primary'
                             : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
-                        <div className="text-2xl mb-1">{sport.icon}</div>
-                        <div className="text-sm font-medium">{sport.label}</div>
+                        <div className="text-lg mb-1">{sport.icon}</div>
+                        <div className="text-xs font-medium">{sport.label}</div>
                       </button>
                     ))}
                   </div>
@@ -675,17 +679,19 @@ export function CreateGame() {
                 {renderField('date', 'Date', 'date')}
                 
                 {/* Quick Time Selection */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">
                     Time
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                  
+                  {/* Quick Time Buttons */}
+                  <div className="grid grid-cols-4 gap-2">
                     {quickTimes.map((timeOption) => (
                       <button
                         key={timeOption}
                         type="button"
                         onClick={() => handleInputChange('time', timeOption)}
-                        className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+                        className={`px-2 py-2 text-xs rounded-md border transition-colors ${
                           formData.time === timeOption
                             ? 'bg-primary text-white border-primary'
                             : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
@@ -700,12 +706,19 @@ export function CreateGame() {
                       </button>
                     ))}
                   </div>
-                  <Input
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => handleInputChange('time', e.target.value)}
-                    className={errors.time ? 'border-destructive' : ''}
-                  />
+                  
+                  {/* Custom Time Input */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-600">Or enter custom time:</label>
+                    <Input
+                      type="time"
+                      value={formData.time}
+                      onChange={(e) => handleInputChange('time', e.target.value)}
+                      className={errors.time ? 'border-destructive' : ''}
+                      placeholder="Select time"
+                    />
+                  </div>
+                  
                   {errors.time && (
                     <p className="text-sm text-destructive">{errors.time}</p>
                   )}
@@ -868,7 +881,7 @@ export function CreateGame() {
       </div>
 
       {/* Mobile Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-area-inset-bottom">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-area-inset-bottom z-50">
         <div className="px-4 py-3 pb-safe">
           {/* Step Indicator for Mobile */}
           <div className="flex justify-center mb-3 sm:hidden">
@@ -900,18 +913,18 @@ export function CreateGame() {
               <Button 
                 variant="outline" 
                 onClick={handleBack}
-                className="min-h-[44px] px-6 flex-1 max-w-[120px] touch-manipulation"
+                className="min-h-[48px] px-4 sm:px-6 flex-1 max-w-[120px] touch-manipulation text-sm sm:text-base"
                 size="lg"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                <span className="hidden xs:inline">Previous</span>
-                <span className="xs:hidden">Back</span>
+                <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Back</span>
               </Button>
             ) : (
               <Button 
                 variant="ghost" 
                 onClick={() => navigate(-1)}
-                className="min-h-[44px] px-4 touch-manipulation"
+                className="min-h-[48px] px-4 touch-manipulation text-sm sm:text-base"
                 size="lg"
               >
                 Cancel
@@ -927,31 +940,31 @@ export function CreateGame() {
               <Button 
                 onClick={handleNext}
                 disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate')}
-                className="min-h-[44px] px-6 flex-1 max-w-[120px] touch-manipulation"
+                className="min-h-[48px] px-4 sm:px-6 flex-1 max-w-[120px] touch-manipulation text-sm sm:text-base"
                 size="lg"
               >
-                <span className="hidden xs:inline">Continue</span>
-                <span className="xs:hidden">Next</span>
-                <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                <span className="hidden sm:inline">Continue</span>
+                <span className="sm:hidden">Next</span>
+                <ArrowLeft className="w-4 h-4 ml-1 sm:ml-2 rotate-180" />
               </Button>
             ) : (
               <Button 
                 onClick={handleSubmit}
                 disabled={!isStepComplete(currentStep) || Object.keys(errors).some(key => key !== 'duplicate') || isSubmitting}
-                className="min-h-[44px] px-6 flex-1 max-w-[140px] touch-manipulation"
+                className="min-h-[48px] px-4 sm:px-6 flex-1 max-w-[140px] touch-manipulation text-sm sm:text-base"
                 size="lg"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    <span className="hidden xs:inline">Creating...</span>
-                    <span className="xs:hidden">Wait...</span>
+                    <Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />
+                    <span className="hidden sm:inline">Creating...</span>
+                    <span className="sm:hidden">Wait...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    <span className="hidden xs:inline">Create Game</span>
-                    <span className="xs:hidden">Create</span>
+                    <CheckCircle className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Create Game</span>
+                    <span className="sm:hidden">Create</span>
                   </>
                 )}
               </Button>

@@ -252,6 +252,31 @@ export function CreateGame() {
     return templates[Math.floor(Math.random() * templates.length)];
   };
 
+  const checkForDuplicateGame = async (sport: string, date: string, time: string, location: string): Promise<string | null> => {
+    if (!sport || !date || !time || !location) return null;
+    
+    try {
+      const games = await SupabaseService.getGames();
+      const duplicates = games.filter(game => {
+        const sameDate = game.date === date;
+        const sameTime = Math.abs(new Date(`2000-01-01T${game.time}`).getTime() - new Date(`2000-01-01T${time}`).getTime()) < 3600000; // Within 1 hour
+        const sameSport = game.sport.toLowerCase() === sport.toLowerCase();
+        const sameLocation = game.location.toLowerCase().includes(location.toLowerCase()) || location.toLowerCase().includes(game.location.toLowerCase());
+        
+        return sameDate && sameTime && sameSport && sameLocation;
+      });
+      
+      if (duplicates.length > 0) {
+        return `Similar ${sport} game already exists at ${location} on ${date} around ${time}`;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+      return null;
+    }
+  };
+
   const validateField = (name: string, value: string): string | null => {
     switch (name) {
       case 'date':
@@ -279,6 +304,13 @@ export function CreateGame() {
         const num = parseInt(value);
         if (num < 2) return 'Need at least 2 players';
         if (num > 100) return 'That seems like a lot of players - double check?';
+        
+        // Smart capacity check based on sport
+        const sportLower = formData.sport?.toLowerCase();
+        if (sportLower === 'tennis' && num > 4) return 'Tennis usually has 2-4 players';
+        if (sportLower === 'basketball' && num > 10) return 'Basketball usually has 6-10 players';
+        if (sportLower === 'soccer' && num > 22) return 'Soccer usually has up to 22 players';
+        
         return null;
         
       case 'location':
@@ -287,6 +319,16 @@ export function CreateGame() {
         if (value.toLowerCase().includes('ocean') || value.toLowerCase().includes('sea')) {
           return 'Are you sure this location is correct?';
         }
+        if (value.toLowerCase().includes('home') || value.toLowerCase().includes('house')) {
+          return 'Consider using a public venue for safety';
+        }
+        return null;
+        
+      case 'cost':
+        if (!value) return null;
+        const cost = parseFloat(value);
+        if (cost < 0) return 'Cost cannot be negative';
+        if (cost > 500) return 'That seems expensive - double check?';
         return null;
         
       default:
@@ -333,6 +375,20 @@ export function CreateGame() {
         return rest;
       }
     });
+
+    // Check for duplicate games when all key fields are filled
+    if (name === 'location' && formData.sport && formData.date && formData.time && value) {
+      checkForDuplicateGame(formData.sport, formData.date, formData.time, value).then(duplicateError => {
+        if (duplicateError) {
+          setErrors(prev => ({ ...prev, duplicate: duplicateError }));
+        } else {
+          setErrors(prev => {
+            const { duplicate: _removed, ...rest } = prev;
+            return rest;
+          });
+        }
+      });
+    }
     
     // Auto-advance to next step when current step is complete
     setTimeout(() => {
@@ -941,59 +997,54 @@ export function CreateGame() {
               <AlertDescription>
                 Ready to create "{formData.title}" for {formData.maxPlayers} players 
                 on {formData.date} at {formData.time}?
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <div className="flex justify-between items-center px-4 py-4 border-t border-border bg-background">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-          >
-            Back
-          </Button>
-          
-          <div className="flex gap-2">
-            {currentStep < steps.length ? (
-              <Button 
-                onClick={handleNext} 
-                disabled={!validateCurrentStep()}
-                className={validateCurrentStep() ? 'bg-green-600 hover:bg-green-700' : ''}
-              >
-                {validateCurrentStep() ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Continue
-                  </>
-                ) : (
-                  'Next'
-                )}
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleSubmit} 
-                disabled={loading || !validateCurrentStep()}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Create Game
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
-  );
+    <p className="text-sm text-yellow-700 mt-1">{errors.duplicate}</p>
+    <p className="text-xs text-yellow-600 mt-2">You can still create this game if it's intentional.</p>
+  </div>
+)}
+
+/* Navigation */
+<div className="flex justify-between items-center px-4 py-4 border-t border-border bg-background">
+  {currentStep > 1 ? (
+    <Button variant="outline" onClick={handlePrevious}>
+      <ArrowLeft className="w-4 h-4 mr-2" />
+      Previous
+    </Button>
+  ) : (
+    <div />
+  )}
+  
+  {currentStep < steps.length ? (
+    <Button 
+      onClick={handleNext}
+      disabled={!isStepComplete(currentStep) || (Object.keys(errors).length > 0 && !errors.duplicate)}
+      className={isStepComplete(currentStep) && !Object.keys(errors).filter(k => k !== 'duplicate').length ? 'bg-green-600 hover:bg-green-700' : ''}
+    >
+      {isStepComplete(currentStep) && !Object.keys(errors).filter(k => k !== 'duplicate').length && <Check className="w-4 h-4 mr-2" />}
+      Continue
+    </Button>
+  ) : (
+    <Button 
+      onClick={handleSubmit}
+      disabled={!isStepComplete(currentStep) || (Object.keys(errors).length > 0 && !errors.duplicate) || isSubmitting}
+      className="bg-green-600 hover:bg-green-700"
+    >
+      {isSubmitting ? (
+        <>
+          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Creating...
+        </>
+      ) : (
+        <>
+          <Check className="w-4 h-4 mr-2" />
+          Create Game
+        </>
+      )}
+    </Button>
+  )}
+</div>
+</div>
+</div>
+</div>
+);
 }

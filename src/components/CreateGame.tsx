@@ -591,7 +591,7 @@ export function CreateGame() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32 sm:pb-24">
+    <div className="min-h-screen bg-background pb-40 sm:pb-24">
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
@@ -616,7 +616,7 @@ export function CreateGame() {
         </div>
       </div>
 
-      <div className="px-4 pb-32 pt-6">
+      <div className="px-4 pb-40 pt-6">
         {/* Selected Sport Preview */}
         {selectedSport && (
           <div className="mb-6">

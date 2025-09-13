@@ -144,6 +144,19 @@ export function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Safety timeout to prevent infinite loading
+  useEffect(() => {
+    if (isLoading && games.length === 0) {
+      const timeout = setTimeout(() => {
+        console.warn('Loading timeout - clearing loading state');
+        setLoading(false);
+        setTimedOut(true);
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoading, games.length, setLoading]);
+
 
   // Disabled realtime to prevent WebSocket connection issues
   // useEffect(() => {

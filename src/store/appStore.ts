@@ -318,7 +318,7 @@ export const useAppStore = create<AppState & AppActions>()(
       },
       
       joinGame: async (gameId) => {
-        const { setLoading, setError, setGames } = get();
+        const { setLoading, setError, setGames, user } = get();
         try {
           setLoading(true);
           await SupabaseService.joinGame(gameId);
@@ -326,6 +326,19 @@ export const useAppStore = create<AppState & AppActions>()(
           // Refresh games to get updated join status
           const updatedGames = await SupabaseService.getGames();
           setGames(updatedGames);
+          
+          // Check for new achievements after joining
+          if (user?.id) {
+            try {
+              const newAchievements = await SupabaseService.checkAndAwardAchievements(user.id);
+              if (newAchievements.length > 0) {
+                console.log('New achievements earned:', newAchievements.map(a => a.name));
+                // You could show a toast notification here
+              }
+            } catch (achievementError) {
+              console.warn('Failed to check achievements:', achievementError);
+            }
+          }
           
         } catch (error) {
           setError(error instanceof Error ? error.message : 'Failed to join game');

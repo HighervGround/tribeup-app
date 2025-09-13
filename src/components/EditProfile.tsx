@@ -267,7 +267,7 @@ export function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-12 pb-6">
         <div className="flex items-center gap-4">

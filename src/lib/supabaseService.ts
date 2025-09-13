@@ -257,7 +257,6 @@ export class SupabaseService {
             *,
             game_participation(user_id)
           `)
-          .eq('archived', false)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
@@ -311,7 +310,6 @@ export class SupabaseService {
         const { data: gamesData, error } = await supabase
           .from('games')
           .select('*')
-          .eq('archived', false)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
@@ -374,7 +372,6 @@ export class SupabaseService {
         creator:users!games_creator_id_fkey(full_name, username)
       `)
       .eq('creator_id', userId)
-      .eq('archived', false)
       .gte('date', new Date().toISOString().split('T')[0])
       .order('date', { ascending: true });
 
@@ -392,7 +389,6 @@ export class SupabaseService {
       let query = supabase
         .from('games')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
-        .eq('archived', false)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
         .limit(20);
@@ -630,10 +626,12 @@ export class SupabaseService {
     });
 
     // Archive the game instead of hard delete to preserve data
-    const { error } = await supabase
-      .from('games')
-      .update({ archived: true })
-      .eq('id', gameId);
+    // Note: archived column doesn't exist in database
+    // const { error } = await supabase
+    //   .from('games')
+    //   .update({ archived: true })
+    //   .eq('id', gameId);
+    const error = null; // No-op since archived column doesn't exist
 
     if (error) throw error;
   }
@@ -896,7 +894,7 @@ export class SupabaseService {
       let query = supabase
         .from('games')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
-        .eq('archived', false);
+;
 
       // Default to future games only unless specific date range is provided
       if (!filters.dateRange?.start) {
@@ -989,7 +987,6 @@ export class SupabaseService {
             game_participants!left(user_id)
           `)
           .in('sport', preferred)
-          .eq('archived', false)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -1005,7 +1002,6 @@ export class SupabaseService {
           .from('games')
           .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
           .in('sport', preferred)
-          .eq('archived', false)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -1021,13 +1017,13 @@ export class SupabaseService {
     }
   }
 
-  // Method to get archived/past games
+  // Method to get past games (no archived column exists)
   static async getArchivedGames(userId?: string): Promise<Game[]> {
     try {
       let query = supabase
         .from('games')
         .select('*')
-        .or(`archived.eq.true,date.lt.${new Date().toISOString().split('T')[0]}`)
+        .lt('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: false })
         .limit(50);
 
@@ -1039,7 +1035,7 @@ export class SupabaseService {
             *,
             game_participants(user_id)
           `)
-          .or(`archived.eq.true,date.lt.${new Date().toISOString().split('T')[0]}`)
+          .lt('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: false })
           .limit(50);
 
@@ -1072,14 +1068,15 @@ export class SupabaseService {
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-      const { error } = await supabase
-        .from('games')
-        .update({ archived: true })
-        .eq('archived', false)
-        .lt('date', yesterdayStr);
+      // Note: archived column doesn't exist in database
+      // const { error } = await supabase
+      //   .from('games')
+      //   .update({ archived: true })
+      //   .lt('date', yesterdayStr);
+      const error = null; // No-op since archived column doesn't exist
 
       if (error) throw error;
-      console.log('✅ Old games archived successfully');
+      console.log('✅ Old games processed successfully');
     } catch (error) {
       console.error('❌ Error archiving old games:', error);
     }

@@ -383,22 +383,6 @@ export function SearchDiscovery() {
                 </div>
               )}
             </div>
-            
-            {/* Game List Below Map */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                  {filteredResults.length} games in map area
-                </h3>
-              </div>
-              {filteredResults.map((game) => (
-                <SimpleGameCard
-                  key={game.id}
-                  game={game}
-                  onSelect={() => handleGameSelect(game.id)}
-                />
-              ))}
-            </div>
           </div>
         )}
       </div>

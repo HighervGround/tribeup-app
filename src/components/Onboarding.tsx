@@ -122,7 +122,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-20">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Progress Header */}
       <div className="px-4 pt-12 pb-6">
         <div className="flex items-center justify-between mb-4">

@@ -318,14 +318,22 @@ export const useAppStore = create<AppState & AppActions>()(
       },
       
       joinGame: async (gameId) => {
-        const { setLoading, setError, setGames, user } = get();
+        const { setError, setGames, user } = get();
         try {
-          setLoading(true);
+          console.log('🔧 Joining game:', gameId);
           await SupabaseService.joinGame(gameId);
           
-          // Refresh games to get updated join status
-          const updatedGames = await SupabaseService.getGames();
-          setGames(updatedGames);
+          // Optimistically update the local state instead of full refresh
+          set((state) => {
+            const gameIndex = state.games.findIndex(g => g.id === gameId);
+            if (gameIndex !== -1) {
+              state.games[gameIndex] = {
+                ...state.games[gameIndex],
+                isJoined: true,
+                currentPlayers: Math.min(state.games[gameIndex].currentPlayers + 1, state.games[gameIndex].maxPlayers)
+              };
+            }
+          });
           
           // Check for new achievements after joining (only if tables exist)
           if (user?.id) {
@@ -341,26 +349,56 @@ export const useAppStore = create<AppState & AppActions>()(
           }
           
         } catch (error) {
+          console.error('❌ Join game error:', error);
           setError(error instanceof Error ? error.message : 'Failed to join game');
-        } finally {
-          setLoading(false);
+          
+          // Revert optimistic update on error
+          set((state) => {
+            const gameIndex = state.games.findIndex(g => g.id === gameId);
+            if (gameIndex !== -1) {
+              state.games[gameIndex] = {
+                ...state.games[gameIndex],
+                isJoined: false,
+                currentPlayers: Math.max(state.games[gameIndex].currentPlayers - 1, 0)
+              };
+            }
+          });
         }
       },
       
       leaveGame: async (gameId) => {
-        const { setLoading, setError, setGames } = get();
+        const { setError } = get();
         try {
-          setLoading(true);
+          console.log('🔧 Leaving game:', gameId);
           await SupabaseService.leaveGame(gameId);
           
-          // Refresh games to get updated join status
-          const updatedGames = await SupabaseService.getGames();
-          setGames(updatedGames);
+          // Optimistically update the local state instead of full refresh
+          set((state) => {
+            const gameIndex = state.games.findIndex(g => g.id === gameId);
+            if (gameIndex !== -1) {
+              state.games[gameIndex] = {
+                ...state.games[gameIndex],
+                isJoined: false,
+                currentPlayers: Math.max(state.games[gameIndex].currentPlayers - 1, 0)
+              };
+            }
+          });
           
         } catch (error) {
+          console.error('❌ Leave game error:', error);
           setError(error instanceof Error ? error.message : 'Failed to leave game');
-        } finally {
-          setLoading(false);
+          
+          // Revert optimistic update on error
+          set((state) => {
+            const gameIndex = state.games.findIndex(g => g.id === gameId);
+            if (gameIndex !== -1) {
+              state.games[gameIndex] = {
+                ...state.games[gameIndex],
+                isJoined: true,
+                currentPlayers: Math.min(state.games[gameIndex].currentPlayers + 1, state.games[gameIndex].maxPlayers)
+              };
+            }
+          });
         }
       },
       

@@ -5,12 +5,7 @@ import type { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Debug logging - FORCE DEPLOYMENT
-console.log('🔧 Supabase Environment Check - PRODUCTION VERSION:');
-console.log('VITE_SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
-console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
-console.log('URL Value:', supabaseUrl);
-console.log('Key Value:', supabaseAnonKey ? `SET (length: ${supabaseAnonKey.length})` : 'undefined');
+// Environment variables loaded successfully
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables!');

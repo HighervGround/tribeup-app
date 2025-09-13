@@ -130,8 +130,10 @@ export function Auth() {
           <form onSubmit={handleAuth} className="space-y-4">
             {isSignUp && !isResetPassword && (
               <div>
-                <label className="text-sm font-medium">Name</label>
+                <label htmlFor="name" className="text-sm font-medium">Name</label>
                 <Input
+                  id="name"
+                  name="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -142,8 +144,10 @@ export function Auth() {
             )}
             
             <div>
-              <label className="text-sm font-medium">Email</label>
+              <label htmlFor="email" className="text-sm font-medium">Email</label>
               <Input
+                id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -154,8 +158,10 @@ export function Auth() {
             
             {!isResetPassword && (
               <div>
-                <label className="text-sm font-medium">Password</label>
+                <label htmlFor="password" className="text-sm font-medium">Password</label>
                 <Input
+                  id="password"
+                  name="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

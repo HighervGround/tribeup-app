@@ -163,26 +163,7 @@ export function HomeScreen() {
     };
   }, [games, onlineCount]);
 
-  // Load games only once on mount, prevent multiple calls
-  useEffect(() => {
-    if (games.length === 0 && !isLoading) {
-      loadGames();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Safety timeout to prevent infinite loading
-  useEffect(() => {
-    if (isLoading && games.length === 0) {
-      const timeout = setTimeout(() => {
-        console.warn('Loading timeout - clearing loading state');
-        setLoading(false);
-        setTimedOut(true);
-      }, 10000); // 10 second timeout
-
-      return () => clearTimeout(timeout);
-    }
-  }, [isLoading, games.length, setLoading]);
+  // No need for manual loading with React Query
 
 
   // Disabled realtime to prevent WebSocket connection issues
@@ -213,34 +194,10 @@ export function HomeScreen() {
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [feedMode, userPreferredSports.join?.('|') ?? '']);
 
-  // Safety: clear global loading if this screen unmounts mid-request
-  useEffect(() => {
-    return () => {
-      setLoading(false);
-    };
-  }, [setLoading]);
+  // No need for manual loading state cleanup with React Query
 
 
-  const loadGames = async () => {
-    if (isLoading) {
-      console.log('Already loading games, skipping duplicate call');
-      return;
-    }
-    
-    setTimedOut(false);
-    setLoading(true);
-    
-    try {
-      const gamesData = await SupabaseService.getGames();
-      setGames(gamesData);
-    } catch (error) {
-      console.error('Error loading games:', error);
-      setTimedOut(true);
-      setGames([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // loadGames function removed - using React Query instead
 
   const handleRefresh = async () => {
     if (refreshing) return; // Prevent multiple concurrent refreshes

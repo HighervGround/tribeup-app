@@ -36,8 +36,7 @@ export function useGame(gameId: string) {
   return useQuery({
     queryKey: gameKeys.detail(gameId),
     queryFn: async () => {
-      const games = await SupabaseService.getGames();
-      return games.find(game => game.id === gameId);
+      return await SupabaseService.getGameById(gameId);
     },
     enabled: !!gameId,
   });

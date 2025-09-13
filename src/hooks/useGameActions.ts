@@ -30,10 +30,21 @@ export function useGameActions() {
 
   // Toggle game participation
   const toggleGameParticipation = useCallback(async (gameId: string) => {
-    // This will be handled by the individual components using the mutations directly
-    // This function is kept for backward compatibility
-    return await handleJoinGame(gameId);
-  }, [handleJoinGame]);
+    try {
+      // Get current game state to determine if user is joined
+      const { games } = useAppStore.getState();
+      const game = games.find(g => g.id === gameId);
+      
+      if (game?.isJoined) {
+        return await handleLeaveGame(gameId);
+      } else {
+        return await handleJoinGame(gameId);
+      }
+    } catch (error) {
+      console.error('Error toggling game participation:', error);
+      return false;
+    }
+  }, [handleJoinGame, handleLeaveGame]);
 
   // Cancel a game (for creators)
   const cancelGame = useCallback(async (gameId: string, reason?: string) => {

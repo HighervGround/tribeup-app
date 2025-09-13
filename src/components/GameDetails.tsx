@@ -247,11 +247,36 @@ export function GameDetails() {
   const [deleteReason, setDeleteReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   
-  // Game data comes from React Query hook above
+  // Handle loading and error states
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-2xl mx-auto space-y-4">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded mb-2"></div>
+            <div className="h-4 bg-muted rounded w-2/3 mb-4"></div>
+            <div className="h-48 bg-muted rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!game) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Game Not Found</h1>
+          <p className="text-muted-foreground mb-4">The game you're looking for doesn't exist or has been removed.</p>
+          <Button onClick={() => navigate('/')}>Back to Home</Button>
+        </div>
+      </div>
+    );
+  }
 
   // Load players for this game
   useEffect(() => {
-    if (gameId) {
+    if (gameId && game) {
       const loadPlayers = async () => {
         setLoadingPlayers(true);
         try {
@@ -261,7 +286,7 @@ export function GameDetails() {
           // Mark the host correctly
           const playersWithHost = gamePlayers.map(player => ({
             ...player,
-            isHost: player.id === game.creator_id
+            isHost: player.id === game?.creator_id
           }));
           
           console.log('🔍 Players with host info:', playersWithHost);
@@ -276,8 +301,19 @@ export function GameDetails() {
       
       loadPlayers();
     }
-  }, [gameId, game.creator_id]);
+  }, [gameId, game?.creator_id]);
   
+  // Show loading state while fetching game data
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading game details...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!game) {
     return (

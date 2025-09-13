@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
 import { MapView } from './MapView';
+import { calculateDistance, formatDistance } from '../hooks/useLocation';
 
 
 
@@ -105,13 +106,33 @@ export function SearchDiscovery() {
     navigate(-1);
   };
 
-  const filteredResults = games.filter(game => {
-    const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         game.sport.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         game.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSport = selectedSport === 'all' || game.sport.toLowerCase() === selectedSport.toLowerCase();
-    return matchesSearch && matchesSport;
-  });
+  // Calculate distances and filter games
+  const filteredResults = games
+    .map(game => {
+      // Calculate distance if we have location data
+      let distance = 'Unknown distance';
+      if (currentLocation && game.latitude && game.longitude) {
+        const distanceKm = calculateDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          game.latitude,
+          game.longitude
+        );
+        distance = formatDistance(distanceKm);
+      }
+      
+      return {
+        ...game,
+        distance
+      };
+    })
+    .filter(game => {
+      const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           game.sport.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           game.location.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSport = selectedSport === 'all' || game.sport.toLowerCase() === selectedSport.toLowerCase();
+      return matchesSearch && matchesSport;
+    });
 
   return (
     <div className="min-h-screen bg-background">

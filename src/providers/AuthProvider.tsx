@@ -68,15 +68,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   highContrast: false,
                   largeText: false,
                   reducedMotion: false,
-                  keyboardNavigation: false
-                },
-                createdAt: new Date().toISOString(),
+                  colorBlindFriendly: false,
+                  privacy: {
+                    locationSharing: true,
+                    profileVisibility: 'public'
+                  }
+                }
               });
             });
         }
         
-        // Initialize auth and load games
-        initializeAuth();
+        // Don't call initializeAuth here to prevent loops
       } catch (error) {
         console.error('Error getting initial session:', error);
       } finally {
@@ -103,8 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               DEBUG && console.log('[Auth] Profile loaded:', userProfile.name);
               setAppUser(userProfile);
               
-              // Initialize auth and load games
-              initializeAuth();
+              // Don't call initializeAuth here to prevent loops
               
               // Check for pending game join after successful login
               const pendingGameId = localStorage.getItem('pendingGameJoin');

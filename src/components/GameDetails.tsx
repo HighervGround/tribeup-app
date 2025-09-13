@@ -255,7 +255,16 @@ export function GameDetails() {
         setLoadingPlayers(true);
         try {
           const gamePlayers = await SupabaseService.getGameParticipants(gameId);
-          setPlayers(gamePlayers);
+          console.log('🔍 Loaded players:', gamePlayers);
+          
+          // Mark the host correctly
+          const playersWithHost = gamePlayers.map(player => ({
+            ...player,
+            isHost: player.id === game.creator_id
+          }));
+          
+          console.log('🔍 Players with host info:', playersWithHost);
+          setPlayers(playersWithHost);
         } catch (error) {
           console.error('Error loading players:', error);
           setPlayers([]);
@@ -266,7 +275,7 @@ export function GameDetails() {
       
       loadPlayers();
     }
-  }, [gameId]);
+  }, [gameId, game.creator_id]);
   
   
   if (!game) {
@@ -706,7 +715,10 @@ export function GameDetails() {
                       <div>
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => navigateToUser(player.id)}
+                            onClick={() => {
+                              console.log('🔍 Clicking on player:', player);
+                              navigateToUser(player.id);
+                            }}
                             className="hover:text-primary transition-colors cursor-pointer"
                           >
                             {player.name}

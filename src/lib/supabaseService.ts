@@ -820,13 +820,20 @@ export class SupabaseService {
 
     if (error) throw error;
 
-    return data.map(participant => ({
-      id: (participant as any).user?.id ?? 'unknown',
-      name: (participant as any).user?.full_name || (participant as any).user?.username || 'Unknown User',
-      avatar: (participant as any).user?.avatar_url || '',
-      isHost: participant.user_id === participant.game_id, // This logic might need adjustment
-      rating: 4.5 // Default rating - in real app this would come from a ratings table
-    }));
+    console.log('🔍 Raw participants data:', data);
+
+    return data.map(participant => {
+      const user = (participant as any).user;
+      console.log('🔍 Processing participant:', participant, 'user:', user);
+      
+      return {
+        id: user?.id ?? 'unknown',
+        name: user?.full_name || user?.username || 'Unknown User',
+        avatar: user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'U',
+        isHost: false, // We'll determine this separately by checking if user is game creator
+        rating: 4.5 // Default rating - in real app this would come from a ratings table
+      };
+    });
   }
 
   // Real-time subscriptions

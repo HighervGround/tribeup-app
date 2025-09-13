@@ -27,18 +27,34 @@ const sportFilters = [
 ];
 
 // Simple GameCard component
+// Simple GameCard component
 function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
+  const { joinGame, leaveGame } = useAppStore();
+
+  const handleJoinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (game.isJoined) {
+      leaveGame(game.id);
+    } else {
+      joinGame(game.id);
+    }
+  };
+
+  const handleCardClick = () => {
+    onSelect();
+  };
+
   return (
     <div 
       className="bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md transition-shadow"
-      onClick={onSelect}
+      onClick={handleCardClick}
     >
       <div className="flex items-start justify-between mb-3">
-        <div>
+        <div className="flex-1 pr-4">
           <h3 className="font-semibold text-lg">{game.title}</h3>
           <p className="text-sm text-muted-foreground">{game.sport}</p>
         </div>
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
           <div className="text-sm font-medium">{game.cost}</div>
           <div className="text-xs text-muted-foreground">
             {game.currentPlayers}/{game.maxPlayers} players
@@ -48,28 +64,47 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
       
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">📍</span>
+          <MapPin className="w-4 h-4 text-muted-foreground" />
           <span>{game.location}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">🕒</span>
-          <span>{game.date} at {game.time}</span>
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
         </div>
+        {game.distance && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">📏</span>
+            <span>{game.distance}</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">📏</span>
-          <span>{game.distance}</span>
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <span>{game.date} at {game.time}</span>
         </div>
       </div>
       
       <p className="text-sm text-muted-foreground mt-3">{game.description}</p>
       
-      {game.isJoined && (
-        <div className="mt-3">
+      <div className="flex items-center justify-between mt-3">
+        {game.isJoined ? (
           <span className="inline-block bg-success/20 text-success dark:bg-success/30 dark:text-success text-xs px-2 py-1 rounded">
             Joined ✓
           </span>
-        </div>
-      )}
+        ) : (
+          <div></div>
+        )}
+        
+        <button
+          onClick={handleJoinClick}
+          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            game.isJoined 
+              ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
+        >
+          {game.isJoined ? 'Leave' : 'Join'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -110,6 +145,23 @@ export function SearchDiscovery() {
     navigate(-1);
   };
 
+  // Get sport color helper
+  const getSportColor = (sport: string) => {
+    const colors = {
+      'Basketball': 'bg-orange-500',
+      'Soccer': 'bg-green-500',
+      'Tennis': 'bg-yellow-500',
+      'Pickleball': 'bg-purple-500',
+      'Volleyball': 'bg-blue-500',
+      'Flag Football': 'bg-red-500',
+      'Baseball': 'bg-amber-600',
+      'Golf': 'bg-emerald-600',
+      'Hockey': 'bg-slate-600',
+      'Rugby': 'bg-indigo-600'
+    };
+    return colors[sport as keyof typeof colors] || 'bg-gray-500';
+  };
+
   // Calculate distances and filter games
   const filteredResults = games
     .map(game => {
@@ -127,7 +179,11 @@ export function SearchDiscovery() {
       
       return {
         ...game,
-        distance
+        distance,
+        sportColor: getSportColor(game.sport),
+        imageUrl: game.imageUrl || '',
+        currentPlayers: game.currentPlayers || game.participants || 0,
+        maxPlayers: game.maxPlayers || game.maxParticipants || 0
       };
     })
     .filter(game => {
@@ -254,11 +310,14 @@ export function SearchDiscovery() {
                       ...game,
                       participants: game.currentPlayers || game.participants || 0,
                       maxParticipants: game.maxPlayers || game.maxParticipants || 0,
+                      sportColor: game.sportColor,
+                      imageUrl: game.imageUrl || '',
                       host: {
                         name: game.hostName || 'Host',
                         avatar: game.hostAvatar || ''
                       },
-                      isHosted: false
+                      isHosted: false,
+                      isJoined: game.isJoined || false
                     }}
                     onSelect={() => handleGameSelect(game.id)}
                   />
@@ -355,11 +414,14 @@ export function SearchDiscovery() {
                     ...game,
                     participants: game.currentPlayers || game.participants || 0,
                     maxParticipants: game.maxPlayers || game.maxParticipants || 0,
+                    sportColor: game.sportColor,
+                    imageUrl: game.imageUrl || '',
                     host: {
                       name: game.hostName || 'Host',
                       avatar: game.hostAvatar || ''
                     },
-                    isHosted: false
+                    isHosted: false,
+                    isJoined: game.isJoined || false
                   }}
                   onSelect={() => handleGameSelect(game.id)}
                 />

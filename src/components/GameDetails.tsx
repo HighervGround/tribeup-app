@@ -298,13 +298,21 @@ export function GameDetails() {
   const tags: string[] | undefined = (game as any).tags;
 
   const handleJoinLeave = async () => {
+    // Prevent multiple rapid clicks
+    if (actionLoading) return;
+    
     // If user is not authenticated, show quick join modal
     if (!user) {
       setShowQuickJoin(true);
       return;
     }
     
-    await toggleGameParticipation(game.id);
+    setActionLoading(true);
+    try {
+      await toggleGameParticipation(game.id);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleQuickJoinSuccess = async () => {
@@ -540,13 +548,13 @@ export function GameDetails() {
             {/* Join Button */}
             <Button
               onClick={handleJoinLeave}
-              disabled={(!game.isJoined && isFull) || isLoading}
+              disabled={(!game.isJoined && isFull) || actionLoading}
               className="w-full h-12"
               variant={game.isJoined ? 'outline' : 'default'}
               data-action="join-game"
               title={`${game.isJoined ? 'Leave' : 'Join'} game (J)`}
             >
-              {isLoading ? (
+              {actionLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   {game.isJoined ? 'Leaving...' : 'Joining...'}

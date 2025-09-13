@@ -165,7 +165,6 @@ VITE_MAPS_API_KEY=your_maps_key
 
 ### Deployment Targets
 - **Vercel**: Zero-config deployment
-- **Netlify**: Static site hosting
 - **AWS S3/CloudFront**: Enterprise hosting
 - **Docker**: Containerized deployment
 

@@ -5,11 +5,12 @@ import type { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Environment variables loaded successfully - FORCE DEPLOYMENT v2
+// Environment variables loaded successfully - FORCE DEPLOYMENT v3 - ALL FIXES INCLUDED
 console.log('🚀 App starting with environment variables:', {
   supabaseUrl: supabaseUrl ? 'SET' : 'NOT SET',
   supabaseKey: supabaseAnonKey ? 'SET' : 'NOT SET'
 });
+console.log('🔧 All fixes deployed: table name, CreateGame step 3, location search, environment variables');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables!');

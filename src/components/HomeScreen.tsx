@@ -25,6 +25,16 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
     onSelect();
   };
 
+  // Get category badge
+  const getCategoryBadge = () => {
+    if (game.category === 'today') {
+      return <span className="inline-block bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-xs px-2 py-1 rounded-full font-medium">Today</span>;
+    } else if (game.category === 'tomorrow') {
+      return <span className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">Tomorrow</span>;
+    }
+    return null;
+  };
+
   return (
     <div 
       className="bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md transition-shadow"
@@ -32,7 +42,10 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 pr-4">
-          <h3 className="font-semibold text-lg">{game.title}</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-lg">{game.title}</h3>
+            {getCategoryBadge()}
+          </div>
           <p className="text-sm text-muted-foreground">{game.sport}</p>
         </div>
         <div className="text-right flex-shrink-0">
@@ -96,7 +109,6 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
-  const [feedMode, setFeedMode] = useState<'all' | 'recommended'>('all');
 
   // Load games only once on mount, prevent multiple calls
   useEffect(() => {
@@ -106,13 +118,6 @@ export function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle feed mode changes separately
-  useEffect(() => {
-    if (games.length > 0) {
-      loadGames();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedMode]);
 
   // Disabled realtime to prevent WebSocket connection issues
   // useEffect(() => {
@@ -159,9 +164,7 @@ export function HomeScreen() {
     setLoading(true);
     
     try {
-      const gamesData = feedMode === 'recommended'
-        ? await SupabaseService.getRecommendedGames(userPreferredSports)
-        : await SupabaseService.getGames();
+      const gamesData = await SupabaseService.getGames();
       setGames(gamesData);
     } catch (error) {
       console.error('Error loading games:', error);
@@ -192,19 +195,41 @@ export function HomeScreen() {
     navigate('/create');
   };
 
-  // Filter today's games
-  const todaysGames = games.filter(game => {
-    const gameDate = new Date(game.date);
-    const today = new Date();
-    return gameDate.toDateString() === today.toDateString();
-  });
-
-  // Filter non-today games for "All Games" section to avoid duplicates
-  const otherGames = games.filter(game => {
-    const gameDate = new Date(game.date);
-    const today = new Date();
-    return gameDate.toDateString() !== today.toDateString();
-  });
+  // Sort games chronologically with smart grouping
+  const sortedGames = games
+    .map(game => {
+      const gameDate = new Date(game.date);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Determine game category for sorting and display
+      let category = 'future';
+      let sortOrder = gameDate.getTime();
+      
+      if (gameDate.toDateString() === today.toDateString()) {
+        category = 'today';
+        sortOrder = 0; // Today's games first
+      } else if (gameDate.toDateString() === tomorrow.toDateString()) {
+        category = 'tomorrow';
+        sortOrder = 1; // Tomorrow's games second
+      }
+      
+      return {
+        ...game,
+        category,
+        sortOrder,
+        gameDate
+      };
+    })
+    .sort((a, b) => {
+      // First sort by category (today, tomorrow, future)
+      if (a.sortOrder !== b.sortOrder) {
+        return a.sortOrder - b.sortOrder;
+      }
+      // Then sort by time within each category
+      return a.gameDate.getTime() - b.gameDate.getTime();
+    });
 
   // Show loading state
   if (isLoading && games.length === 0) {
@@ -270,27 +295,10 @@ export function HomeScreen() {
             </div>
           </div>
 
-          {/* Today's Games */}
-          {todaysGames.length > 0 && (
-            <div className="px-4">
-              <h2 className="text-lg mb-4">Happening Soon</h2>
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {todaysGames.map((game) => (
-                  <div key={game.id} className="flex-shrink-0 w-72">
-                    <SimpleGameCard 
-                      game={game} 
-                      onSelect={() => handleGameSelect(game.id)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* All Games */}
+          {/* Single Games List */}
           <div className="px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">All Games</h2>
+              <h2 className="text-lg font-semibold">Upcoming Games</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -303,7 +311,7 @@ export function HomeScreen() {
             </div>
 
             <div className="space-y-4">
-              {otherGames.map((game) => (
+              {sortedGames.map((game) => (
                 <div key={game.id}>
                   <SimpleGameCard
                     game={game}
@@ -327,47 +335,15 @@ export function HomeScreen() {
                   <h1 className="text-3xl font-bold">TribeUp</h1>
                   <p className="text-muted-foreground">Find your next game</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="bg-muted rounded-md p-1 flex">
-                    <button
-                      className={`px-3 py-1 text-sm rounded ${feedMode === 'recommended' ? 'bg-background shadow font-medium' : 'text-muted-foreground'}`}
-                      onClick={() => setFeedMode('recommended')}
-                    >
-                      Recommended
-                    </button>
-                    <button
-                      className={`px-3 py-1 text-sm rounded ${feedMode === 'all' ? 'bg-background shadow font-medium' : 'text-muted-foreground'}`}
-                      onClick={() => setFeedMode('all')}
-                    >
-                      All
-                    </button>
-                  </div>
-                  <Button onClick={handleCreateGame}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Game
-                  </Button>
-                </div>
+                <Button onClick={handleCreateGame}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Game
+                </Button>
               </div>
 
-              {/* Today's Games */}
-              {todaysGames.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-semibold mb-4">Happening Today</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {todaysGames.map((game) => (
-                      <SimpleGameCard
-                        key={game.id}
-                        game={game}
-                        onSelect={() => handleGameSelect(game.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Feed Header */}
+              {/* Single Games List */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">{feedMode === 'recommended' ? 'Recommended For You' : 'All Games'}</h2>
+                <h2 className="text-xl font-semibold">Upcoming Games</h2>
                 <Button
                   variant="outline"
                   onClick={handleRefresh}
@@ -379,7 +355,7 @@ export function HomeScreen() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {otherGames.map((game) => (
+                {sortedGames.map((game) => (
                   <div key={game.id}>
                     <SimpleGameCard
                       game={game}

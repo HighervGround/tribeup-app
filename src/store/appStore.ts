@@ -239,20 +239,21 @@ export const useAppStore = create<AppState & AppActions>()(
 
       initializeAuth: async () => {
         const { setLoading, setError, setGames } = get();
+        const state = get();
+        
+        // Prevent multiple simultaneous calls
+        if (state.isLoading) {
+          return;
+        }
+        
         try {
           setLoading(true);
-          const user = await SupabaseService.getCurrentUser();
-          if (user) {
-            const userProfile = await SupabaseService.getUserProfile(user.id);
-            set((state) => {
-              state.user = userProfile;
-              state.isAuthenticated = true;
-            });
-          }
           
-          // Load games after auth initialization
-          const gamesData = await SupabaseService.getGames();
-          setGames(gamesData);
+          // Only load games if we don't have them already
+          if (state.games.length === 0) {
+            const gamesData = await SupabaseService.getGames();
+            setGames(gamesData);
+          }
         } catch (error) {
           setError(error instanceof Error ? error.message : 'Failed to initialize auth');
         } finally {

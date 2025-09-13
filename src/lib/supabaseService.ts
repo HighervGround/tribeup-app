@@ -245,15 +245,17 @@ export class SupabaseService {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
       
-      const queryStart = performance.now();
-      
-      // If user is authenticated, get games with join status
-      if (userId) {
+        const queryStart = performance.now();
+        
+        console.log(`🔍 Getting games for user: ${userId}`);
+        
+        // If user is authenticated, get games with join status
+        if (userId) {
         const { data: gamesWithParticipants, error } = await supabase
           .from('games')
           .select(`
             *,
-            game_participants!left(user_id)
+            game_participants!left(*)
           `)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -267,6 +269,7 @@ export class SupabaseService {
         const games = (gamesWithParticipants || []).map((game: any) => {
           try {
             const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+            console.log(`🔍 Game ${game.id} (${game.title}): isJoined=${isJoined}, participants=`, game.game_participants);
             return transformGameFromDB(game, isJoined);
           } catch (transformError) {
             console.error('❌ Transform error for game:', game.id, transformError);

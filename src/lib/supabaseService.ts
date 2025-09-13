@@ -680,11 +680,11 @@ export class SupabaseService {
 
     if (error) throw error;
 
-    // Record participation for stats tracking
+    // Record participation for stats tracking (only if table exists)
     try {
       await this.recordGameParticipation(currentUser.id, gameId, 'joined');
     } catch (participationError) {
-      console.warn('Failed to record game participation:', participationError);
+      console.warn('Failed to record game participation (table may not exist yet):', participationError);
       // Don't throw here as the main join operation succeeded
     }
   }
@@ -700,11 +700,11 @@ export class SupabaseService {
 
     if (error) throw error;
 
-    // Record participation for stats tracking
+    // Record participation for stats tracking (only if table exists)
     try {
       await this.recordGameParticipation(currentUser.id, gameId, 'left');
     } catch (participationError) {
-      console.warn('Failed to record game participation:', participationError);
+      console.warn('Failed to record game participation (table may not exist yet):', participationError);
       // Don't throw here as the main leave operation succeeded
     }
   }

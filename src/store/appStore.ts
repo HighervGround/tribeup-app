@@ -327,7 +327,7 @@ export const useAppStore = create<AppState & AppActions>()(
           const updatedGames = await SupabaseService.getGames();
           setGames(updatedGames);
           
-          // Check for new achievements after joining
+          // Check for new achievements after joining (only if tables exist)
           if (user?.id) {
             try {
               const newAchievements = await SupabaseService.checkAndAwardAchievements(user.id);
@@ -336,7 +336,7 @@ export const useAppStore = create<AppState & AppActions>()(
                 // You could show a toast notification here
               }
             } catch (achievementError) {
-              console.warn('Failed to check achievements:', achievementError);
+              console.warn('Failed to check achievements (tables may not exist yet):', achievementError);
             }
           }
           

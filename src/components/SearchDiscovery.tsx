@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { useJoinGame, useLeaveGame } from '../hooks/useGames';
 import { formatTimeString } from '../lib/dateUtils';
 
 
@@ -25,16 +26,17 @@ const sportFilters = [
 ];
 
 // Simple GameCard component
-// Simple GameCard component
 function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
-  const { joinGame, leaveGame } = useAppStore();
+  const joinGameMutation = useJoinGame();
+  const leaveGameMutation = useLeaveGame();
+  const loading = joinGameMutation.isPending || leaveGameMutation.isPending;
 
-  const handleJoinClick = (e: React.MouseEvent) => {
+  const handleJoinClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (game.isJoined) {
-      leaveGame(game.id);
+      leaveGameMutation.mutate(game.id);
     } else {
-      joinGame(game.id);
+      joinGameMutation.mutate(game.id);
     }
   };
 

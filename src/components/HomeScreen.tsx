@@ -12,20 +12,21 @@ import { GameCardSkeleton } from './GameCardSkeleton';
 
 
 // Simple GameCard component
-function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
-  const joinGameMutation = useJoinGame();
-  const leaveGameMutation = useLeaveGame();
-
+function SimpleGameCard({ 
+  game, 
+  onSelect, 
+  onJoinLeave, 
+  isLoading 
+}: { 
+  game: any; 
+  onSelect: () => void;
+  onJoinLeave: (gameId: string) => void;
+  isLoading: boolean;
+}) {
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (game.isJoined) {
-      leaveGameMutation.mutate(game.id);
-    } else {
-      joinGameMutation.mutate(game.id);
-    }
+    onJoinLeave(game.id);
   };
-
-  const isLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
 
   const handleCardClick = () => {
     onSelect();
@@ -122,6 +123,21 @@ export function HomeScreen() {
   
   // Use React Query for games
   const { data: games = [], isLoading, error, refetch } = useGames();
+  
+  // Join/Leave mutations
+  const joinGameMutation = useJoinGame();
+  const leaveGameMutation = useLeaveGame();
+  
+  const handleJoinLeave = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (game?.isJoined) {
+      leaveGameMutation.mutate(gameId);
+    } else {
+      joinGameMutation.mutate(gameId);
+    }
+  };
+  
+  const isJoinLeaveLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
 
   // Calculate real stats
   const stats = useMemo(() => {
@@ -389,6 +405,8 @@ export function HomeScreen() {
                     <SimpleGameCard
                       game={game}
                       onSelect={() => handleGameSelect(game.id)}
+                      onJoinLeave={handleJoinLeave}
+                      isLoading={isJoinLeaveLoading}
                     />
                   </div>
                 ))

@@ -239,8 +239,6 @@ export class SupabaseService {
   static async getGames(): Promise<Game[]> {
     const startTime = performance.now();
     console.log('🚀 Starting getGames...');
-    console.log('🔧 Supabase client:', supabase);
-    console.log('🔧 Supabase URL:', supabase.supabaseUrl);
     
     try {
       // Get current user to check join status
@@ -257,7 +255,7 @@ export class SupabaseService {
           .from('games')
           .select(`
             *,
-            game_participants(user_id)
+            game_participation(user_id)
           `)
           .eq('archived', false)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -272,8 +270,8 @@ export class SupabaseService {
         const transformStart = performance.now();
         const games = (gamesWithParticipants || []).map((game: any) => {
           try {
-            const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
-            console.log(`🔍 Game ${game.id} (${game.title}): isJoined=${isJoined}, participants=`, game.game_participants);
+            const isJoined = game.game_participation?.some((p: any) => p.user_id === userId) || false;
+            console.log(`🔍 Game ${game.id} (${game.title}): isJoined=${isJoined}, participants=`, game.game_participation);
             return transformGameFromDB(game, isJoined);
           } catch (transformError) {
             console.error('❌ Transform error for game:', game.id, transformError);

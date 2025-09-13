@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppStore } from '../store/appStore';
 import { 
@@ -150,6 +150,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3">
             <Avatar className="cursor-pointer" onClick={() => navigate('/profile')}>
+              {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
               <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             {!sidebarCollapsed && (

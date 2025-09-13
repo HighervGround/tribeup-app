@@ -528,24 +528,24 @@ export function CreateGame() {
     if (type === 'select') {
       return (
         <div className="space-y-2">
-          <label className="text-sm font-medium">{label}</label>
+          <label className="text-sm font-medium text-foreground">{label}</label>
           <select 
             value={value} 
             onChange={(e) => handleInputChange(name, e.target.value)}
             className={`w-full p-3 border rounded-lg transition-colors bg-background text-foreground ${
-              error ? 'border-red-500 bg-red-50 dark:bg-red-950 dark:border-red-400' : 
-              isValid ? 'border-green-500 bg-green-50 dark:bg-green-950 dark:border-green-400' : 
-              'border-gray-300 dark:border-gray-600'
+              error ? 'border-destructive bg-destructive/10 dark:bg-destructive/20' : 
+              isValid ? 'border-green-500 bg-green-50 dark:bg-green-950/50 dark:border-green-400' : 
+              'border-input hover:border-ring focus:border-ring focus:ring-2 focus:ring-ring/20'
             }`}
           >
-            <option value="">Select {label.toLowerCase()}</option>
+            <option value="" className="bg-background text-foreground">Select {label.toLowerCase()}</option>
             {options?.map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="bg-background text-foreground">
                 {option.label}
               </option>
             ))}
           </select>
-          {error && <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+          {error && <p className="text-sm text-destructive flex items-center gap-1">
             <span>⚠️</span> {error}
           </p>}
           {isValid && !error && <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
@@ -667,7 +667,7 @@ export function CreateGame() {
               <CardContent className="space-y-6">
                 {/* Sport Selection */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-foreground">
                     Sport
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -678,8 +678,8 @@ export function CreateGame() {
                         onClick={() => handleInputChange('sport', sport.value)}
                         className={`p-2 rounded-lg border-2 transition-all duration-200 ${
                           formData.sport === sport.value
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-input hover:border-ring text-foreground bg-background'
                         }`}
                       >
                         <div className="text-lg mb-1">{sport.icon}</div>
@@ -696,7 +696,7 @@ export function CreateGame() {
                 
                 {/* Quick Time Selection */}
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-foreground">
                     Time
                   </label>
                   
@@ -709,8 +709,8 @@ export function CreateGame() {
                         onClick={() => handleInputChange('time', timeOption)}
                         className={`px-2 py-2 text-xs rounded-md border transition-colors ${
                           formData.time === timeOption
-                            ? 'bg-primary text-white border-primary'
-                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-input hover:bg-muted hover:border-ring'
                         }`}
                       >
                         {/* Convert 24-hour to 12-hour for display */}
@@ -725,7 +725,7 @@ export function CreateGame() {
                   
                   {/* Custom Time Input */}
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-600">Or enter custom time:</label>
+                    <label className="text-xs text-muted-foreground">Or enter custom time:</label>
                     <Input
                       type="time"
                       value={formData.time}
@@ -758,7 +758,7 @@ export function CreateGame() {
               <CardContent className="space-y-6">
                 {/* Location Input Field */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-foreground">
                     Location
                   </label>
                   <div className="relative">

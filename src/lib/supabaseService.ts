@@ -257,6 +257,8 @@ export class SupabaseService {
             *,
             game_participants(user_id)
           `)
+          .eq('archived', false)
+          .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
         
@@ -309,6 +311,8 @@ export class SupabaseService {
         const { data: gamesData, error } = await supabase
           .from('games')
           .select('*')
+          .eq('archived', false)
+          .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
         
@@ -369,14 +373,10 @@ export class SupabaseService {
         *,
         creator:users!games_creator_id_fkey(full_name, username)
       `)
-      .or(`creator_id.eq.${userId},id.in.(${
-        supabase
-          .from('game_participants')
-          .select('game_id')
-          .eq('user_id', userId)
-          .toString()
-      })`)
-      .order('created_at', { ascending: false });
+      .eq('creator_id', userId)
+      .eq('archived', false)
+      .gte('date', new Date().toISOString().split('T')[0])
+      .order('date', { ascending: true });
 
     if (error) throw error;
 
@@ -392,6 +392,7 @@ export class SupabaseService {
       let query = supabase
         .from('games')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
+        .eq('archived', false)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
         .limit(20);
@@ -515,6 +516,157 @@ export class SupabaseService {
     }
 
     return data.id;
+  }
+
+  static async updateGame(gameId: string, updates: Partial<{
+    title: string;
+    sport: string;
+    description: string;
+    date: string;
+    time: string;
+    location: string;
+    latitude: number | null;
+    longitude: number | null;
+    maxPlayers: number;
+    cost: string;
+    imageUrl: string;
+  }>): Promise<Game> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+
+    // First check if user is the creator
+    const { data: gameData, error: fetchError } = await supabase
+      .from('games')
+      .select('creator_id, date, time')
+      .eq('id', gameId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (gameData.creator_id !== currentUser.id) {
+      throw new Error('Only the game creator can edit this game');
+    }
+
+    // Check time restrictions (can't edit within 2 hours of game time)
+    const gameDateTime = new Date(`${gameData.date}T${gameData.time}`);
+    const now = new Date();
+    const hoursUntilGame = (gameDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursUntilGame < 2) {
+      throw new Error('Cannot edit game within 2 hours of start time');
+    }
+
+    // Parse cost if provided
+    let cost: number | undefined = undefined;
+    if (updates.cost !== undefined) {
+      if (updates.cost === 'FREE') {
+        cost = 0;
+      } else {
+        const costMatch = updates.cost.match(/\$(\d+)/);
+        cost = costMatch ? parseInt(costMatch[1]) : 0;
+      }
+    }
+
+    // Prepare update object
+    const updateData: any = {};
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.sport !== undefined) updateData.sport = updates.sport;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.date !== undefined) updateData.date = updates.date;
+    if (updates.time !== undefined) updateData.time = updates.time;
+    if (updates.location !== undefined) updateData.location = updates.location;
+    if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
+    if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
+    if (updates.maxPlayers !== undefined) updateData.max_players = updates.maxPlayers;
+    if (cost !== undefined) updateData.cost = cost;
+    if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
+
+    const { data, error } = await supabase
+      .from('games')
+      .update(updateData)
+      .eq('id', gameId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Notify participants of changes
+    await this.notifyGameParticipants(gameId, 'game_updated', {
+      title: 'Game Updated',
+      message: `The game "${data.title}" has been updated by the organizer.`
+    });
+
+    return transformGameFromDB(data, false);
+  }
+
+  static async deleteGame(gameId: string, reason?: string): Promise<void> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+
+    // First check if user is the creator and get game details
+    const { data: gameData, error: fetchError } = await supabase
+      .from('games')
+      .select('creator_id, date, time, title')
+      .eq('id', gameId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (gameData.creator_id !== currentUser.id) {
+      throw new Error('Only the game creator can delete this game');
+    }
+
+    // Check time restrictions (can't delete within 4 hours of game time)
+    const gameDateTime = new Date(`${gameData.date}T${gameData.time}`);
+    const now = new Date();
+    const hoursUntilGame = (gameDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursUntilGame < 4) {
+      throw new Error('Cannot delete game within 4 hours of start time');
+    }
+
+    // Notify participants before deletion
+    await this.notifyGameParticipants(gameId, 'game_cancelled', {
+      title: 'Game Cancelled',
+      message: `The game "${gameData.title}" has been cancelled${reason ? `: ${reason}` : '.'}`
+    });
+
+    // Archive the game instead of hard delete to preserve data
+    const { error } = await supabase
+      .from('games')
+      .update({ archived: true })
+      .eq('id', gameId);
+
+    if (error) throw error;
+  }
+
+  private static async notifyGameParticipants(gameId: string, type: string, notification: { title: string; message: string }): Promise<void> {
+    try {
+      // Get all participants
+      const { data: participants, error } = await supabase
+        .from('game_participants')
+        .select('user_id')
+        .eq('game_id', gameId);
+
+      if (error || !participants) return;
+
+      // Create notifications for each participant
+      const notifications = participants.map(p => ({
+        user_id: p.user_id,
+        type,
+        title: notification.title,
+        message: notification.message,
+        data: { gameId },
+        read: false
+      }));
+
+      if (notifications.length > 0) {
+        await supabase
+          .from('notifications')
+          .insert(notifications);
+      }
+    } catch (error) {
+      console.error('Error notifying participants:', error);
+      // Don't throw - notification failure shouldn't block game operations
+    }
   }
 
   static async joinGame(gameId: string): Promise<void> {
@@ -727,7 +879,13 @@ export class SupabaseService {
 
       let query = supabase
         .from('games')
-        .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id');
+        .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
+        .eq('archived', false);
+
+      // Default to future games only unless specific date range is provided
+      if (!filters.dateRange?.start) {
+        query = query.gte('date', new Date().toISOString().split('T')[0]);
+      }
 
       if (filters.sports && filters.sports.length > 0) {
         query = query.in('sport', filters.sports);
@@ -815,7 +973,8 @@ export class SupabaseService {
             game_participants!left(user_id)
           `)
           .in('sport', preferred)
-          // .gte('date', new Date().toISOString().split('T')[0])  // Temporarily removed
+          .eq('archived', false)
+          .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
 
@@ -830,7 +989,8 @@ export class SupabaseService {
           .from('games')
           .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
           .in('sport', preferred)
-          // .gte('date', new Date().toISOString().split('T')[0])  // Temporarily removed
+          .eq('archived', false)
+          .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
 
@@ -842,6 +1002,70 @@ export class SupabaseService {
       return this.getGames(); // Fallback to all games
     } finally {
       console.timeEnd?.(timeLabel);
+    }
+  }
+
+  // Method to get archived/past games
+  static async getArchivedGames(userId?: string): Promise<Game[]> {
+    try {
+      let query = supabase
+        .from('games')
+        .select('*')
+        .or(`archived.eq.true,date.lt.${new Date().toISOString().split('T')[0]}`)
+        .order('date', { ascending: false })
+        .limit(50);
+
+      if (userId) {
+        // Get games where user was a participant or creator
+        const { data: gamesData, error } = await supabase
+          .from('games')
+          .select(`
+            *,
+            game_participants(user_id)
+          `)
+          .or(`archived.eq.true,date.lt.${new Date().toISOString().split('T')[0]}`)
+          .order('date', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+
+        return (gamesData || [])
+          .filter((game: any) => 
+            game.creator_id === userId || 
+            game.game_participants?.some((p: any) => p.user_id === userId)
+          )
+          .map((game: any) => {
+            const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+            return transformGameFromDB(game, isJoined);
+          });
+      } else {
+        const { data: gamesData, error } = await query;
+        if (error) throw error;
+        return (gamesData || []).map((game: any) => transformGameFromDB(game, false));
+      }
+    } catch (error) {
+      console.error('[SupabaseService.getArchivedGames] Error:', error);
+      return [];
+    }
+  }
+
+  // Method to automatically archive old games
+  static async archiveOldGames(): Promise<void> {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      const { error } = await supabase
+        .from('games')
+        .update({ archived: true })
+        .eq('archived', false)
+        .lt('date', yesterdayStr);
+
+      if (error) throw error;
+      console.log('✅ Old games archived successfully');
+    } catch (error) {
+      console.error('❌ Error archiving old games:', error);
     }
   }
 }

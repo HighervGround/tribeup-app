@@ -44,7 +44,8 @@ function safeParse(dateStr?: string, timeStr?: string): Date | null {
 function formatTime(dt: Date, locale?: string) {
   return new Intl.DateTimeFormat(locale || undefined, {
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: true
   }).format(dt);
 }
 
@@ -112,4 +113,26 @@ export function formatCalendarInfo(dateStr?: string, timeStr?: string, locale?: 
     date: formatMonthDay(parsed, locale),
     time: formatTime(parsed, locale),
   };
+}
+
+// Convert 24-hour time string to 12-hour format
+export function formatTimeString(timeStr: string): string {
+  if (!timeStr) return '';
+  
+  try {
+    // Parse time string like "14:30" or "14:30:00"
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return timeStr;
+    
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  } catch {
+    return timeStr; // Return original if parsing fails
+  }
 }

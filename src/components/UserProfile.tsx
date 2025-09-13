@@ -29,17 +29,16 @@ export function UserProfile() {
       }
 
       try {
-        // Load user stats
-        const stats = await SupabaseService.getUserStats(user.id);
+        // TODO: Implement getUserStats and getUserRecentGames in SupabaseService
+        // For now, use placeholder data
         setUserStats([
-          { label: 'Games Played', value: stats.gamesPlayed.toString(), icon: Calendar },
-          { label: 'Games Hosted', value: stats.gamesHosted.toString(), icon: MapPin },
-          { label: 'Achievements', value: stats.achievements.toString(), icon: Trophy },
+          { label: 'Games Played', value: '0', icon: Calendar },
+          { label: 'Games Hosted', value: '0', icon: MapPin },
+          { label: 'Achievements', value: '0', icon: Trophy },
         ]);
 
-        // Load recent games
-        const games = await SupabaseService.getUserRecentGames(user.id, 5);
-        setRecentGames(games);
+        // TODO: Load recent games from SupabaseService
+        setRecentGames([]);
       } catch (error) {
         console.error('Error loading user data:', error);
       } finally {
@@ -59,7 +58,7 @@ export function UserProfile() {
   const needsCompletion = !(user?.name && user?.email);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-12 pb-6">
         <h1 className="text-xl font-semibold">Profile</h1>
@@ -68,7 +67,7 @@ export function UserProfile() {
         </Button>
       </div>
 
-      <div className="px-4 space-y-6">
+      <div className="px-4 space-y-6 pb-6">
         {/* Profile Info */}
         <Card>
           <CardContent className="pt-6">

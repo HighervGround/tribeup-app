@@ -61,7 +61,15 @@ export function Auth() {
     try {
       await signInWithOAuth(provider);
     } catch (error: any) {
-      setError(error.message);
+      console.error(`OAuth sign-in error for ${provider}:`, error);
+      // Provide more user-friendly error messages
+      if (error.message?.includes('popup')) {
+        setError('Authentication popup was blocked. Please allow popups and try again.');
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        setError('Network error during authentication. Please check your connection and try again.');
+      } else {
+        setError(`Authentication failed. Please try again or use email sign-in.`);
+      }
       setLoading(false);
     }
   };
@@ -112,6 +120,10 @@ export function Auth() {
                   <Apple className="mr-2 h-4 w-4" />
                   Apple
                 </Button>
+              </div>
+              
+              <div className="text-xs text-muted-foreground text-center mb-4">
+                Note: You may see browser warnings during OAuth sign-in. These are from external services and don't affect your account security.
               </div>
 
               <div className="relative my-6">

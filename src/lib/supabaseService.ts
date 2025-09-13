@@ -255,7 +255,7 @@ export class SupabaseService {
           .from('games')
           .select(`
             *,
-            game_participants!left(*)
+            game_participants(user_id)
           `)
           .order('created_at', { ascending: false })
           .limit(50);

@@ -72,16 +72,19 @@ export function AppContent() {
 
   // Render mobile layout
   if (isMobile) {
+    // Check if we're on the CreateGame route - it has its own navigation
+    const isCreateGameRoute = location.pathname === '/create';
+    
     return (
       <>
         <div className="min-h-screen bg-background">
           {/* Main content area with proper scrolling */}
-          <main style={{ paddingBottom: `${navigationHeight + 16}px` }}>
+          <main style={{ paddingBottom: isCreateGameRoute ? '0px' : `${navigationHeight + 16}px` }}>
             <Outlet />
           </main>
 
-          {/* Bottom navigation */}
-          <BottomNavigation ref={navigationRef} />
+          {/* Bottom navigation - hide for CreateGame route */}
+          {!isCreateGameRoute && <BottomNavigation ref={navigationRef} />}
 
         </div>
 

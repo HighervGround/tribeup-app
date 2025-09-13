@@ -188,7 +188,7 @@ export function HomeScreen() {
   };
 
   const handleCreateGame = () => {
-    navigate('/create-game');
+    navigate('/create');
   };
 
   // Filter today's games

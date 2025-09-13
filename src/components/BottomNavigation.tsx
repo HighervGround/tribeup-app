@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 // import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -14,13 +14,13 @@ const navItems = [
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
-export function BottomNavigation() {
+export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount } = useNotifications();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
+    <div ref={ref} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
       <div className="flex items-center justify-between px-4 py-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -75,4 +75,6 @@ export function BottomNavigation() {
       <div className="pb-safe bg-background/95" />
     </div>
   );
-}
+});
+
+BottomNavigation.displayName = 'BottomNavigation';

@@ -21,7 +21,7 @@ export function BottomNavigation() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
-      <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
+      <div className="flex items-center justify-between px-4 py-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
@@ -29,12 +29,12 @@ export function BottomNavigation() {
           return (
             <div
               key={item.path}
-              className="relative"
+              className="relative flex-1 flex justify-center"
             >
               <Button
                 variant="ghost"
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1 p-2 h-auto min-w-[50px] transition-all duration-200 ${
+                className={`flex flex-col items-center gap-1 p-2 h-auto w-full transition-all duration-200 ${
                   isActive 
                     ? 'text-primary' 
                     : 'text-muted-foreground hover:text-foreground'
@@ -58,16 +58,13 @@ export function BottomNavigation() {
                   {item.label}
                 </span>
                 
-                {/* Active indicator */}
-                <div
-                  className={`absolute -top-1 left-1/2 w-1 h-1 bg-primary rounded-full transition-all duration-200 ${
-                    isActive ? 'scale-100' : 'scale-0'
-                  }`}
-                  style={{ transform: 'translateX(-50%)' }}
-                />
-                
-                {/* Ripple effect */}
-                <div className="absolute inset-0 bg-primary/10 rounded-lg scale-0 opacity-0 transition-all duration-200" />
+                {/* Active indicator - only show for meaningful active states */}
+                {isActive && (
+                  <div
+                    className="absolute -top-1 left-1/2 w-1 h-1 bg-primary rounded-full transition-all duration-200"
+                    style={{ transform: 'translateX(-50%)' }}
+                  />
+                )}
               </Button>
             </div>
           );

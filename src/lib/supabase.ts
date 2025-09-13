@@ -5,8 +5,8 @@ import type { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Debug logging
-console.log('🔧 Supabase Environment Check:');
+// Debug logging - FORCE DEPLOYMENT
+console.log('🔧 Supabase Environment Check - PRODUCTION VERSION:');
 console.log('VITE_SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
 console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
 console.log('URL Value:', supabaseUrl);

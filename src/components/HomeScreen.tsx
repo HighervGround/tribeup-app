@@ -199,6 +199,13 @@ export function HomeScreen() {
     return gameDate.toDateString() === today.toDateString();
   });
 
+  // Filter non-today games for "All Games" section to avoid duplicates
+  const otherGames = games.filter(game => {
+    const gameDate = new Date(game.date);
+    const today = new Date();
+    return gameDate.toDateString() !== today.toDateString();
+  });
+
   // Show loading state
   if (isLoading && games.length === 0) {
     return (
@@ -296,7 +303,7 @@ export function HomeScreen() {
             </div>
 
             <div className="space-y-4">
-              {games.map((game) => (
+              {otherGames.map((game) => (
                 <div key={game.id}>
                   <SimpleGameCard
                     game={game}
@@ -372,7 +379,7 @@ export function HomeScreen() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {games.map((game) => (
+                {otherGames.map((game) => (
                   <div key={game.id}>
                     <SimpleGameCard
                       game={game}

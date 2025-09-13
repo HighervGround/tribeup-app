@@ -5,9 +5,9 @@ import { useLocation } from '../hooks/useLocation';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Search, SlidersHorizontal, MapPin, Clock, Users } from 'lucide-react';
 import { MapView } from './MapView';
-import { GameCard } from './GameCard';
+import { useAppStore } from '../store/appStore';
 import { calculateDistance, formatDistance } from '../hooks/useLocation';
 
 
@@ -304,27 +304,11 @@ export function SearchDiscovery() {
             {/* Results List */}
             <div className="space-y-4">
               {filteredResults.map((game) => (
-                <div key={game.id} className="relative">
-                  <GameCard 
-                    game={{
-                      ...game,
-                      participants: game.currentPlayers || game.participants || 0,
-                      maxParticipants: game.maxPlayers || game.maxParticipants || 0,
-                      sportColor: game.sportColor,
-                      imageUrl: game.imageUrl || '',
-                      host: {
-                        name: game.hostName || 'Host',
-                        avatar: game.hostAvatar || ''
-                      },
-                      isHosted: false,
-                      isJoined: game.isJoined || false
-                    }}
-                    onSelect={() => handleGameSelect(game.id)}
-                  />
-                  <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm rounded px-2 py-1">
-                    <span className="text-xs text-muted-foreground">{game.distance}</span>
-                  </div>
-                </div>
+                <SimpleGameCard
+                  key={game.id}
+                  game={game}
+                  onSelect={() => handleGameSelect(game.id)}
+                />
               ))}
             </div>
 
@@ -408,21 +392,9 @@ export function SearchDiscovery() {
                 </h3>
               </div>
               {filteredResults.map((game) => (
-                <GameCard
+                <SimpleGameCard
                   key={game.id}
-                  game={{
-                    ...game,
-                    participants: game.currentPlayers || game.participants || 0,
-                    maxParticipants: game.maxPlayers || game.maxParticipants || 0,
-                    sportColor: game.sportColor,
-                    imageUrl: game.imageUrl || '',
-                    host: {
-                      name: game.hostName || 'Host',
-                      avatar: game.hostAvatar || ''
-                    },
-                    isHosted: false,
-                    isJoined: game.isJoined || false
-                  }}
+                  game={game}
                   onSelect={() => handleGameSelect(game.id)}
                 />
               ))}

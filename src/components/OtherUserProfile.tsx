@@ -18,7 +18,7 @@ import {
   Flag,
   Share
 } from 'lucide-react';
-import { useGames } from '../store/appStore';
+import { useGames } from '../hooks/useGames';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
 

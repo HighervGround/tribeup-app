@@ -29,18 +29,41 @@ export function UserProfile() {
       }
 
       try {
-        // TODO: Implement getUserStats and getUserRecentGames in SupabaseService
-        // For now, use placeholder data
+        // Load real user stats
+        const [stats, recentGamesData, achievements] = await Promise.all([
+          SupabaseService.getUserStats(user.id),
+          SupabaseService.getUserRecentGames(user.id, 5),
+          SupabaseService.getUserAchievements(user.id)
+        ]);
+
+        // Update stats with real data
+        setUserStats([
+          { label: 'Games Played', value: stats.games_played.toString(), icon: Calendar },
+          { label: 'Games Hosted', value: stats.games_hosted.toString(), icon: MapPin },
+          { label: 'Achievements', value: achievements.length.toString(), icon: Trophy },
+        ]);
+
+        // Transform recent games data
+        const transformedRecentGames = recentGamesData.map((participation: any) => ({
+          id: participation.games.id,
+          title: participation.games.title,
+          sport: participation.games.sport,
+          date: participation.games.date,
+          time: participation.games.time,
+          location: participation.games.location,
+          isHost: participation.games.created_by === user.id
+        }));
+
+        setRecentGames(transformedRecentGames);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        // Fallback to placeholder data on error
         setUserStats([
           { label: 'Games Played', value: '0', icon: Calendar },
           { label: 'Games Hosted', value: '0', icon: MapPin },
           { label: 'Achievements', value: '0', icon: Trophy },
         ]);
-
-        // TODO: Load recent games from SupabaseService
         setRecentGames([]);
-      } catch (error) {
-        console.error('Error loading user data:', error);
       } finally {
         setLoading(false);
       }

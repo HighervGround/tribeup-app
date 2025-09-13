@@ -679,6 +679,14 @@ export class SupabaseService {
     });
 
     if (error) throw error;
+
+    // Record participation for stats tracking
+    try {
+      await this.recordGameParticipation(currentUser.id, gameId, 'joined');
+    } catch (participationError) {
+      console.warn('Failed to record game participation:', participationError);
+      // Don't throw here as the main join operation succeeded
+    }
   }
 
   static async leaveGame(gameId: string): Promise<void> {
@@ -691,6 +699,14 @@ export class SupabaseService {
     });
 
     if (error) throw error;
+
+    // Record participation for stats tracking
+    try {
+      await this.recordGameParticipation(currentUser.id, gameId, 'left');
+    } catch (participationError) {
+      console.warn('Failed to record game participation:', participationError);
+      // Don't throw here as the main leave operation succeeded
+    }
   }
 
   // Public RSVP methods
@@ -1066,6 +1082,205 @@ export class SupabaseService {
       console.log('✅ Old games archived successfully');
     } catch (error) {
       console.error('❌ Error archiving old games:', error);
+    }
+  }
+
+  // User Stats methods
+  static async getUserStats(userId: string) {
+    const { data, error } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw error;
+    }
+
+    // Return default stats if no record exists
+    return data || {
+      user_id: userId,
+      games_played: 0,
+      games_hosted: 0,
+      total_play_time_minutes: 0,
+      favorite_sport: null,
+      last_activity: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  static async getUserRecentGames(userId: string, limit = 5) {
+    const { data, error } = await supabase
+      .from('game_participation')
+      .select(`
+        *,
+        games (
+          id,
+          title,
+          sport,
+          date,
+          time,
+          location,
+          created_by
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('joined_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getUserAchievements(userId: string) {
+    const { data, error } = await supabase
+      .from('user_achievements')
+      .select(`
+        *,
+        achievements (
+          id,
+          name,
+          description,
+          icon,
+          category,
+          points
+        )
+      `)
+      .eq('user_id', userId)
+      .order('earned_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async checkAndAwardAchievements(userId: string) {
+    // Get current user stats
+    const stats = await this.getUserStats(userId);
+    
+    // Get all active achievements
+    const { data: achievements, error: achievementsError } = await supabase
+      .from('achievements')
+      .select('*')
+      .eq('is_active', true);
+
+    if (achievementsError) throw achievementsError;
+
+    // Get user's current achievements
+    const { data: userAchievements, error: userAchievementsError } = await supabase
+      .from('user_achievements')
+      .select('achievement_id')
+      .eq('user_id', userId);
+
+    if (userAchievementsError) throw userAchievementsError;
+
+    const earnedAchievementIds = new Set(userAchievements?.map(ua => ua.achievement_id) || []);
+
+    // Check each achievement
+    const newAchievements = [];
+    for (const achievement of achievements || []) {
+      if (earnedAchievementIds.has(achievement.id)) continue;
+
+      const criteria = achievement.criteria;
+      let shouldAward = false;
+
+      // Check participation achievements
+      if (criteria.games_played && stats.games_played >= criteria.games_played) {
+        shouldAward = true;
+      }
+
+      // Check hosting achievements
+      if (criteria.games_hosted && stats.games_hosted >= criteria.games_hosted) {
+        shouldAward = true;
+      }
+
+      if (shouldAward) {
+        newAchievements.push(achievement);
+      }
+    }
+
+    // Award new achievements
+    if (newAchievements.length > 0) {
+      const achievementsToInsert = newAchievements.map(achievement => ({
+        user_id: userId,
+        achievement_id: achievement.id,
+        earned_at: new Date().toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from('user_achievements')
+        .insert(achievementsToInsert);
+
+      if (insertError) throw insertError;
+    }
+
+    return newAchievements;
+  }
+
+  // Method to record game participation
+  static async recordGameParticipation(userId: string, gameId: string, status: 'joined' | 'left' | 'completed' = 'joined') {
+    const { data, error } = await supabase
+      .from('game_participation')
+      .upsert({
+        user_id: userId,
+        game_id: gameId,
+        status: status,
+        joined_at: status === 'joined' ? new Date().toISOString() : undefined,
+        left_at: status === 'left' || status === 'completed' ? new Date().toISOString() : undefined
+      }, {
+        onConflict: 'user_id,game_id'
+      });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Method to mark a game as completed for all participants
+  static async markGameCompleted(gameId: string) {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('User not authenticated');
+
+    // First, verify the user is the game creator
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('created_by')
+      .eq('id', gameId)
+      .single();
+
+    if (gameError) throw gameError;
+    if (game.created_by !== currentUser.id) {
+      throw new Error('Only the game creator can mark a game as completed');
+    }
+
+    // Mark all participants as completed
+    const { error } = await supabase
+      .from('game_participation')
+      .update({ 
+        status: 'completed',
+        left_at: new Date().toISOString()
+      })
+      .eq('game_id', gameId)
+      .eq('status', 'joined');
+
+    if (error) throw error;
+
+    // Check for new achievements for all participants
+    const { data: participants, error: participantsError } = await supabase
+      .from('game_participation')
+      .select('user_id')
+      .eq('game_id', gameId)
+      .eq('status', 'completed');
+
+    if (participantsError) throw participantsError;
+
+    // Award achievements to all participants
+    for (const participant of participants || []) {
+      try {
+        await this.checkAndAwardAchievements(participant.user_id);
+      } catch (achievementError) {
+        console.warn(`Failed to check achievements for user ${participant.user_id}:`, achievementError);
+      }
     }
   }
 }

@@ -6,21 +6,26 @@ import { formatEventHeader, formatCalendarInfo, formatTimeString } from '../lib/
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
+import { useGames, useJoinGame, useLeaveGame } from '../hooks/useGames';
+import { GameCardSkeleton } from './GameCardSkeleton';
 
 
 
 // Simple GameCard component
 function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
-  const { joinGame, leaveGame } = useAppStore();
+  const joinGameMutation = useJoinGame();
+  const leaveGameMutation = useLeaveGame();
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (game.isJoined) {
-      leaveGame(game.id);
+      leaveGameMutation.mutate(game.id);
     } else {
-      joinGame(game.id);
+      joinGameMutation.mutate(game.id);
     }
   };
+
+  const isLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
 
   const handleCardClick = () => {
     onSelect();
@@ -109,11 +114,14 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
 
 export function HomeScreen() {
   const navigate = useNavigate();
-  const { games, setGames, isLoading, setLoading, user } = useAppStore();
+  const { user } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
   const { onlineCount, isLoading: presenceLoading } = useUserPresence();
+  
+  // Use React Query for games
+  const { data: games = [], isLoading, error, refetch } = useGames();
 
   // Calculate real stats
   const stats = useMemo(() => {
@@ -224,7 +232,7 @@ export function HomeScreen() {
     setTimedOut(false);
     setRefreshing(true);
     try {
-      await loadGames();
+      await refetch();
     } finally {
       setRefreshing(false);
     }
@@ -370,14 +378,21 @@ export function HomeScreen() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedGames.map((game) => (
-                <div key={game.id}>
-                  <SimpleGameCard
-                    game={game}
-                    onSelect={() => handleGameSelect(game.id)}
-                  />
-                </div>
-              ))}
+              {isLoading ? (
+                // Show skeleton loading
+                Array.from({ length: 6 }).map((_, index) => (
+                  <GameCardSkeleton key={index} />
+                ))
+              ) : (
+                sortedGames.map((game) => (
+                  <div key={game.id}>
+                    <SimpleGameCard
+                      game={game}
+                      onSelect={() => handleGameSelect(game.id)}
+                    />
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

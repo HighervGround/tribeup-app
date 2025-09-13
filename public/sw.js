@@ -1,128 +1,252 @@
-// Service Worker - Minimal caching to prevent loading issues
+// Service Worker for caching and offline support
 const CACHE_NAME = 'tribeup-v1';
+const STATIC_CACHE = 'tribeup-static-v1';
+const DYNAMIC_CACHE = 'tribeup-dynamic-v1';
 
+// Files to cache on install
+const STATIC_FILES = [
+  '/',
+  '/static/js/bundle.js',
+  '/static/css/main.css',
+  '/manifest.json'
+];
+
+// Install event - cache static files
 self.addEventListener('install', (event) => {
-  // Skip waiting to activate immediately
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  // Clear all caches to prevent stale content
+  console.log('Service Worker installing...');
+  
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => caches.delete(cacheName))
-      );
-    })
+    caches.open(STATIC_CACHE)
+      .then((cache) => {
+        console.log('Caching static files');
+        return cache.addAll(STATIC_FILES);
+      })
+      .then(() => {
+        console.log('Service Worker installed');
+        return self.skipWaiting();
+      })
   );
-  // Take control of all clients immediately
-  self.clients.claim();
 });
 
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating...');
+  
+  event.waitUntil(
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+      .then(() => {
+        console.log('Service Worker activated');
+        return self.clients.claim();
+      })
+  );
+});
+
+// Fetch event - serve from cache or network
 self.addEventListener('fetch', (event) => {
-  // Skip caching entirely for main app requests to prevent loading issues
-  // Only handle push notifications and background sync
-  return;
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+  
+  // Skip chrome-extension and other non-http requests
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+  
+  // Handle different types of requests
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase.co')) {
+    // API requests - network first with cache fallback
+    event.respondWith(handleApiRequest(request));
+  } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2)$/)) {
+    // Static assets - cache first
+    event.respondWith(handleStaticRequest(request));
+  } else {
+    // HTML pages - network first with cache fallback
+    event.respondWith(handlePageRequest(request));
+  }
 });
 
-// Push event - handle incoming push notifications
-self.addEventListener('push', (event) => {
-  console.log('Push event received:', event);
+// Handle API requests (network first)
+async function handleApiRequest(request) {
+  try {
+    // Try network first
+    const networkResponse = await fetch(request);
+    
+    // If successful, cache the response
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Network failed for API request, trying cache:', request.url);
+    
+    // Fallback to cache
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // If no cache, return offline response
+    return new Response(
+      JSON.stringify({ error: 'Offline - no cached data available' }),
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+}
 
-  let notificationData = {
-    title: 'TribeUp',
-    body: 'You have a new notification',
-    icon: '/icon-192x192.png',
-    badge: '/badge-72x72.png',
-    tag: 'tribeup-notification',
-    data: {}
-  };
+// Handle static assets (cache first)
+async function handleStaticRequest(request) {
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Failed to fetch static asset:', request.url);
+    return new Response('Asset not available offline', { status: 404 });
+  }
+}
 
-  if (event.data) {
+// Handle HTML pages (network first)
+async function handlePageRequest(request) {
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Network failed for page request, trying cache:', request.url);
+    
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // Fallback to index.html for SPA routing
+    if (request.mode === 'navigate') {
+      const indexResponse = await caches.match('/');
+      if (indexResponse) {
+        return indexResponse;
+      }
+    }
+    
+    return new Response('Page not available offline', { status: 404 });
+  }
+}
+
+// Background sync for offline actions
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync());
+  }
+});
+
+async function doBackgroundSync() {
+  console.log('Performing background sync...');
+  
+  // Get pending actions from IndexedDB
+  const pendingActions = await getPendingActions();
+  
+  for (const action of pendingActions) {
     try {
-      const payload = event.data.json();
-      notificationData = { ...notificationData, ...payload };
+      await performAction(action);
+      await removePendingAction(action.id);
     } catch (error) {
-      console.error('Error parsing push data:', error);
+      console.log('Background sync failed for action:', action.id);
     }
   }
+}
 
-  const promiseChain = self.registration.showNotification(
-    notificationData.title,
-    {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      tag: notificationData.tag,
-      data: notificationData.data,
+// Helper functions for background sync
+async function getPendingActions() {
+  // This would integrate with IndexedDB to get pending actions
+  return [];
+}
+
+async function performAction(action) {
+  // This would perform the actual action (join game, etc.)
+  console.log('Performing action:', action);
+}
+
+async function removePendingAction(actionId) {
+  // This would remove the action from IndexedDB
+  console.log('Removing action:', actionId);
+}
+
+// Push notifications
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    const data = event.data.json();
+    
+    const options = {
+      body: data.body,
+      icon: '/icon-192x192.png',
+      badge: '/badge-72x72.png',
+      vibrate: [100, 50, 100],
+      data: {
+        dateOfArrival: Date.now(),
+        primaryKey: data.primaryKey
+      },
       actions: [
         {
-          action: 'view',
-          title: 'View Game'
+          action: 'explore',
+          title: 'View Game',
+          icon: '/icon-192x192.png'
         },
         {
-          action: 'dismiss',
-          title: 'Dismiss'
+          action: 'close',
+          title: 'Close',
+          icon: '/icon-192x192.png'
         }
       ]
-    }
-  );
-
-  event.waitUntil(promiseChain);
-});
-
-// Notification click event
-self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
-
-  event.notification.close();
-
-  if (event.action === 'view' && event.notification.data.gameId) {
-    // Open the game page
-    const gameUrl = `/game/${event.notification.data.gameId}`;
+    };
     
     event.waitUntil(
-      self.clients.matchAll({ type: 'window' }).then((clients) => {
-        // Check if there's already a window/tab open with the target URL
-        for (const client of clients) {
-          if (client.url.includes(gameUrl) && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        
-        // If no existing window, open a new one
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(gameUrl);
-        }
-      })
-    );
-  } else if (event.action === 'dismiss') {
-    // Just close the notification (already done above)
-    return;
-  } else {
-    // Default action - open the app
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window' }).then((clients) => {
-        if (clients.length > 0 && 'focus' in clients[0]) {
-          return clients[0].focus();
-        }
-        
-        if (self.clients.openWindow) {
-          return self.clients.openWindow('/');
-        }
-      })
+      self.registration.showNotification(data.title, options)
     );
   }
 });
 
-// Background sync for offline functionality (future enhancement)
-self.addEventListener('sync', (event) => {
-  console.log('Background sync:', event.tag);
+// Notification click handling
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
   
-  if (event.tag === 'background-sync') {
+  if (event.action === 'explore') {
     event.waitUntil(
-      // Handle background sync tasks
-      Promise.resolve()
+      clients.openWindow('/')
     );
   }
 });

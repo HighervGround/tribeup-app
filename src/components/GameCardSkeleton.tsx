@@ -1,59 +1,115 @@
-import React from 'react';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 
 export function GameCardSkeleton() {
   return (
-    <Card className="overflow-hidden">
-      <div className="relative">
-        <Skeleton className="aspect-video w-full" />
-        
-        {/* Date/Time skeleton */}
-        <div className="absolute top-3 left-3">
-          <Skeleton className="h-12 w-20 rounded-lg" />
-        </div>
-        
-        {/* Sport tag skeleton */}
-        <div className="absolute top-3 right-3">
-          <Skeleton className="h-6 w-16 rounded-full" />
-        </div>
-      </div>
-      
+    <Card className="w-full">
       <CardContent className="p-4">
-        {/* Title skeleton */}
-        <div className="mb-3">
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <div className="flex items-center gap-1">
-            <Skeleton className="h-4 w-4" />
-            <Skeleton className="h-4 w-1/2" />
+        <div className="space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+            <Skeleton className="h-8 w-16" />
           </div>
-        </div>
-        
-        {/* Description skeleton */}
-        <div className="mb-3">
-          <Skeleton className="h-4 w-full mb-1" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-        
-        {/* Host info skeleton */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-6 rounded-full" />
-            <Skeleton className="h-4 w-24" />
+          
+          {/* Location and time */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-1/4" />
+            </div>
           </div>
-          <Skeleton className="h-4 w-8" />
-        </div>
-        
-        {/* Participants & action skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Skeleton className="h-4 w-4" />
-            <Skeleton className="h-4 w-12" />
+          
+          {/* Description */}
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-2">
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-8 w-16" />
           </div>
-          <Skeleton className="h-8 w-20 rounded" />
         </div>
       </CardContent>
     </Card>
   );
 }
 
+export function GameDetailsSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          <Skeleton className="h-8 w-8" />
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-6 space-y-6">
+        {/* Hero Image */}
+        <Skeleton className="h-48 w-full rounded-lg" />
+        
+        {/* Basic Info */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+        </div>
+        
+        {/* Description */}
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+        
+        {/* Join Button */}
+        <Skeleton className="h-12 w-full" />
+        
+        {/* Players List */}
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

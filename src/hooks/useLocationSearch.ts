@@ -70,10 +70,13 @@ export function useLocationSearch() {
       return;
     }
 
+    console.log('🔍 Starting location search for:', query);
     setLoading(true);
+    
     try {
       // Try Google Places API (Legacy) first - more stable
-      if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key') {
+      if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key' && GOOGLE_API_KEY !== 'your_anon_key_here') {
+        console.log('🌐 Trying Google Places API...');
         let placesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`;
         
         // Add location bias if available
@@ -81,10 +84,13 @@ export function useLocationSearch() {
           placesUrl += `&location=${userLat},${userLng}&radius=50000`;
         }
 
+        console.log('📡 Google Places URL:', placesUrl);
         const response = await fetch(placesUrl);
 
         if (response.ok) {
           const data = await response.json();
+          console.log('✅ Google Places response:', data);
+          
           if (data.predictions && data.predictions.length > 0) {
             const suggestions: LocationSuggestion[] = data.predictions.map((place: any) => ({
               place_id: place.place_id,
@@ -94,63 +100,60 @@ export function useLocationSearch() {
                 secondary_text: place.structured_formatting?.secondary_text || place.description.split(',').slice(1).join(',').trim()
               }
             }));
+            console.log('🎯 Google Places suggestions:', suggestions);
             setSuggestions(suggestions);
             setLoading(false);
             return;
+          } else {
+            console.log('⚠️ Google Places returned no predictions');
           }
+        } else {
+          console.log('❌ Google Places API error:', response.status, response.statusText);
         }
+      } else {
+        console.log('⚠️ Google API key not available or invalid:', GOOGLE_API_KEY);
       }
       
       // Fallback to OpenStreetMap
+      console.log('🗺️ Trying OpenStreetMap...');
       let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
       
       if (userLat && userLng) {
         searchUrl += `&lat=${userLat}&lon=${userLng}&bounded=1&viewbox=${userLng-0.1},${userLat+0.1},${userLng+0.1},${userLat-0.1}`;
       }
       
+      console.log('📡 OpenStreetMap URL:', searchUrl);
       const response = await fetch(searchUrl);
-      const data = await response.json();
       
-      const suggestions: LocationSuggestion[] = data.map((place: any, index: number) => ({
-        place_id: place.place_id || `osm-${index}`,
-        description: place.display_name,
-        structured_formatting: {
-          main_text: place.name || place.display_name.split(',')[0],
-          secondary_text: place.display_name.split(',').slice(1, 3).join(',').trim()
-        }
-      }));
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ OpenStreetMap response:', data);
+        
+        const suggestions: LocationSuggestion[] = data.map((place: any, index: number) => ({
+          place_id: place.place_id || `osm-${index}`,
+          description: place.display_name,
+          structured_formatting: {
+            main_text: place.name || place.display_name.split(',')[0],
+            secondary_text: place.display_name.split(',').slice(1, 3).join(',').trim()
+          }
+        }));
 
-      setSuggestions(suggestions);
+        console.log('🎯 OpenStreetMap suggestions:', suggestions);
+        setSuggestions(suggestions);
+        setLoading(false);
+        return;
+      } else {
+        console.log('❌ OpenStreetMap API error:', response.status, response.statusText);
+      }
+      
+      // If both APIs fail, show a helpful message instead of mock suggestions
+      console.log('❌ All location APIs failed, showing no suggestions');
+      setSuggestions([]);
+      
     } catch (error) {
-      console.error('Location search error:', error);
-      // Fallback to mock suggestions
-      const mockSuggestions: LocationSuggestion[] = [
-        {
-          place_id: '1',
-          description: `${query} Community Center`,
-          structured_formatting: {
-            main_text: `${query} Community Center`,
-            secondary_text: 'Recreation Center'
-          }
-        },
-        {
-          place_id: '2', 
-          description: `${query} Park`,
-          structured_formatting: {
-            main_text: `${query} Park`,
-            secondary_text: 'Public Park'
-          }
-        },
-        {
-          place_id: '3',
-          description: `${query} Sports Complex`,
-          structured_formatting: {
-            main_text: `${query} Sports Complex`,
-            secondary_text: 'Athletic Facility'
-          }
-        }
-      ];
-      setSuggestions(mockSuggestions);
+      console.error('❌ Location search error:', error);
+      // Don't show mock suggestions - just show empty
+      setSuggestions([]);
     } finally {
       setLoading(false);
     }

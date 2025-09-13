@@ -821,35 +821,40 @@ export function CreateGame() {
                   </div>
                   
                   {/* Location Suggestions */}
-                  {console.log('Location suggestions debug:', { showLocationSuggestions, suggestionsLength: suggestions.length, suggestions })}
-                  {showLocationSuggestions && suggestions.length > 0 && (
+                  {showLocationSuggestions && (
                     <div className="border border-border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto">
-                      {suggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.place_id}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
-                          onClick={async () => {
-                            setFormData(prev => ({ ...prev, location: suggestion.description }));
-                            setShowLocationSuggestions(false);
-                            
-                            const coords = await geocodeLocation(suggestion.description);
-                            if (coords) {
-                              setFormData(prev => ({
-                                ...prev,
-                                latitude: coords.lat,
-                                longitude: coords.lng
-                              }));
-                            }
-                          }}
-                        >
-                          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <div>
-                            <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                            <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
-                          </div>
-                        </button>
-                      ))}
+                      {suggestions.length > 0 ? (
+                        suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.place_id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
+                            onClick={async () => {
+                              setFormData(prev => ({ ...prev, location: suggestion.description }));
+                              setShowLocationSuggestions(false);
+                              
+                              const coords = await geocodeLocation(suggestion.description);
+                              if (coords) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  latitude: coords.lat,
+                                  longitude: coords.lng
+                                }));
+                              }
+                            }}
+                          >
+                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <div>
+                              <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
+                              <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          {isLocationLoading ? 'Searching...' : 'No suggestions found. Try typing a more specific location.'}
+                        </div>
+                      )}
                     </div>
                   )}
                   

@@ -39,3 +39,4 @@ export function ProtectedRoute({
   // User is authenticated and can access the route
   return <>{children || null}</>;
 }
+

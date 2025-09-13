@@ -25,12 +25,7 @@ export function useGameActions() {
     }
 
     try {
-      setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      joinGame(gameId);
+      await joinGame(gameId);
       
       toast.success('Joined game!', {
         description: `You're now part of ${game.title}`,
@@ -38,15 +33,12 @@ export function useGameActions() {
       
       return true;
     } catch (error) {
-      setError('Failed to join game');
       toast.error('Failed to join game', {
         description: 'Please try again later',
       });
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [games, joinGame, setLoading, setError]);
+  }, [games, joinGame]);
 
   // Leave a game
   const handleLeaveGame = useCallback(async (gameId: string) => {
@@ -62,12 +54,7 @@ export function useGameActions() {
     }
 
     try {
-      setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      leaveGame(gameId);
+      await leaveGame(gameId);
       
       toast.success('Left game successfully', {
         description: `You've left ${game.title}`,
@@ -75,15 +62,12 @@ export function useGameActions() {
       
       return true;
     } catch (error) {
-      setError('Failed to leave game');
       toast.error('Failed to leave game', {
         description: 'Please try again later',
       });
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [games, leaveGame, setLoading, setError]);
+  }, [games, leaveGame]);
 
   // Toggle game participation
   const toggleGameParticipation = useCallback(async (gameId: string) => {
@@ -100,11 +84,6 @@ export function useGameActions() {
   // Cancel a game (for creators)
   const cancelGame = useCallback(async (gameId: string, reason?: string) => {
     try {
-      setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       updateGame(gameId, { 
         description: `${reason ? `CANCELLED: ${reason}` : 'CANCELLED'}` 
       });
@@ -115,15 +94,12 @@ export function useGameActions() {
       
       return true;
     } catch (error) {
-      setError('Failed to cancel game');
       toast.error('Failed to cancel game', {
         description: 'Please try again later',
       });
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [updateGame, setLoading, setError]);
+  }, [updateGame]);
 
   return {
     joinGame: handleJoinGame,

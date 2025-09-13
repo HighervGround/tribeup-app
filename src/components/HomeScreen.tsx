@@ -67,8 +67,8 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
       
       <div className="flex items-center justify-between mt-3">
         {game.isJoined ? (
-          <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-            Joined
+          <span className="inline-block bg-success/20 text-success dark:bg-success/30 dark:text-success text-xs px-2 py-1 rounded">
+            Joined ✓
           </span>
         ) : (
           <div></div>
@@ -78,7 +78,7 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
           onClick={handleJoinClick}
           className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
             game.isJoined 
-              ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+              ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
               : 'bg-primary text-primary-foreground hover:bg-primary/90'
           }`}
         >

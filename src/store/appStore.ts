@@ -238,7 +238,7 @@ export const useAppStore = create<AppState & AppActions>()(
       },
 
       initializeAuth: async () => {
-        const { setLoading, setError } = get();
+        const { setLoading, setError, setGames } = get();
         try {
           setLoading(true);
           const user = await SupabaseService.getCurrentUser();
@@ -249,6 +249,10 @@ export const useAppStore = create<AppState & AppActions>()(
               state.isAuthenticated = true;
             });
           }
+          
+          // Load games after auth initialization
+          const gamesData = await SupabaseService.getGames();
+          setGames(gamesData);
         } catch (error) {
           setError(error instanceof Error ? error.message : 'Failed to initialize auth');
         } finally {
@@ -313,22 +317,15 @@ export const useAppStore = create<AppState & AppActions>()(
       },
       
       joinGame: async (gameId) => {
-        const { setLoading, setError } = get();
+        const { setLoading, setError, setGames } = get();
         try {
           setLoading(true);
           await SupabaseService.joinGame(gameId);
-          set((state) => {
-            const game = state.games.find(g => g.id === gameId);
-            if (game && !game.isJoined && game.currentPlayers < game.maxPlayers) {
-              game.isJoined = true;
-              game.currentPlayers += 1;
-              
-              // Add to my games
-              if (!state.myGames.find(g => g.id === gameId)) {
-                state.myGames.push(game);
-              }
-            }
-          });
+          
+          // Refresh games to get updated join status
+          const updatedGames = await SupabaseService.getGames();
+          setGames(updatedGames);
+          
         } catch (error) {
           setError(error instanceof Error ? error.message : 'Failed to join game');
         } finally {
@@ -337,22 +334,15 @@ export const useAppStore = create<AppState & AppActions>()(
       },
       
       leaveGame: async (gameId) => {
-        const { setLoading, setError } = get();
+        const { setLoading, setError, setGames } = get();
         try {
           setLoading(true);
           await SupabaseService.leaveGame(gameId);
-          set((state) => {
-            const game = state.games.find(g => g.id === gameId);
-            if (game && game.isJoined) {
-              game.isJoined = false;
-              game.currentPlayers = Math.max(0, game.currentPlayers - 1);
-              
-              // Remove from my games if not creator
-              if (game.createdBy !== state.user?.id) {
-                state.myGames = state.myGames.filter(g => g.id !== gameId);
-              }
-            }
-          });
+          
+          // Refresh games to get updated join status
+          const updatedGames = await SupabaseService.getGames();
+          setGames(updatedGames);
+          
         } catch (error) {
           setError(error instanceof Error ? error.message : 'Failed to leave game');
         } finally {

@@ -1,22 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Textarea } from './ui/textarea';
 import { Progress } from './ui/progress';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
-import { 
-  ArrowLeft, 
-  CheckCircle,
-  Loader2,
-  MapPin,
-  Navigation
-} from 'lucide-react';
-import { SupabaseService } from '../lib/supabaseService';
+import { ArrowLeft, CheckCircle, Loader2, MapPin, Clock, Users, DollarSign, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { useGeolocation } from '../hooks/useGeolocation';
+import { SupabaseService } from '../lib/supabaseService';
 import { useLocationSearch } from '../hooks/useLocationSearch';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 interface FormData {
   sport: string;
@@ -69,8 +63,11 @@ export function CreateGame() {
   
   // Location hooks
   const { latitude: userLat, longitude: userLng, error: geoError } = useGeolocation();
-  const { suggestions, loading: locationLoading, searchLocations, geocodeLocation } = useLocationSearch();
-  
+  const { searchLocations, loading: isLocationLoading, suggestions, geocodeLocation } = useLocationSearch();
+  const { user } = useAppStore();
+  const navigationRef = useRef<HTMLDivElement>(null);
+  const [navigationHeight, setNavigationHeight] = useState(0);
+
   // Smart defaults
   const getDefaultDate = () => {
     const tomorrow = new Date();
@@ -233,6 +230,27 @@ export function CreateGame() {
       autoFillLocation();
     }
   }, [userLat, userLng, geoError]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  // Dynamic navigation height calculation
+  useEffect(() => {
+    const updateNavigationHeight = () => {
+      if (navigationRef.current) {
+        const height = navigationRef.current.offsetHeight;
+        setNavigationHeight(height);
+      }
+    };
+
+    updateNavigationHeight();
+    window.addEventListener('resize', updateNavigationHeight);
+    
+    return () => window.removeEventListener('resize', updateNavigationHeight);
+  }, [currentStep, isSubmitting]);
 
   const generateGameTitle = (sport: string, time: string, location: string) => {
     if (!sport || !time || !location) return '';
@@ -483,12 +501,10 @@ export function CreateGame() {
         location: formData.location,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        max_players: parseInt(formData.maxPlayers) || 10,
+        maxPlayers: parseInt(formData.maxPlayers) || 10,
         cost: formData.cost || 'Free',
         description: '', // Default empty description
-        requirements: '', // Default empty requirements
-        image_url: formData.imageUrl,
-        creator_id: user.id
+        imageUrl: formData.imageUrl
       };
       console.log('[CreateGame] creating game with data =', gameData);
       await SupabaseService.createGame(gameData as any);
@@ -591,7 +607,7 @@ export function CreateGame() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-40 sm:pb-24">
+    <div className="min-h-screen bg-background" style={{ paddingBottom: `${navigationHeight + 16}px` }}>
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
@@ -616,7 +632,7 @@ export function CreateGame() {
         </div>
       </div>
 
-      <div className="px-4 pb-40 pt-6">
+      <div className="px-4 pt-6" style={{ paddingBottom: `${navigationHeight + 16}px` }}>
         {/* Selected Sport Preview */}
         {selectedSport && (
           <div className="mb-6">
@@ -761,7 +777,7 @@ export function CreateGame() {
                       className={errors.location ? 'border-destructive' : ''}
                     />
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
-                      {locationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      {isLocationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                       <Button
                         type="button"
                         variant="ghost"
@@ -795,7 +811,7 @@ export function CreateGame() {
                         disabled={!userLat || !userLng}
                         title={userLat && userLng ? "Use my current location" : geoError || "Location not available"}
                       >
-                        <Navigation className="w-4 h-4" />
+                        <MapPin className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -881,7 +897,7 @@ export function CreateGame() {
       </div>
 
       {/* Mobile Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-area-inset-bottom z-50">
+      <div ref={navigationRef} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-area-inset-bottom z-50">
         <div className="px-4 py-3 pb-safe">
           {/* Step Indicator for Mobile */}
           <div className="flex justify-center mb-3 sm:hidden">

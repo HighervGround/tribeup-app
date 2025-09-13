@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SupabaseService } from '../lib/supabaseService';
-import { useGeolocation } from '../hooks/useGeolocation';
+import { useLocation } from '../hooks/useLocation';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -60,8 +60,8 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
       
       {game.isJoined && (
         <div className="mt-3">
-          <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-            Joined
+          <span className="inline-block bg-success/20 text-success dark:bg-success/30 dark:text-success text-xs px-2 py-1 rounded">
+            Joined ✓
           </span>
         </div>
       )}
@@ -71,7 +71,7 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
 
 export function SearchDiscovery() {
   const navigate = useNavigate();
-  const { latitude: userLat, longitude: userLng } = useGeolocation();
+  const { currentLocation, isLoading: locationLoading, requestLocation } = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -256,7 +256,7 @@ export function SearchDiscovery() {
             {/* Map View Content */}
             <div className="bg-card rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Games Near You</h3>
-              {userLat && userLng ? (
+              {currentLocation ? (
                 <div className="relative">
                   <MapView
                     games={filteredResults.map(game => ({
@@ -264,39 +264,43 @@ export function SearchDiscovery() {
                       title: game.title,
                       sport: game.sport,
                       location: {
-                        latitude: game.latitude || userLat + (Math.random() - 0.5) * 0.01,
-                        longitude: game.longitude || userLng + (Math.random() - 0.5) * 0.01
+                        latitude: game.latitude || currentLocation.latitude + (Math.random() - 0.5) * 0.01,
+                        longitude: game.longitude || currentLocation.longitude + (Math.random() - 0.5) * 0.01
                       },
                       locationName: game.location,
                       date: game.date,
                       time: game.time,
-                      players: game.players,
+                      players: game.currentPlayers || game.players,
                       maxPlayers: game.maxPlayers,
                       cost: game.cost,
                       difficulty: game.difficulty
                     }))}
-                    center={{ latitude: userLat, longitude: userLng }}
+                    center={currentLocation}
                     zoom={13}
-                    className="h-64"
+                    className="h-64 md:h-80"
                     showCurrentLocation={true}
                     showGameMarkers={true}
+                    onGameSelect={handleGameSelect}
                   />
                   <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs">
-                    📍 You • 🎮 Games
+                    📍 You • 🎮 {filteredResults.length} Games
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-64 bg-muted rounded-lg flex flex-col items-center justify-center border">
+                <div className="w-full h-64 md:h-80 bg-muted rounded-lg flex flex-col items-center justify-center border">
                   <div className="text-4xl mb-2">📍</div>
                   <p className="text-muted-foreground text-center">
                     Allow location access to see games on map
                   </p>
-                  <button 
-                    onClick={() => navigator.geolocation?.getCurrentPosition(() => window.location.reload())}
-                    className="mt-2 text-sm text-primary hover:underline"
+                  <Button 
+                    onClick={requestLocation}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    disabled={locationLoading}
                   >
-                    Enable Location
-                  </button>
+                    {locationLoading ? 'Requesting...' : 'Enable Location'}
+                  </Button>
                 </div>
               )}
             </div>

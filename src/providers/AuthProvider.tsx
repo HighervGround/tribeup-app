@@ -74,6 +74,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
             });
         }
+        
+        // Initialize auth and load games
+        initializeAuth();
       } catch (error) {
         console.error('Error getting initial session:', error);
       } finally {
@@ -99,6 +102,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (userProfile) {
               DEBUG && console.log('[Auth] Profile loaded:', userProfile.name);
               setAppUser(userProfile);
+              
+              // Initialize auth and load games
+              initializeAuth();
               
               // Check for pending game join after successful login
               const pendingGameId = localStorage.getItem('pendingGameJoin');

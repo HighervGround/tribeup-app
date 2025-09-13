@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SupabaseService } from '../lib/supabaseService';
-import { useLocation } from '../hooks/useLocation';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Search, SlidersHorizontal, MapPin, Clock, Users } from 'lucide-react';
+import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { calculateDistance, formatDistance } from '../hooks/useLocation';
 import { formatTimeString } from '../lib/dateUtils';
 
 
@@ -71,12 +69,6 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
           <Users className="w-4 h-4 text-muted-foreground" />
           <span>{game.currentPlayers}/{game.maxPlayers} players</span>
         </div>
-        {game.distance && (
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">📏</span>
-            <span>{game.distance}</span>
-          </div>
-        )}
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />
           <span>{game.date} at {formatTimeString(game.time)}</span>
@@ -111,11 +103,9 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
 
 export function SearchDiscovery() {
   const navigate = useNavigate();
-  const { currentLocation, isLoading: locationLoading, requestLocation } = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedView, setSelectedView] = useState<'list' | 'map'>('list');
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -162,30 +152,15 @@ export function SearchDiscovery() {
     return colors[sport as keyof typeof colors] || 'bg-gray-500';
   };
 
-  // Calculate distances and filter games
+  // Filter games
   const filteredResults = games
-    .map(game => {
-      // Calculate distance if we have location data
-      let distance = 'Unknown distance';
-      if (currentLocation && game.latitude && game.longitude) {
-        const distanceKm = calculateDistance(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          game.latitude,
-          game.longitude
-        );
-        distance = formatDistance(distanceKm);
-      }
-      
-      return {
-        ...game,
-        distance,
-        sportColor: getSportColor(game.sport),
-        imageUrl: game.imageUrl || '',
-        currentPlayers: game.currentPlayers || game.participants || 0,
-        maxPlayers: game.maxPlayers || game.maxParticipants || 0
-      };
-    })
+    .map(game => ({
+      ...game,
+      sportColor: getSportColor(game.sport),
+      imageUrl: game.imageUrl || '',
+      currentPlayers: game.currentPlayers || game.participants || 0,
+      maxPlayers: game.maxPlayers || game.maxParticipants || 0
+    }))
     .filter(game => {
       const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            game.sport.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -267,169 +242,46 @@ export function SearchDiscovery() {
       </div>
 
       <div className="px-4 py-6">
-        {/* View Toggle */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={selectedView === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedView('list')}
-          >
-            List View
-          </Button>
-          <Button
-            variant={selectedView === 'map' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedView('map')}
-          >
-            Map View
-          </Button>
-        </div>
-
-        {selectedView === 'list' ? (
-          <div className="space-y-6">
-            {/* Results Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {filteredResults.length} games found
-                </h2>
-                {searchQuery && (
-                  <p className="text-sm text-muted-foreground">
-                    Results for "{searchQuery}"
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Results List */}
-            <div className="space-y-4">
-              {filteredResults.map((game) => (
-                <SimpleGameCard
-                  key={game.id}
-                  game={game}
-                  onSelect={() => handleGameSelect(game.id)}
-                />
-              ))}
-            </div>
-
-            {filteredResults.length === 0 && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">No games found</h3>
-                <p className="text-muted-foreground mb-4">
-                  Try adjusting your search or filters
-                </p>
-                <Button variant="outline" onClick={() => {
-                  setSearchQuery('');
-                  setSelectedSport('all');
-                }}>
-                  Clear filters
-                </Button>
-              </div>
+        {/* Results Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold">
+              {filteredResults.length} games found
+            </h2>
+            {searchQuery && (
+              <p className="text-sm text-muted-foreground">
+                Results for "{searchQuery}"
+              </p>
             )}
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Map View Content */}
-            <div className="bg-card rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Games Near You</h3>
-              {currentLocation ? (
-                <div className="relative">
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    {filteredResults.length > 0 ? (
-                      <iframe
-                        src={`https://www.google.com/maps/embed/v1/view?key=${(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}&center=${currentLocation.latitude},${currentLocation.longitude}&zoom=12&maptype=roadmap`}
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0 }}
-                        allowFullScreen
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                        className="rounded-lg"
-                        title="Games map view"
-                      />
-                    ) : (
-                      <div className="text-center text-muted-foreground">
-                        <MapPin className="w-8 h-8 mx-auto mb-2" />
-                        <p>No games with locations found</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs">
-                    📍 You • 🎮 {filteredResults.length} Games
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full h-64 md:h-80 bg-muted rounded-lg flex flex-col items-center justify-center border">
-                  <div className="text-4xl mb-2">📍</div>
-                  <p className="text-muted-foreground text-center">
-                    Allow location access to see games on map
-                  </p>
-                  <Button 
-                    onClick={requestLocation}
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    disabled={locationLoading}
-                  >
-                    {locationLoading ? 'Requesting...' : 'Enable Location'}
-                  </Button>
-                </div>
-              )}
+        </div>
 
-              {/* Games List with Map Numbers */}
-              {currentLocation && filteredResults.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Games on Map</h4>
-                  {filteredResults
-                    .filter(game => game.latitude && game.longitude)
-                    .slice(0, 10)
-                    .map((game, index) => (
-                      <div 
-                        key={game.id}
-                        className="flex items-center gap-3 p-3 bg-background rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleGameSelect(game.id)}
-                      >
-                        <div className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h5 className="font-medium truncate">{game.title}</h5>
-                            <Badge variant="secondary" className="text-xs">
-                              {game.sport}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {formatTimeString(game.time)}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {game.currentPlayers || 0}/{game.maxPlayers}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {currentLocation && game.latitude && game.longitude ? 
-                                formatDistance(calculateDistance(
-                                  currentLocation.latitude, 
-                                  currentLocation.longitude, 
-                                  game.latitude, 
-                                  game.longitude
-                                )) : 
-                                'Distance unknown'
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
+        {/* Results List */}
+        <div className="space-y-4">
+          {filteredResults.map((game) => (
+            <SimpleGameCard
+              key={game.id}
+              game={game}
+              onSelect={() => handleGameSelect(game.id)}
+            />
+          ))}
+        </div>
+
+        {filteredResults.length === 0 && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-6 h-6 text-muted-foreground" />
             </div>
+            <h3 className="text-lg font-semibold mb-2">No games found</h3>
+            <p className="text-muted-foreground mb-4">
+              Try adjusting your search or filters
+            </p>
+            <Button variant="outline" onClick={() => {
+              setSearchQuery('');
+              setSelectedSport('all');
+            }}>
+              Clear filters
+            </Button>
           </div>
         )}
       </div>

@@ -11,9 +11,37 @@ export interface GamePhoto {
 }
 
 export class PhotoService {
-  private static readonly BUCKET_NAME = 'game-photos';
+  private static readonly BUCKET_NAME = 'game-images';
   private static readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private static readonly ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // Ensure bucket exists (call this before any upload operations)
+  static async ensureBucketExists(): Promise<boolean> {
+    try {
+      // Try to list the bucket to see if it exists
+      const { data, error } = await supabase.storage.listBuckets();
+      
+      if (error) {
+        console.error('Error checking buckets:', error);
+        return false;
+      }
+
+      const bucketExists = data?.some(bucket => bucket.name === this.BUCKET_NAME);
+      
+      if (!bucketExists) {
+        console.log(`Creating storage bucket: ${this.BUCKET_NAME}`);
+        // Note: Bucket creation through client is not supported
+        // This would need to be done through the Supabase dashboard or CLI
+        console.warn(`Bucket ${this.BUCKET_NAME} does not exist. Please create it through the Supabase dashboard.`);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error ensuring bucket exists:', error);
+      return false;
+    }
+  }
 
   // One-click upload - no validation needed, auto-compress
   static async quickUpload(gameId: string, file: File): Promise<GamePhoto | null> {
@@ -34,6 +62,12 @@ export class PhotoService {
     caption?: string
   ): Promise<GamePhoto | null> {
     try {
+      // Check if bucket exists first
+      const bucketExists = await this.ensureBucketExists();
+      if (!bucketExists) {
+        throw new Error(`Storage bucket '${this.BUCKET_NAME}' does not exist. Please create it in the Supabase dashboard.`);
+      }
+
       // Auto-validate and compress
       const processedFile = this.validateFile(file) ? file : await this.compressImage(file);
       if (!processedFile) {

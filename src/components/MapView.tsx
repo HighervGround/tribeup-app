@@ -240,19 +240,37 @@ export function MapView({
           </div>
         )}
 
-        {/* Map Background Pattern */}
-        <div 
-          className={`absolute inset-0 opacity-30 ${
-            showSatellite 
-              ? 'bg-gradient-to-br from-gray-900 via-gray-700 to-gray-800' 
-              : 'bg-gradient-to-br from-green-200 via-blue-100 to-green-300'
-          }`}
-          style={{
-            backgroundImage: showSatellite 
-              ? 'radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)'
-              : 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
-          }}
-        />
+        {/* Interactive Map Implementation */}
+        <div className="absolute inset-0">
+          {/* OpenStreetMap Tile Layer */}
+          <div 
+            className="w-full h-full bg-cover bg-center"
+            style={{
+              backgroundImage: showSatellite 
+                ? `url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${mapZoom}/${Math.floor((90 - mapCenter.latitude) * Math.pow(2, mapZoom) / 360)}/${Math.floor((mapCenter.longitude + 180) * Math.pow(2, mapZoom) / 360)}')`
+                : `url('https://tile.openstreetmap.org/${mapZoom}/${Math.floor((mapCenter.longitude + 180) * Math.pow(2, mapZoom) / 360)}/${Math.floor((90 - mapCenter.latitude) * Math.pow(2, mapZoom) / 360)}.png')`
+            }}
+          />
+          
+          {/* Map Grid Overlay */}
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
+            }}
+          />
+          
+          {/* Street Pattern Overlay */}
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: showSatellite 
+                ? 'none'
+                : `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.1'%3E%3Cpath d='M20 20h20v20H20z'/%3E%3Cpath d='M0 0h20v20H0z'/%3E%3C/g%3E%3C/svg%3E")`
+            }}
+          />
+        </div>
 
         {/* Current Location Marker */}
         {showCurrentLocation && currentLocation && (
@@ -287,15 +305,17 @@ export function MapView({
           const latDiff = game.location.latitude - mapCenter.latitude;
           const lngDiff = game.location.longitude - mapCenter.longitude;
           
-          // Convert lat/lng differences to pixel positions (simplified projection)
-          // Use a more appropriate scale factor based on zoom level
-          const scaleFactor = Math.pow(2, mapZoom - 10) * 1000;
-          const pixelX = 50 + (lngDiff * scaleFactor);
-          const pixelY = 50 - (latDiff * scaleFactor);
+          // Convert lat/lng differences to pixel positions using Web Mercator projection
+          const scaleFactor = Math.pow(2, mapZoom) / 360;
+          const pixelX = 50 + (lngDiff * scaleFactor * 100);
+          const pixelY = 50 - (latDiff * scaleFactor * 100);
           
-          // Clamp to map bounds with some padding
-          const clampedX = Math.max(8, Math.min(92, pixelX));
-          const clampedY = Math.max(8, Math.min(92, pixelY));
+          // Clamp to map bounds with padding
+          const clampedX = Math.max(5, Math.min(95, pixelX));
+          const clampedY = Math.max(5, Math.min(95, pixelY));
+          
+          // Only show markers that are within reasonable bounds
+          const isVisible = pixelX >= -10 && pixelX <= 110 && pixelY >= -10 && pixelY <= 110;
 
           return (
             <div

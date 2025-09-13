@@ -255,7 +255,7 @@ export class SupabaseService {
           .from('games')
           .select(`
             *,
-            game_participation(user_id)
+            game_participants(user_id)
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
@@ -269,8 +269,8 @@ export class SupabaseService {
         const transformStart = performance.now();
         const games = (gamesWithParticipants || []).map((game: any) => {
           try {
-            const isJoined = game.game_participation?.some((p: any) => p.user_id === userId) || false;
-            console.log(`🔍 Game ${game.id} (${game.title}): isJoined=${isJoined}, participants=`, game.game_participation);
+            const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+            console.log(`🔍 Game ${game.id} (${game.title}): isJoined=${isJoined}, participants=`, game.game_participants);
             return transformGameFromDB(game, isJoined);
           } catch (transformError) {
             console.error('❌ Transform error for game:', game.id, transformError);
@@ -1109,7 +1109,7 @@ export class SupabaseService {
 
   static async getUserRecentGames(userId: string, limit = 5) {
     const { data, error } = await supabase
-      .from('game_participation')
+      .from('game_participants')
       .select(`
         *,
         games (
@@ -1218,7 +1218,7 @@ export class SupabaseService {
   // Method to record game participation
   static async recordGameParticipation(userId: string, gameId: string, status: 'joined' | 'left' | 'completed' = 'joined') {
     const { data, error } = await supabase
-      .from('game_participation')
+      .from('game_participants')
       .upsert({
         user_id: userId,
         game_id: gameId,
@@ -1252,7 +1252,7 @@ export class SupabaseService {
 
     // Mark all participants as completed
     const { error } = await supabase
-      .from('game_participation')
+      .from('game_participants')
       .update({ 
         status: 'completed',
         left_at: new Date().toISOString()
@@ -1264,7 +1264,7 @@ export class SupabaseService {
 
     // Check for new achievements for all participants
     const { data: participants, error: participantsError } = await supabase
-      .from('game_participation')
+      .from('game_participants')
       .select('user_id')
       .eq('game_id', gameId)
       .eq('status', 'completed');

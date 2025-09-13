@@ -239,6 +239,8 @@ export class SupabaseService {
   static async getGames(): Promise<Game[]> {
     const startTime = performance.now();
     console.log('🚀 Starting getGames...');
+    console.log('🔧 Supabase client:', supabase);
+    console.log('🔧 Supabase URL:', supabase.supabaseUrl);
     
     try {
       // Get current user to check join status

@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
 import { MapView } from './MapView';
+import { GameCard } from './GameCard';
 import { calculateDistance, formatDistance } from '../hooks/useLocation';
 
 
@@ -18,8 +19,11 @@ const sportFilters = [
   { name: 'Tennis', value: 'tennis' },
   { name: 'Pickleball', value: 'pickleball' },
   { name: 'Volleyball', value: 'volleyball' },
-  { name: 'Football', value: 'football' },
+  { name: 'Flag Football', value: 'flag football' },
   { name: 'Baseball', value: 'baseball' },
+  { name: 'Golf', value: 'golf' },
+  { name: 'Hockey', value: 'hockey' },
+  { name: 'Rugby', value: 'rugby' },
 ];
 
 // Simple GameCard component
@@ -245,8 +249,17 @@ export function SearchDiscovery() {
             <div className="space-y-4">
               {filteredResults.map((game) => (
                 <div key={game.id} className="relative">
-                  <SimpleGameCard 
-                    game={game} 
+                  <GameCard 
+                    game={{
+                      ...game,
+                      participants: game.currentPlayers || game.participants || 0,
+                      maxParticipants: game.maxPlayers || game.maxParticipants || 0,
+                      host: {
+                        name: game.hostName || 'Host',
+                        avatar: game.hostAvatar || ''
+                      },
+                      isHosted: false
+                    }}
                     onSelect={() => handleGameSelect(game.id)}
                   />
                   <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm rounded px-2 py-1">
@@ -336,9 +349,18 @@ export function SearchDiscovery() {
                 </h3>
               </div>
               {filteredResults.map((game) => (
-                <SimpleGameCard
+                <GameCard
                   key={game.id}
-                  game={game}
+                  game={{
+                    ...game,
+                    participants: game.currentPlayers || game.participants || 0,
+                    maxParticipants: game.maxPlayers || game.maxParticipants || 0,
+                    host: {
+                      name: game.hostName || 'Host',
+                      avatar: game.hostAvatar || ''
+                    },
+                    isHosted: false
+                  }}
                   onSelect={() => handleGameSelect(game.id)}
                 />
               ))}

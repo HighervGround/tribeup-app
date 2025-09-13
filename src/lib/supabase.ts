@@ -10,7 +10,7 @@ console.log('🚀 App starting with environment variables:', {
   supabaseUrl: supabaseUrl ? 'SET' : 'NOT SET',
   supabaseKey: supabaseAnonKey ? 'SET' : 'NOT SET'
 });
-console.log('🔧 All fixes deployed: table name, CreateGame step 3, location search, environment variables');
+    console.log('🔧 All fixes deployed: table name, CreateGame step 3, location search, environment variables, JOIN/LEAVE FIXED');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables!');

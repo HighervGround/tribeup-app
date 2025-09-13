@@ -82,19 +82,20 @@ export function MapView({
 
   const mapRef = useRef<HTMLDivElement>(null);
 
-  // Convert store games to map games
-  const mapGames: MapGame[] = games.length > 0 ? games : allGames.map(game => ({
+  // Convert games to map games - prioritize passed games, fallback to store games
+  const sourceGames = games.length > 0 ? games : allGames;
+  const mapGames: MapGame[] = sourceGames.map(game => ({
     id: game.id,
     title: game.title,
     sport: game.sport,
     location: {
-      latitude: 29.6516 + (Math.random() - 0.5) * 0.1, // Random locations around Gainesville
-      longitude: -82.3248 + (Math.random() - 0.5) * 0.1
+      latitude: game.latitude || (mapCenter.latitude + (Math.random() - 0.5) * 0.01),
+      longitude: game.longitude || (mapCenter.longitude + (Math.random() - 0.5) * 0.01)
     },
     locationName: game.location,
     date: game.date,
     time: game.time,
-    players: game.players,
+    players: game.currentPlayers || game.players,
     maxPlayers: game.maxPlayers,
     cost: game.cost,
     difficulty: game.difficulty
@@ -142,8 +143,9 @@ export function MapView({
     const y = event.clientY - rect.top;
 
     // Convert pixel coordinates to lat/lng (simplified)
-    const lat = mapCenter.latitude + (y - rect.height / 2) * -0.001;
-    const lng = mapCenter.longitude + (x - rect.width / 2) * 0.001;
+    const scaleFactor = Math.pow(2, mapZoom - 10) * 1000;
+    const lat = mapCenter.latitude + (y - rect.height / 2) * -0.001 / scaleFactor;
+    const lng = mapCenter.longitude + (x - rect.width / 2) * 0.001 / scaleFactor;
 
     const location = { latitude: lat, longitude: lng };
     setSelectedLocation(location);
@@ -151,7 +153,28 @@ export function MapView({
     if (onLocationSelect) {
       onLocationSelect(location);
     }
-  }, [allowLocationSelection, mapCenter, onLocationSelect]);
+  }, [allowLocationSelection, mapCenter, mapZoom, onLocationSelect]);
+
+  const handleMapTouch = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (!allowLocationSelection || event.touches.length !== 1) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const touch = event.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    // Convert pixel coordinates to lat/lng (simplified)
+    const scaleFactor = Math.pow(2, mapZoom - 10) * 1000;
+    const lat = mapCenter.latitude + (y - rect.height / 2) * -0.001 / scaleFactor;
+    const lng = mapCenter.longitude + (x - rect.width / 2) * 0.001 / scaleFactor;
+
+    const location = { latitude: lat, longitude: lng };
+    setSelectedLocation(location);
+
+    if (onLocationSelect) {
+      onLocationSelect(location);
+    }
+  }, [allowLocationSelection, mapCenter, mapZoom, onLocationSelect]);
 
   const zoomIn = useCallback(() => {
     setMapZoom(prev => Math.min(prev + 1, 18));
@@ -202,10 +225,11 @@ export function MapView({
       {/* Map Container */}
       <div
         ref={mapRef}
-        className={`relative w-full h-full min-h-[400px] cursor-crosshair transition-all duration-300 ${
+        className={`relative w-full h-full min-h-[300px] md:min-h-[400px] cursor-crosshair transition-all duration-300 ${
           showSatellite ? 'bg-gray-800' : 'bg-green-100'
         }`}
         onClick={handleMapClick}
+        onTouchEnd={handleMapTouch}
         role="application"
         aria-label="Interactive map showing games and locations"
       >
@@ -243,6 +267,7 @@ export function MapView({
             <div className="relative">
               <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg" />
               <div className="absolute inset-0 w-4 h-4 bg-blue-500 rounded-full animate-ping opacity-30" />
+              <div className="absolute -top-1 -left-1 w-6 h-6 bg-blue-500/20 rounded-full animate-pulse" />
             </div>
           </div>
         )}
@@ -258,13 +283,27 @@ export function MapView({
             game.location.longitude
           ) : null;
 
+          // Calculate marker position based on actual coordinates
+          const latDiff = game.location.latitude - mapCenter.latitude;
+          const lngDiff = game.location.longitude - mapCenter.longitude;
+          
+          // Convert lat/lng differences to pixel positions (simplified projection)
+          // Use a more appropriate scale factor based on zoom level
+          const scaleFactor = Math.pow(2, mapZoom - 10) * 1000;
+          const pixelX = 50 + (lngDiff * scaleFactor);
+          const pixelY = 50 - (latDiff * scaleFactor);
+          
+          // Clamp to map bounds with some padding
+          const clampedX = Math.max(8, Math.min(92, pixelX));
+          const clampedY = Math.max(8, Math.min(92, pixelY));
+
           return (
             <div
               key={game.id}
               className="absolute z-10 cursor-pointer"
               style={{
-                left: `${45 + index * 8}%`, // Spread markers across map
-                top: `${40 + index * 6}%`
+                left: `${clampedX}%`,
+                top: `${clampedY}%`
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -286,41 +325,43 @@ export function MapView({
                 {/* Game Info Popup */}
                 {(isSelected || isHovered) && (
                   <div
-                    className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2"
+                    className={`absolute z-40 ${
+                      clampedY > 70 ? 'bottom-full mb-2' : 'top-full mt-2'
+                    } left-1/2 transform -translate-x-1/2`}
                   >
-                    <Card className="w-64 shadow-lg border-2">
+                    <Card className="w-64 max-w-[calc(100vw-2rem)] shadow-lg border-2 bg-background/95 backdrop-blur-sm">
                       <CardContent className="p-3">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h4 className="font-medium truncate">{game.title}</h4>
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-xs flex-shrink-0">
                               {game.sport}
                             </Badge>
                           </div>
                           
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                             <div className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {game.time}
+                              <span className="truncate">{game.time}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Users className="w-3 h-3" />
-                              {game.players}/{game.maxPlayers}
+                              <span>{game.players}/{game.maxPlayers}</span>
                             </div>
                             {game.cost !== 'Free' && (
                               <div className="flex items-center gap-1">
                                 <DollarSign className="w-3 h-3" />
-                                {game.cost}
+                                <span className="truncate">{game.cost}</span>
                               </div>
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="truncate mr-2">
                               {game.locationName}
                             </span>
                             {distance && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="flex-shrink-0">
                                 {formatDistance(distance)} away
                               </span>
                             )}
@@ -356,16 +397,16 @@ export function MapView({
       </div>
 
       {/* Map Controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-30">
+      <div className="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col gap-1 md:gap-2 z-30">
         {/* Layer Toggle */}
         <Button
           variant="outline"
           size="icon"
-          className="bg-background/95 backdrop-blur-sm"
+          className="bg-background/95 backdrop-blur-sm h-8 w-8 md:h-10 md:w-10"
           onClick={() => setShowSatellite(!showSatellite)}
           aria-label={showSatellite ? "Switch to map view" : "Switch to satellite view"}
         >
-          <Layers className="w-4 h-4" />
+          <Layers className="w-3 h-3 md:w-4 md:h-4" />
         </Button>
 
         {/* Zoom Controls */}
@@ -373,20 +414,20 @@ export function MapView({
           <Button
             variant="outline"
             size="icon"
-            className="bg-background/95 backdrop-blur-sm"
+            className="bg-background/95 backdrop-blur-sm h-8 w-8 md:h-10 md:w-10"
             onClick={zoomIn}
             aria-label="Zoom in"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3 h-3 md:w-4 md:h-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="bg-background/95 backdrop-blur-sm"
+            className="bg-background/95 backdrop-blur-sm h-8 w-8 md:h-10 md:w-10"
             onClick={zoomOut}
             aria-label="Zoom out"
           >
-            <Minus className="w-4 h-4" />
+            <Minus className="w-3 h-3 md:w-4 md:h-4" />
           </Button>
         </div>
 
@@ -394,7 +435,7 @@ export function MapView({
         <Button
           variant="outline"
           size="icon"
-          className="bg-background/95 backdrop-blur-sm"
+          className="bg-background/95 backdrop-blur-sm h-8 w-8 md:h-10 md:w-10"
           onClick={centerOnCurrentLocation}
           disabled={locationLoading}
           aria-label="Center on current location"
@@ -402,7 +443,7 @@ export function MapView({
           {locationLoading ? (
             <LoadingSpinner size="sm" />
           ) : (
-            <Crosshair className="w-4 h-4" />
+            <Crosshair className="w-3 h-3 md:w-4 md:h-4" />
           )}
         </Button>
 
@@ -410,32 +451,32 @@ export function MapView({
         <Button
           variant="outline"
           size="icon"
-          className="bg-background/95 backdrop-blur-sm"
+          className="bg-background/95 backdrop-blur-sm h-8 w-8 md:h-10 md:w-10"
           onClick={resetView}
           aria-label="Reset map view"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
         </Button>
       </div>
 
       {/* Map Legend */}
-      <div className="absolute bottom-4 left-4 z-30">
+      <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-30">
         <Card className="bg-background/95 backdrop-blur-sm">
-          <CardContent className="p-3">
+          <CardContent className="p-2 md:p-3">
             <div className="text-xs space-y-1">
-              <div className="font-medium mb-2">Legend</div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                <span>Your Location</span>
+              <div className="font-medium mb-1 md:mb-2 text-xs md:text-sm">Legend</div>
+              <div className="flex items-center gap-1 md:gap-2">
+                <div className="w-2 h-2 md:w-3 md:h-3 bg-blue-500 rounded-full" />
+                <span className="text-xs">You</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-primary rounded-full" />
-                <span>Games</span>
+              <div className="flex items-center gap-1 md:gap-2">
+                <div className="w-2 h-2 md:w-3 md:h-3 bg-primary rounded-full" />
+                <span className="text-xs">Games</span>
               </div>
               {selectedLocation && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3 h-3 text-destructive" />
-                  <span>Selected</span>
+                <div className="flex items-center gap-1 md:gap-2">
+                  <MapPin className="w-2 h-2 md:w-3 md:h-3 text-destructive" />
+                  <span className="text-xs">Selected</span>
                 </div>
               )}
             </div>
@@ -445,9 +486,9 @@ export function MapView({
 
       {/* Game Count Badge */}
       {showGameMarkers && mapGames.length > 0 && (
-        <div className="absolute top-4 left-4 z-30">
-          <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm">
-            {mapGames.length} game{mapGames.length !== 1 ? 's' : ''} shown
+        <div className="absolute top-2 left-2 md:top-4 md:left-4 z-30">
+          <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-xs">
+            {mapGames.length} game{mapGames.length !== 1 ? 's' : ''}
           </Badge>
         </div>
       )}

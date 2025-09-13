@@ -167,8 +167,8 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
             )}
             
             {game.isJoined && !compact && (
-              <Badge variant="secondary" className="text-success">
-                Joined
+              <Badge variant="secondary" className="bg-success/20 text-success dark:bg-success/30 dark:text-success border-success/30">
+                Joined ✓
               </Badge>
             )}
           </div>

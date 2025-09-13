@@ -117,9 +117,10 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://tribeup-social-sports.vercel.app"
+site_url = "https://app.tribeup.fit"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
+  "https://app.tribeup.fit/auth/callback",
   "https://tribeup-social-sports.vercel.app/auth/callback",
   "http://127.0.0.1:3000/auth/callback",
   "http://localhost:3000/auth/callback"

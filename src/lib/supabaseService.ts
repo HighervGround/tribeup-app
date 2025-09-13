@@ -241,55 +241,117 @@ export class SupabaseService {
     console.log('🚀 Starting getGames...');
     
     try {
+      // Get current user to check join status
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      
       const queryStart = performance.now();
-      const { data: gamesData, error } = await supabase
-        .from('games')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
       
-      const queryTime = performance.now() - queryStart;
-      console.log(`📊 Supabase query took: ${queryTime.toFixed(2)}ms`);
+      // If user is authenticated, get games with join status
+      if (userId) {
+        const { data: gamesWithParticipants, error } = await supabase
+          .from('games')
+          .select(`
+            *,
+            game_participants!left(user_id)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        const queryTime = performance.now() - queryStart;
+        console.log(`📊 Supabase query with participants took: ${queryTime.toFixed(2)}ms`);
 
-      if (error) throw error;
-      
-      const transformStart = performance.now();
-      const games = (gamesData || []).map((game: any) => {
-        try {
-          return transformGameFromDB(game, false);
-        } catch (transformError) {
-          console.error('❌ Transform error for game:', game.id, transformError);
-          // Fallback to basic game object
-          return {
-            id: game.id,
-            title: game.title,
-            sport: game.sport,
-            date: game.date,
-            time: game.time,
-            location: game.location,
-            latitude: game.latitude,
-            longitude: game.longitude,
-            cost: game.cost,
-            maxPlayers: game.max_players,
-            currentPlayers: game.current_players,
-            description: game.description,
-            imageUrl: game.image_url || '',
-            sportColor: '#6B7280',
-            isJoined: false,
-            createdBy: game.creator_id,
-            createdAt: game.created_at,
-          };
-        }
-      });
-      
-      const transformTime = performance.now() - transformStart;
-      const totalTime = performance.now() - startTime;
-      
-      console.log(`⚡ Transform took: ${transformTime.toFixed(2)}ms`);
-      console.log(`✅ Total getGames took: ${totalTime.toFixed(2)}ms`);
-      console.log(`📦 Returned ${games.length} games`);
-      
-      return games;
+        if (error) throw error;
+        
+        const transformStart = performance.now();
+        const games = (gamesWithParticipants || []).map((game: any) => {
+          try {
+            const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+            return transformGameFromDB(game, isJoined);
+          } catch (transformError) {
+            console.error('❌ Transform error for game:', game.id, transformError);
+            // Fallback to basic game object
+            return {
+              id: game.id,
+              title: game.title,
+              sport: game.sport,
+              date: game.date,
+              time: game.time,
+              location: game.location,
+              latitude: game.latitude,
+              longitude: game.longitude,
+              cost: game.cost,
+              maxPlayers: game.max_players,
+              currentPlayers: game.current_players,
+              description: game.description,
+              imageUrl: game.image_url || '',
+              sportColor: '#6B7280',
+              isJoined: false,
+              createdBy: game.creator_id,
+              createdAt: game.created_at,
+            };
+          }
+        });
+        
+        const transformTime = performance.now() - transformStart;
+        const totalTime = performance.now() - startTime;
+        
+        console.log(`⚡ Transform took: ${transformTime.toFixed(2)}ms`);
+        console.log(`✅ Total getGames took: ${totalTime.toFixed(2)}ms`);
+        console.log(`📦 Returned ${games.length} games`);
+        
+        return games;
+      } else {
+        // If no user, get games without join status
+        const { data: gamesData, error } = await supabase
+          .from('games')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        const queryTime = performance.now() - queryStart;
+        console.log(`📊 Supabase query took: ${queryTime.toFixed(2)}ms`);
+
+        if (error) throw error;
+        
+        const transformStart = performance.now();
+        const games = (gamesData || []).map((game: any) => {
+          try {
+            return transformGameFromDB(game, false);
+          } catch (transformError) {
+            console.error('❌ Transform error for game:', game.id, transformError);
+            // Fallback to basic game object
+            return {
+              id: game.id,
+              title: game.title,
+              sport: game.sport,
+              date: game.date,
+              time: game.time,
+              location: game.location,
+              latitude: game.latitude,
+              longitude: game.longitude,
+              cost: game.cost,
+              maxPlayers: game.max_players,
+              currentPlayers: game.current_players,
+              description: game.description,
+              imageUrl: game.image_url || '',
+              sportColor: '#6B7280',
+              isJoined: false,
+              createdBy: game.creator_id,
+              createdAt: game.created_at,
+            };
+          }
+        });
+        
+        const transformTime = performance.now() - transformStart;
+        const totalTime = performance.now() - startTime;
+        
+        console.log(`⚡ Transform took: ${transformTime.toFixed(2)}ms`);
+        console.log(`✅ Total getGames took: ${totalTime.toFixed(2)}ms`);
+        console.log(`📦 Returned ${games.length} games`);
+        
+        return games;
+      }
       
     } catch (error) {
       console.error('❌ getGames error:', error);

@@ -90,7 +90,7 @@ export function UserProfile() {
   const needsCompletion = !(user?.name && user?.email);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-12 pb-6">
         <h1 className="text-xl font-semibold">Profile</h1>
@@ -99,7 +99,7 @@ export function UserProfile() {
         </Button>
       </div>
 
-      <div className="px-4 space-y-6 pb-6">
+      <div className="px-4 space-y-6">
         {/* Profile Info */}
         <Card>
           <CardContent className="pt-6">

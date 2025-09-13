@@ -60,7 +60,7 @@ CREATE POLICY "Users can view all stats" ON public.user_stats
     FOR SELECT USING (true);
 
 CREATE POLICY "Users can update their own stats" ON public.user_stats
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert their own stats" ON public.user_stats
     FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -70,7 +70,7 @@ CREATE POLICY "Users can view all participation" ON public.game_participation
     FOR SELECT USING (true);
 
 CREATE POLICY "Users can update their own participation" ON public.game_participation
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert their own participation" ON public.game_participation
     FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -87,7 +87,6 @@ CREATE POLICY "Users can insert their own achievements" ON public.user_achieveme
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_user_stats_user_id ON public.user_stats(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_stats_last_activity ON public.user_stats(last_activity);
 
 CREATE INDEX IF NOT EXISTS idx_game_participation_user_id ON public.game_participation(user_id);
@@ -107,12 +106,24 @@ CREATE OR REPLACE FUNCTION update_user_stats_on_participation()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Update user stats when participation is inserted or updated
-    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    IF TG_OP = 'INSERT' THEN
+        -- For INSERT, just increment games_played if status is completed
         INSERT INTO public.user_stats (user_id, games_played, last_activity)
-        VALUES (NEW.user_id, 1, NOW())
+        VALUES (NEW.user_id, CASE WHEN NEW.status = 'completed' THEN 1 ELSE 0 END, NOW())
         ON CONFLICT (user_id) DO UPDATE SET
             games_played = CASE 
-                WHEN NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') 
+                WHEN NEW.status = 'completed' THEN user_stats.games_played + 1
+                ELSE user_stats.games_played
+            END,
+            last_activity = NOW(),
+            updated_at = NOW();
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- For UPDATE, only increment if status changed to completed
+        INSERT INTO public.user_stats (user_id, games_played, last_activity)
+        VALUES (NEW.user_id, 0, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+            games_played = CASE 
+                WHEN NEW.status = 'completed' AND OLD.status != 'completed' 
                 THEN user_stats.games_played + 1
                 ELSE user_stats.games_played
             END,
@@ -131,13 +142,13 @@ CREATE TRIGGER trigger_update_user_stats_on_participation
     EXECUTE FUNCTION update_user_stats_on_participation();
 
 -- Create function to update hosted games count
-CREATE OR REPLICT FUNCTION update_hosted_games_count()
+CREATE OR REPLACE FUNCTION update_hosted_games_count()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Update hosted games count when a game is created
     IF TG_OP = 'INSERT' THEN
         INSERT INTO public.user_stats (user_id, games_hosted, last_activity)
-        VALUES (NEW.created_by, 1, NOW())
+        VALUES (NEW.creator_id, 1, NOW())
         ON CONFLICT (user_id) DO UPDATE SET
             games_hosted = user_stats.games_hosted + 1,
             last_activity = NOW(),

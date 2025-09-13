@@ -56,9 +56,9 @@ export function AppContent() {
   if (isMobile) {
     return (
       <>
-        <div className="min-h-screen bg-background flex flex-col">
-          {/* Main content area */}
-          <main className="flex-1 overflow-hidden">
+        <div className="min-h-screen bg-background">
+          {/* Main content area with proper scrolling */}
+          <main className="pb-20">
             <Outlet />
           </main>
 

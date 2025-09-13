@@ -29,11 +29,20 @@ export function UserProfile() {
       }
 
       try {
-        // Load real user stats
+        // Load real user stats (with fallback if tables don't exist yet)
         const [stats, recentGamesData, achievements] = await Promise.all([
-          SupabaseService.getUserStats(user.id),
-          SupabaseService.getUserRecentGames(user.id, 5),
-          SupabaseService.getUserAchievements(user.id)
+          SupabaseService.getUserStats(user.id).catch(() => ({
+            user_id: user.id,
+            games_played: 0,
+            games_hosted: 0,
+            total_play_time_minutes: 0,
+            favorite_sport: null,
+            last_activity: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })),
+          SupabaseService.getUserRecentGames(user.id, 5).catch(() => []),
+          SupabaseService.getUserAchievements(user.id).catch(() => [])
         ]);
 
         // Update stats with real data

@@ -40,6 +40,7 @@ const sportOptions = [
 const steps = [
   { id: 1, title: 'What & When', fields: ['sport', 'date', 'time'] },
   { id: 2, title: 'Where & Who', fields: ['location', 'maxPlayers', 'cost'] },
+  { id: 3, title: 'Review & Create', fields: [] },
 ];
 
 const quickTimes = [
@@ -766,10 +767,13 @@ export function CreateGame() {
                       value={formData.location}
                       onChange={(e) => {
                         handleInputChange('location', e.target.value);
+                        console.log('Location input changed:', e.target.value);
                         if (e.target.value.length > 2) {
+                          console.log('Triggering location search for:', e.target.value);
                           searchLocations(e.target.value, userLat || undefined, userLng || undefined);
                           setShowLocationSuggestions(true);
                         } else {
+                          console.log('Hiding location suggestions');
                           setShowLocationSuggestions(false);
                         }
                       }}
@@ -817,6 +821,7 @@ export function CreateGame() {
                   </div>
                   
                   {/* Location Suggestions */}
+                  {console.log('Location suggestions debug:', { showLocationSuggestions, suggestionsLength: suggestions.length, suggestions })}
                   {showLocationSuggestions && suggestions.length > 0 && (
                     <div className="border border-border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto">
                       {suggestions.map((suggestion) => (
@@ -867,31 +872,81 @@ export function CreateGame() {
           </div>
         )}
 
+        {currentStep === 3 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
+                    3
+                  </div>
+                  Review & Create
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Game Summary */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Game Summary</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Sport:</span>
+                        <span className="text-sm">{selectedSport?.icon} {selectedSport?.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Date:</span>
+                        <span className="text-sm">{formData.date}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Time:</span>
+                        <span className="text-sm">{formData.time}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Location:</span>
+                        <span className="text-sm">{formData.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Max Players:</span>
+                        <span className="text-sm">{formData.maxPlayers}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Cost:</span>
+                        <span className="text-sm">{formData.cost}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Form Summary (Step 3) */}
+                {/* Ready to Create Alert */}
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Ready to create "{formData.title}" for {formData.maxPlayers} players 
+                    on {formData.date} at {formData.time}?
+                  </AlertDescription>
+                </Alert>
+                
+                {errors.duplicate && (
+                  <div className="mt-2">
+                    <p className="text-sm text-yellow-700 mt-1">{errors.duplicate}</p>
+                    <p className="text-xs text-yellow-600 mt-2">You can still create this game if it's intentional.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Submit Error Display */}
         {submitError && (
           <div className="mt-4">
             <Alert variant="destructive">
               <AlertDescription>{submitError}</AlertDescription>
             </Alert>
-          </div>
-        )}
-
-        {currentStep === 3 && formData.sport && (
-          <div className="mt-6">
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Ready to create "{formData.title}" for {formData.maxPlayers} players 
-                on {formData.date} at {formData.time}?
-              </AlertDescription>
-            </Alert>
-            {errors.duplicate && (
-              <div className="mt-2">
-                <p className="text-sm text-yellow-700 mt-1">{errors.duplicate}</p>
-                <p className="text-xs text-yellow-600 mt-2">You can still create this game if it's intentional.</p>
-              </div>
-            )}
           </div>
         )}
       </div>

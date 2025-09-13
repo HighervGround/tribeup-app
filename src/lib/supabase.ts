@@ -22,6 +22,7 @@ const createSupabaseClient = () =>
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storageKey: 'tribeup-auth',
+      flowType: 'pkce', // Use PKCE flow for better security
     },
     db: {
       schema: 'public',

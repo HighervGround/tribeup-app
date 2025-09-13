@@ -5,6 +5,7 @@ import { Plus, RefreshCw, MapPin, Clock, Users } from 'lucide-react';
 import { formatEventHeader, formatCalendarInfo, formatTimeString } from '../lib/dateUtils';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
+import { useUserPresence } from '../hooks/useUserPresence';
 
 
 
@@ -109,6 +110,31 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
+  const { onlineCount, isLoading: presenceLoading } = useUserPresence();
+
+  // Calculate real stats
+  const stats = useMemo(() => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of current week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Count games this week
+    const thisWeekGames = games.filter(game => {
+      const gameDate = new Date(game.date);
+      return gameDate >= startOfWeek && gameDate <= endOfWeek;
+    }).length;
+
+    return {
+      totalGames: games.length,
+      thisWeekGames,
+      onlinePlayers: onlineCount
+    };
+  }, [games, onlineCount]);
 
   // Load games only once on mount, prevent multiple calls
   useEffect(() => {
@@ -281,15 +307,17 @@ export function HomeScreen() {
             {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-card rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{games.length}</div>
+                <div className="text-2xl font-bold text-primary">{stats.totalGames}</div>
                 <div className="text-sm text-muted-foreground">Active Games</div>
               </div>
               <div className="bg-card rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">0</div>
+                <div className="text-2xl font-bold text-primary">
+                  {presenceLoading ? '...' : stats.onlinePlayers}
+                </div>
                 <div className="text-sm text-muted-foreground">Players Online</div>
               </div>
               <div className="bg-card rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">0</div>
+                <div className="text-2xl font-bold text-primary">{stats.thisWeekGames}</div>
                 <div className="text-sm text-muted-foreground">This Week</div>
               </div>
             </div>
@@ -373,15 +401,17 @@ export function HomeScreen() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Active Games</span>
-                    <span className="font-semibold">{games.length}</span>
+                    <span className="font-semibold">{stats.totalGames}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Players Online</span>
-                    <span className="font-semibold">0</span>
+                    <span className="font-semibold">
+                      {presenceLoading ? '...' : stats.onlinePlayers}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">This Week</span>
-                    <span className="font-semibold">0</span>
+                    <span className="font-semibold">{stats.thisWeekGames}</span>
                   </div>
                 </div>
               </div>

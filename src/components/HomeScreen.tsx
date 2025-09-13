@@ -193,6 +193,7 @@ export function HomeScreen() {
     };
   }, [setLoading]);
 
+
   const loadGames = async () => {
     if (isLoading) {
       console.log('Already loading games, skipping duplicate call');

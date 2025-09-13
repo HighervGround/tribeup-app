@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
 import { DesktopLayout } from './DesktopLayout';
@@ -12,6 +12,10 @@ export function AppContent() {
   const location = useLocation();
   const { announceToScreenReader } = useAccessibility();
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(false);
+  
+  // Navigation height calculation for proper scrolling
+  const navigationRef = useRef<HTMLDivElement>(null);
+  const [navigationHeight, setNavigationHeight] = useState(0);
 
   // Handle the fromOnboarding state to prevent redirect loops
   React.useEffect(() => {
@@ -51,6 +55,20 @@ export function AppContent() {
     document.title = `${title} - TribeUp`;
   }, [location.pathname, announceToScreenReader]);
 
+  // Dynamic navigation height calculation
+  useEffect(() => {
+    const updateNavigationHeight = () => {
+      if (navigationRef.current) {
+        const height = navigationRef.current.offsetHeight;
+        setNavigationHeight(height);
+      }
+    };
+
+    updateNavigationHeight();
+    window.addEventListener('resize', updateNavigationHeight);
+    
+    return () => window.removeEventListener('resize', updateNavigationHeight);
+  }, []);
 
   // Render mobile layout
   if (isMobile) {
@@ -58,12 +76,12 @@ export function AppContent() {
       <>
         <div className="min-h-screen bg-background">
           {/* Main content area with proper scrolling */}
-          <main className="pb-20">
+          <main style={{ paddingBottom: `${navigationHeight + 16}px` }}>
             <Outlet />
           </main>
 
           {/* Bottom navigation */}
-          <BottomNavigation />
+          <BottomNavigation ref={navigationRef} />
 
         </div>
 

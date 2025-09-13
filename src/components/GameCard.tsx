@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
+import { useGameActions } from '../hooks/useGameActions';
 
 interface GameCardProps {
   game: {
@@ -36,6 +37,7 @@ interface GameCardProps {
 export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const { toggleGameParticipation } = useGameActions();
 
   const handleCardClick = () => {
     if (onSelect) {
@@ -47,8 +49,7 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Handle join logic here
-    console.log('Joining game:', game.id);
+    toggleGameParticipation(game.id);
   };
 
   return (
@@ -153,7 +154,7 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
-              <span>{game.participants}/{game.maxParticipants}</span>
+              <span>{game.currentPlayers || game.participants}/{game.maxPlayers || game.maxParticipants}</span>
             </div>
             
             {!game.isJoined && !compact && (
@@ -161,15 +162,21 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
                 size="sm" 
                 onClick={handleJoinClick}
                 className="transition-all duration-200"
+                disabled={game.currentPlayers >= game.maxPlayers}
               >
-                Join Game
+                {game.currentPlayers >= game.maxPlayers ? 'Game Full' : 'Join Game'}
               </Button>
             )}
             
             {game.isJoined && !compact && (
-              <Badge variant="secondary" className="bg-success/20 text-success dark:bg-success/30 dark:text-success border-success/30">
-                Joined ✓
-              </Badge>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleJoinClick}
+                className="transition-all duration-200 bg-destructive/20 text-destructive hover:bg-destructive/30"
+              >
+                Leave Game
+              </Button>
             )}
           </div>
         </CardContent>

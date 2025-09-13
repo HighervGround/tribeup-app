@@ -33,17 +33,9 @@ export class NotificationService {
   // Register service worker for push notifications
   private static async registerServiceWorker(): Promise<void> {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered:', registration);
-
-      // Subscribe to push notifications
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
-      });
-
-      // Store subscription in Supabase
-      await this.storeSubscription(subscription);
+      // Skip service worker registration to prevent caching issues
+      console.log('Service worker registration skipped to prevent loading issues');
+      return;
     } catch (error) {
       console.error('Service Worker registration failed:', error);
     }

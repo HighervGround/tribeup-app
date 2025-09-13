@@ -67,6 +67,10 @@ export default defineConfig({
       }
     }
   },
+  define: {
+    // Disable service worker registration in production to prevent caching issues
+    __SW_ENABLED__: false
+  },
   server: {
       port: 3000,
       open: true,

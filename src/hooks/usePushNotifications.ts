@@ -63,32 +63,9 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     }
 
     try {
-      const registration = await navigator.serviceWorker.register(serviceWorkerUrl);
-      
-      // Wait for service worker to be ready
-      await navigator.serviceWorker.ready;
-      
-      setServiceWorkerRegistration(registration);
-      
-      // Listen for service worker updates
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              toast.info('App update available', {
-                action: {
-                  label: 'Refresh',
-                  onClick: () => window.location.reload()
-                }
-              });
-            }
-          });
-        }
-      });
-
-      console.log('Service Worker registered successfully');
-      return registration;
+      // Skip service worker registration to prevent caching issues
+      console.log('Service worker registration skipped to prevent loading issues');
+      return null;
     } catch (error) {
       console.error('Service Worker registration failed:', error);
       setState(prev => ({ ...prev, error: 'Failed to register service worker' }));

@@ -1,51 +1,28 @@
-// Service Worker - Cache busting version
-const CACHE_NAME = 'tribeup-v' + Date.now();
-const urlsToCache = [
-  '/',
-];
+// Service Worker - Minimal caching to prevent loading issues
+const CACHE_NAME = 'tribeup-v1';
 
 self.addEventListener('install', (event) => {
   // Skip waiting to activate immediately
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
-  );
 });
 
 self.addEventListener('activate', (event) => {
-  // Clear old caches
+  // Clear all caches to prevent stale content
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames.map((cacheName) => caches.delete(cacheName))
       );
     })
   );
+  // Take control of all clients immediately
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests and skip API calls
-  if (event.request.method === 'GET' && !event.request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Always fetch fresh, only cache as backup
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME)
-            .then((cache) => cache.put(event.request, responseClone));
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache only if network fails
-          return caches.match(event.request);
-        })
-    );
-  }
+  // Skip caching entirely for main app requests to prevent loading issues
+  // Only handle push notifications and background sync
+  return;
 });
 
 // Push event - handle incoming push notifications

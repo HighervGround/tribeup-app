@@ -84,22 +84,39 @@ export function MapView({
 
   // Convert games to map games - prioritize passed games, fallback to store games
   const sourceGames = games.length > 0 ? games : allGames;
-  const mapGames: MapGame[] = sourceGames.map(game => ({
-    id: game.id,
-    title: game.title,
-    sport: game.sport,
-    location: {
-      latitude: game.latitude || (mapCenter.latitude + (Math.random() - 0.5) * 0.01),
-      longitude: game.longitude || (mapCenter.longitude + (Math.random() - 0.5) * 0.01)
-    },
-    locationName: game.location,
-    date: game.date,
-    time: game.time,
-    players: game.currentPlayers || game.players,
-    maxPlayers: game.maxPlayers,
-    cost: game.cost,
-    difficulty: game.difficulty
-  }));
+  console.log('MapView: Source games count:', sourceGames.length);
+  
+  const mapGames: MapGame[] = sourceGames
+    .filter((game: any) => {
+      // Only include games that have valid coordinates
+      const hasCoords = game.latitude && game.longitude;
+      if (!hasCoords) {
+        console.log(`MapView: Game "${game.title}" missing coordinates:`, {
+          latitude: game.latitude,
+          longitude: game.longitude,
+          location: game.location
+        });
+      }
+      return hasCoords;
+    })
+    .map((game: any) => ({
+      id: game.id,
+      title: game.title,
+      sport: game.sport,
+      location: {
+        latitude: game.latitude,
+        longitude: game.longitude
+      },
+      locationName: typeof game.location === 'string' ? game.location : 'Unknown Location',
+      date: game.date,
+      time: game.time,
+      players: game.currentPlayers || game.players || 0,
+      maxPlayers: game.maxPlayers || 0,
+      cost: game.cost || 'Free',
+      difficulty: game.difficulty || 'Beginner'
+    }));
+    
+  console.log('MapView: Games with coordinates:', mapGames.length);
 
   // Update map center when current location changes
   useEffect(() => {
@@ -242,23 +259,32 @@ export function MapView({
 
         {/* Interactive Map Implementation */}
         <div className="absolute inset-0">
-          {/* Map Tile Layer */}
+          {/* OpenStreetMap Tile Layer */}
           <div 
             className="w-full h-full bg-cover bg-center"
             style={{
               backgroundImage: showSatellite 
-                ? `url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${mapZoom}/${Math.floor((1 - Math.log(Math.tan(mapCenter.latitude * Math.PI/180) + 1/Math.cos(mapCenter.latitude * Math.PI/180))/Math.PI)/2 * Math.pow(2,mapZoom))}/${Math.floor((mapCenter.longitude + 180) / 360 * Math.pow(2,mapZoom))}')`
-                : `url('https://tile.openstreetmap.org/${mapZoom}/${Math.floor((mapCenter.longitude + 180) / 360 * Math.pow(2,mapZoom))}/${Math.floor((1 - Math.log(Math.tan(mapCenter.latitude * Math.PI/180) + 1/Math.cos(mapCenter.latitude * Math.PI/180))/Math.PI)/2 * Math.pow(2,mapZoom))}.png')`
+                ? `url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${mapZoom}/${Math.floor((90 - mapCenter.latitude) * Math.pow(2, mapZoom) / 360)}/${Math.floor((mapCenter.longitude + 180) * Math.pow(2, mapZoom) / 360)}')`
+                : `url('https://tile.openstreetmap.org/${mapZoom}/${Math.floor((mapCenter.longitude + 180) * Math.pow(2, mapZoom) / 360)}/${Math.floor((90 - mapCenter.latitude) * Math.pow(2, mapZoom) / 360)}.png')`
             }}
           />
           
-          {/* Fallback pattern when tiles don't load */}
+          {/* Map Grid Overlay */}
           <div 
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-20"
             style={{
-              backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
-              backgroundSize: '20px 20px',
-              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+              backgroundImage: 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
+            }}
+          />
+          
+          {/* Street Pattern Overlay */}
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: showSatellite 
+                ? 'none'
+                : `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.1'%3E%3Cpath d='M20 20h20v20H20z'/%3E%3Cpath d='M0 0h20v20H0z'/%3E%3C/g%3E%3C/svg%3E")`
             }}
           />
         </div>

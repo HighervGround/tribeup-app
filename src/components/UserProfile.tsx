@@ -1,24 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { Settings, Trophy, Calendar, MapPin } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Settings, Trophy, Calendar, MapPin, Star } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { SupabaseService } from '../lib/supabaseService';
+import { formatTimeString } from '../lib/dateUtils';
 
 export function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAppStore();
-
-  // Default values if user data is not available
-  const userStats = [
+  const [userStats, setUserStats] = useState([
     { label: 'Games Played', value: '0', icon: Calendar },
     { label: 'Games Hosted', value: '0', icon: MapPin },
     { label: 'Achievements', value: '0', icon: Trophy },
-  ];
+  ]);
+  const [recentGames, setRecentGames] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentGames: any[] = [];
+  // Load user stats and recent games
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Load user stats
+        const stats = await SupabaseService.getUserStats(user.id);
+        setUserStats([
+          { label: 'Games Played', value: stats.gamesPlayed.toString(), icon: Calendar },
+          { label: 'Games Hosted', value: stats.gamesHosted.toString(), icon: MapPin },
+          { label: 'Achievements', value: stats.achievements.toString(), icon: Trophy },
+        ]);
+
+        // Load recent games
+        const games = await SupabaseService.getUserRecentGames(user.id, 5);
+        setRecentGames(games);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [user?.id]);
 
   // Get user data with fallbacks
   const displayName = user?.name || 'User Profile';
@@ -44,13 +74,10 @@ export function UserProfile() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 mb-6">
               <Avatar className="w-16 h-16">
-                {displayAvatar ? (
-                  <img src={displayAvatar} alt={displayName} />
-                ) : (
-                  <AvatarFallback className="text-xl">
-                    {displayName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                )}
+                <AvatarImage src={displayAvatar} alt={displayName} />
+                <AvatarFallback className="text-xl">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <h2 className="text-xl font-semibold">{displayName}</h2>
@@ -115,14 +142,31 @@ export function UserProfile() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentGames.length > 0 ? (
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p>Loading recent games...</p>
+                </div>
+              ) : recentGames.length > 0 ? (
                 recentGames.map((game, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
+                  <div key={game.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
                       <div className="font-medium">{game.title}</div>
-                      <div className="text-sm text-muted-foreground">{game.date}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(game.date).toLocaleDateString()} at {formatTimeString(game.time)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {game.location}
+                      </div>
                     </div>
-                    <Badge variant="outline">{game.sport}</Badge>
+                    <div className="flex items-center gap-2">
+                      {game.isHost && (
+                        <Badge variant="secondary" className="text-xs">
+                          Host
+                        </Badge>
+                      )}
+                      <Badge variant="outline">{game.sport}</Badge>
+                    </div>
                   </div>
                 ))
               ) : (

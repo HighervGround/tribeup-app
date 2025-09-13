@@ -91,6 +91,7 @@ export type Database = {
       }
       games: {
         Row: {
+          archived: boolean | null
           cost: string | null
           created_at: string | null
           creator_id: string | null
@@ -108,6 +109,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          archived?: boolean | null
           cost?: string | null
           created_at?: string | null
           creator_id?: string | null
@@ -125,6 +127,7 @@ export type Database = {
           title: string
         }
         Update: {
+          archived?: boolean | null
           cost?: string | null
           created_at?: string | null
           creator_id?: string | null

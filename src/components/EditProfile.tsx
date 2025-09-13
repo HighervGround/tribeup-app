@@ -199,7 +199,14 @@ export function EditProfile() {
       // Upload avatar if a file is selected
       let finalAvatarUrl = formData.avatarUrl;
       if (selectedFile) {
-        finalAvatarUrl = await SupabaseService.uploadAvatar(selectedFile);
+        try {
+          finalAvatarUrl = await SupabaseService.uploadAvatar(selectedFile);
+          console.log('Avatar uploaded successfully:', finalAvatarUrl);
+        } catch (avatarError) {
+          console.error('Avatar upload failed:', avatarError);
+          toast.error('Failed to upload profile picture. Profile will be saved without image.');
+          // Continue with profile update even if avatar upload fails
+        }
       }
 
       const updatedProfile = await SupabaseService.updateUserProfile(user.id, {
@@ -246,7 +253,7 @@ export function EditProfile() {
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [formData]);
 
-  const isDirty = initialFormRef.current && JSON.stringify(initialFormRef.current) !== JSON.stringify(formData);
+  const isDirty = (initialFormRef.current && JSON.stringify(initialFormRef.current) !== JSON.stringify(formData)) || selectedFile !== null;
 
   if (!user) {
     return (

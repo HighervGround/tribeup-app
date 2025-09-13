@@ -51,18 +51,30 @@ export class WeatherService {
   // Get weather forecast for game time with 4-hour window analysis
   static async getGameWeather(lat: number, lng: number, gameDateTime: Date): Promise<WeatherData | null> {
     try {
-      console.log(`🌤️ Fetching weather for coordinates: ${lat}, ${lng}`);
+      // Ensure coordinates are properly formatted (max 6 decimal places for precision)
+      const formattedLat = parseFloat(lat.toFixed(6));
+      const formattedLng = parseFloat(lng.toFixed(6));
+      
+      console.log(`🌤️ Fetching weather for coordinates: ${formattedLat}, ${formattedLng}`);
       console.log(`🕐 Game time: ${gameDateTime.toISOString()}`);
       
       const response = await fetch(
-        `${this.BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
+        `${this.BASE_URL}/forecast?lat=${formattedLat}&lon=${formattedLng}&appid=${this.API_KEY}&units=imperial`
       );
 
       if (!response.ok) {
-        throw new Error(`Weather API error: ${response.status}`);
+        console.error(`Weather API error: ${response.status} ${response.statusText}`);
+        // Try current weather as fallback
+        return await this.getCurrentWeather(formattedLat, formattedLng);
       }
 
       const data = await response.json();
+      
+      if (!data.list || data.list.length === 0) {
+        console.warn('No forecast data available, falling back to current weather');
+        return await this.getCurrentWeather(formattedLat, formattedLng);
+      }
+      
       console.log(`📊 Received ${data.list.length} forecast entries`);
       
       // Define 4-hour window around game time (2 hours before to 2 hours after)

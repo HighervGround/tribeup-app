@@ -6,6 +6,10 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -19,6 +23,9 @@ import {
   Star,
   Navigation,
   Loader2,
+  Edit3,
+  Trash2,
+  MoreVertical,
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useGames, useAppLoading, useAppStore } from '../store/appStore';
@@ -55,7 +62,7 @@ function WeatherInfo({ game }: { game: any }) {
         } else if (game.location) {
           // Use Google Maps Geocoding API (same as the map uses)
           console.log('🗺️ Using Google Maps geocoding for weather (same as map)');
-          const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY;
+          const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;
           
           try {
             const geocodeResponse = await fetch(
@@ -66,12 +73,16 @@ function WeatherInfo({ game }: { game: any }) {
               const geocodeData = await geocodeResponse.json();
               console.log('🗺️ Google geocoding results:', geocodeData);
               
-              if (geocodeData.results && geocodeData.results.length > 0) {
+              if (geocodeData.status === 'OK' && geocodeData.results && geocodeData.results.length > 0) {
                 const { lat, lng } = geocodeData.results[0].geometry.location;
                 console.log('🎯 Using Google Maps coordinates for weather:', lat, lng);
                 weatherData = await WeatherService.getGameWeather(lat, lng, gameDateTime);
                 console.log('✅ Weather from Google Maps coordinates:', weatherData);
+              } else {
+                console.warn('🗺️ Google geocoding failed:', geocodeData.status, geocodeData.error_message);
               }
+            } else {
+              console.error('🗺️ Google geocoding HTTP error:', geocodeResponse.status, geocodeResponse.statusText);
             }
           } catch (error) {
             console.error('❌ Google Maps geocoding failed:', error);
@@ -222,6 +233,17 @@ export function GameDetails() {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    maxPlayers: 0,
+    cost: ''
+  });
+  const [deleteReason, setDeleteReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   
   // Find the game by ID
   const game = games.find(g => g.id === gameId);
@@ -324,6 +346,57 @@ export function GameDetails() {
     }
   };
 
+  const handleEditGame = () => {
+    setEditFormData({
+      title: game.title,
+      description: game.description,
+      location: game.location,
+      maxPlayers: game.maxPlayers,
+      cost: game.cost
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!gameId) return;
+    
+    setActionLoading(true);
+    try {
+      await SupabaseService.updateGame(gameId, editFormData);
+      toast.success('Game updated successfully');
+      setShowEditDialog(false);
+      // Refresh the page to show updated data
+      window.location.reload();
+    } catch (error: any) {
+      toast.error('Failed to update game', {
+        description: error.message || 'Please try again later'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteGame = async () => {
+    if (!gameId) return;
+    
+    setActionLoading(true);
+    try {
+      await SupabaseService.deleteGame(gameId, deleteReason);
+      toast.success('Game cancelled successfully');
+      setShowDeleteDialog(false);
+      navigate('/');
+    } catch (error: any) {
+      toast.error('Failed to cancel game', {
+        description: error.message || 'Please try again later'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Check if current user is the game creator
+  const isGameCreator = user && game && game.createdBy === user.id;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -354,6 +427,32 @@ export function GameDetails() {
             >
               <Share className="w-5 h-5" />
             </Button>
+            {isGameCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    aria-label="Game options"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEditGame}>
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit Game
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Cancel Game
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button 
               variant="ghost" 
               size="icon"
@@ -655,6 +754,140 @@ export function GameDetails() {
         onClose={() => setShowInvite(false)}
         game={game}
       />
+
+      {/* Edit Game Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Game</DialogTitle>
+            <DialogDescription>
+              Make changes to your game. Participants will be notified of any updates.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="edit-title" className="text-sm font-medium">
+                Title
+              </label>
+              <Input
+                id="edit-title"
+                value={editFormData.title}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Game title"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="edit-description" className="text-sm font-medium">
+                Description
+              </label>
+              <Textarea
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Game description"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="edit-location" className="text-sm font-medium">
+                Location
+              </label>
+              <Input
+                id="edit-location"
+                value={editFormData.location}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Game location"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="edit-maxPlayers" className="text-sm font-medium">
+                  Max Players
+                </label>
+                <Input
+                  id="edit-maxPlayers"
+                  type="number"
+                  min="2"
+                  max="50"
+                  value={editFormData.maxPlayers}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, maxPlayers: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="edit-cost" className="text-sm font-medium">
+                  Cost
+                </label>
+                <Input
+                  id="edit-cost"
+                  value={editFormData.cost}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, cost: e.target.value }))}
+                  placeholder="FREE or $10"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={actionLoading}>
+              {actionLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Game Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Cancel Game</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. All participants will be notified of the cancellation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="delete-reason" className="text-sm font-medium">
+                Reason for cancellation (optional)
+              </label>
+              <Textarea
+                id="delete-reason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Let participants know why the game is cancelled..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Keep Game
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteGame} 
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                'Cancel Game'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

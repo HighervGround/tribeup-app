@@ -72,40 +72,26 @@ export function useLocationSearch() {
 
     setLoading(true);
     try {
-      // Try Google Places API (New) first
+      // Try Google Places API (Legacy) first - more stable
       if (GOOGLE_API_KEY && GOOGLE_API_KEY !== 'demo_key') {
-        let placesUrl = `https://places.googleapis.com/v1/places:autocomplete`;
+        let placesUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`;
         
-        const requestBody = {
-          input: query,
-          ...(userLat && userLng && {
-            locationBias: {
-              circle: {
-                center: { latitude: userLat, longitude: userLng },
-                radius: 50000 // 50km radius
-              }
-            }
-          })
-        };
+        // Add location bias if available
+        if (userLat && userLng) {
+          placesUrl += `&location=${userLat},${userLng}&radius=50000`;
+        }
 
-        const response = await fetch(placesUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': GOOGLE_API_KEY
-          },
-          body: JSON.stringify(requestBody)
-        });
+        const response = await fetch(placesUrl);
 
         if (response.ok) {
           const data = await response.json();
-          if (data.suggestions && data.suggestions.length > 0) {
-            const suggestions: LocationSuggestion[] = data.suggestions.map((place: any, index: number) => ({
-              place_id: place.placePrediction?.placeId || `google-${index}`,
-              description: place.placePrediction?.text?.text || '',
+          if (data.predictions && data.predictions.length > 0) {
+            const suggestions: LocationSuggestion[] = data.predictions.map((place: any) => ({
+              place_id: place.place_id,
+              description: place.description,
               structured_formatting: {
-                main_text: place.placePrediction?.structuredFormat?.mainText?.text || '',
-                secondary_text: place.placePrediction?.structuredFormat?.secondaryText?.text || ''
+                main_text: place.structured_formatting?.main_text || place.description.split(',')[0],
+                secondary_text: place.structured_formatting?.secondary_text || place.description.split(',').slice(1).join(',').trim()
               }
             }));
             setSuggestions(suggestions);

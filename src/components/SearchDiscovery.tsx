@@ -6,9 +6,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, MapPin, Clock, Users } from 'lucide-react';
-import { MapView } from './MapView';
 import { useAppStore } from '../store/appStore';
 import { calculateDistance, formatDistance } from '../hooks/useLocation';
+import { formatTimeString } from '../lib/dateUtils';
 
 
 
@@ -79,7 +79,7 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
         )}
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />
-          <span>{game.date} at {game.time}</span>
+          <span>{game.date} at {formatTimeString(game.time)}</span>
         </div>
       </div>
       
@@ -337,30 +337,26 @@ export function SearchDiscovery() {
               <h3 className="text-lg font-semibold mb-4">Games Near You</h3>
               {currentLocation ? (
                 <div className="relative">
-                  <MapView
-                    games={filteredResults.map(game => ({
-                      id: game.id,
-                      title: game.title,
-                      sport: game.sport,
-                      location: {
-                        latitude: game.latitude || currentLocation.latitude + (Math.random() - 0.5) * 0.01,
-                        longitude: game.longitude || currentLocation.longitude + (Math.random() - 0.5) * 0.01
-                      },
-                      locationName: game.location,
-                      date: game.date,
-                      time: game.time,
-                      players: game.currentPlayers || game.players,
-                      maxPlayers: game.maxPlayers,
-                      cost: game.cost,
-                      difficulty: game.difficulty
-                    }))}
-                    center={currentLocation}
-                    zoom={13}
-                    className="h-64 md:h-80"
-                    showCurrentLocation={true}
-                    showGameMarkers={true}
-                    onGameSelect={handleGameSelect}
-                  />
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    {filteredResults.length > 0 ? (
+                      <iframe
+                        src={`https://www.google.com/maps/embed/v1/view?key=${(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}&center=${currentLocation.latitude},${currentLocation.longitude}&zoom=12&maptype=roadmap`}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        className="rounded-lg"
+                        title="Games map view"
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <MapPin className="w-8 h-8 mx-auto mb-2" />
+                        <p>No games with locations found</p>
+                      </div>
+                    )}
+                  </div>
                   <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs">
                     📍 You • 🎮 {filteredResults.length} Games
                   </div>
@@ -380,6 +376,57 @@ export function SearchDiscovery() {
                   >
                     {locationLoading ? 'Requesting...' : 'Enable Location'}
                   </Button>
+                </div>
+              )}
+
+              {/* Games List with Map Numbers */}
+              {currentLocation && filteredResults.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Games on Map</h4>
+                  {filteredResults
+                    .filter(game => game.latitude && game.longitude)
+                    .slice(0, 10)
+                    .map((game, index) => (
+                      <div 
+                        key={game.id}
+                        className="flex items-center gap-3 p-3 bg-background rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleGameSelect(game.id)}
+                      >
+                        <div className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h5 className="font-medium truncate">{game.title}</h5>
+                            <Badge variant="secondary" className="text-xs">
+                              {game.sport}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTimeString(game.time)}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {game.currentPlayers || 0}/{game.maxPlayers}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {currentLocation && game.latitude && game.longitude ? 
+                                formatDistance(calculateDistance(
+                                  currentLocation.latitude, 
+                                  currentLocation.longitude, 
+                                  game.latitude, 
+                                  game.longitude
+                                )) : 
+                                'Distance unknown'
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               )}
             </div>

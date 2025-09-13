@@ -285,27 +285,32 @@ export function HomeScreen() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Layout */}
-      <div className="block md:hidden">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="px-4 pt-4">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-8">
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold">TribeUp</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">TribeUp</h1>
                 <p className="text-muted-foreground">Find your next game</p>
               </div>
+              <Button onClick={handleCreateGame} className="hidden md:flex">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Game
+              </Button>
               <Button 
                 onClick={handleCreateGame}
                 size="icon"
+                className="md:hidden"
                 aria-label="Create new game"
               >
                 <Plus className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            {/* Quick Stats - Mobile */}
+            <div className="grid grid-cols-3 gap-4 mb-6 lg:hidden">
               <div className="bg-card rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-primary">{stats.totalGames}</div>
                 <div className="text-sm text-muted-foreground">Active Games</div>
@@ -321,24 +326,33 @@ export function HomeScreen() {
                 <div className="text-sm text-muted-foreground">This Week</div>
               </div>
             </div>
-          </div>
 
-          {/* Single Games List */}
-          <div className="px-4">
+            {/* Games List */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Upcoming Games</h2>
+              <h2 className="text-lg md:text-xl font-semibold">Upcoming Games</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="hidden md:flex"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleRefresh}
                 disabled={isLoading}
+                className="md:hidden"
                 aria-label="Refresh games"
               >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedGames.map((game) => (
                 <div key={game.id}>
                   <SimpleGameCard
@@ -349,70 +363,25 @@ export function HomeScreen() {
               ))}
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Desktop Layout */}
-      <div className="hidden md:block">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="grid grid-cols-12 gap-6">
-            {/* Main Content */}
-            <div className="col-span-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold">TribeUp</h1>
-                  <p className="text-muted-foreground">Find your next game</p>
+
+          {/* Sidebar - Desktop Only */}
+          <div className="hidden lg:block lg:col-span-4">
+            <div className="bg-card rounded-lg p-6 sticky top-6">
+              <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Active Games</span>
+                  <span className="font-semibold">{stats.totalGames}</span>
                 </div>
-                <Button onClick={handleCreateGame}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Game
-                </Button>
-              </div>
-
-              {/* Single Games List */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Upcoming Games</h2>
-                <Button
-                  variant="outline"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sortedGames.map((game) => (
-                  <div key={game.id}>
-                    <SimpleGameCard
-                      game={game}
-                      onSelect={() => handleGameSelect(game.id)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="col-span-4">
-              <div className="bg-card rounded-lg p-6 sticky top-6">
-                <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Active Games</span>
-                    <span className="font-semibold">{stats.totalGames}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Players Online</span>
-                    <span className="font-semibold">
-                      {presenceLoading ? '...' : stats.onlinePlayers}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">This Week</span>
-                    <span className="font-semibold">{stats.thisWeekGames}</span>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Players Online</span>
+                  <span className="font-semibold">
+                    {presenceLoading ? '...' : stats.onlinePlayers}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">This Week</span>
+                  <span className="font-semibold">{stats.thisWeekGames}</span>
                 </div>
               </div>
             </div>

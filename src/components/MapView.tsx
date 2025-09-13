@@ -19,7 +19,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '../hooks/useLocation';
-import { useGames } from '../store/appStore';
+import { useGames } from '../hooks/useGames';
 import { toast } from 'sonner';
 
 export interface MapGame {

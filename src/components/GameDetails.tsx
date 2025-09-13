@@ -28,7 +28,8 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { useGames, useAppLoading, useAppStore } from '../store/appStore';
+import { useAppStore } from '../store/appStore';
+import { useGame, useJoinGame, useLeaveGame } from '../hooks/useGames';
 import { useGameActions } from '../hooks/useGameActions';
 import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
@@ -223,10 +224,11 @@ function WeatherInfo({ game }: { game: any }) {
 export function GameDetails() {
   const navigate = useNavigate();
   const { gameId } = useParams();
-  const games = useGames();
-  const isLoading = useAppLoading();
   const { user } = useAppStore();
   const { toggleGameParticipation } = useGameActions();
+  
+  // Use React Query for game data
+  const { data: game, isLoading } = useGame(gameId || '');
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [players, setPlayers] = useState([] as any[]);
@@ -245,8 +247,7 @@ export function GameDetails() {
   const [deleteReason, setDeleteReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   
-  // Find the game by ID
-  const game = games.find(g => g.id === gameId);
+  // Game data comes from React Query hook above
 
   // Load players for this game
   useEffect(() => {

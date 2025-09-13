@@ -242,32 +242,23 @@ export function MapView({
 
         {/* Interactive Map Implementation */}
         <div className="absolute inset-0">
-          {/* OpenStreetMap Tile Layer */}
+          {/* Map Tile Layer */}
           <div 
             className="w-full h-full bg-cover bg-center"
             style={{
               backgroundImage: showSatellite 
-                ? `url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${mapZoom}/${Math.floor((90 - mapCenter.latitude) * Math.pow(2, mapZoom) / 360)}/${Math.floor((mapCenter.longitude + 180) * Math.pow(2, mapZoom) / 360)}')`
-                : `url('https://tile.openstreetmap.org/${mapZoom}/${Math.floor((mapCenter.longitude + 180) * Math.pow(2, mapZoom) / 360)}/${Math.floor((90 - mapCenter.latitude) * Math.pow(2, mapZoom) / 360)}.png')`
+                ? `url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${mapZoom}/${Math.floor((1 - Math.log(Math.tan(mapCenter.latitude * Math.PI/180) + 1/Math.cos(mapCenter.latitude * Math.PI/180))/Math.PI)/2 * Math.pow(2,mapZoom))}/${Math.floor((mapCenter.longitude + 180) / 360 * Math.pow(2,mapZoom))}')`
+                : `url('https://tile.openstreetmap.org/${mapZoom}/${Math.floor((mapCenter.longitude + 180) / 360 * Math.pow(2,mapZoom))}/${Math.floor((1 - Math.log(Math.tan(mapCenter.latitude * Math.PI/180) + 1/Math.cos(mapCenter.latitude * Math.PI/180))/Math.PI)/2 * Math.pow(2,mapZoom))}.png')`
             }}
           />
           
-          {/* Map Grid Overlay */}
+          {/* Fallback pattern when tiles don't load */}
           <div 
-            className="absolute inset-0 opacity-20"
+            className="absolute inset-0 opacity-30"
             style={{
-              backgroundImage: 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
-              backgroundSize: '20px 20px'
-            }}
-          />
-          
-          {/* Street Pattern Overlay */}
-          <div 
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: showSatellite 
-                ? 'none'
-                : `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.1'%3E%3Cpath d='M20 20h20v20H20z'/%3E%3Cpath d='M0 0h20v20H0z'/%3E%3C/g%3E%3C/svg%3E")`
+              backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)',
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
             }}
           />
         </div>

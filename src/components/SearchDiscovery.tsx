@@ -88,16 +88,16 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
         
         <button
           onClick={handleJoinClick}
-          disabled={loading}
+          disabled={joinGameMutation.isPending || leaveGameMutation.isPending}
           className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-            loading 
+            joinGameMutation.isPending || leaveGameMutation.isPending 
               ? 'opacity-50 cursor-not-allowed' 
               : game.isJoined 
                 ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
           }`}
         >
-          {loading ? '...' : (game.isJoined ? 'Leave' : 'Join')}
+          {joinGameMutation.isPending || leaveGameMutation.isPending ? '...' : (game.isJoined ? 'Leave' : 'Join')}
         </button>
       </div>
     </div>

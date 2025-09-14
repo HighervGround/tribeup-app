@@ -2,6 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSpinner } from './ui/loading-spinner';
+import { ProtectedRoute } from './ProtectedRoute';
+import { ProfileCheck } from './ProfileCheck';
 
 // Lazy load components for better performance
 const HomeScreen = lazy(() => import('./HomeScreen'));
@@ -43,8 +45,14 @@ export function AppRouter() {
         <AppWrapper>
           <Suspense fallback={<RouteLoader text="Loading application..." />}>
             <Routes>
-              {/* Layout Route - wraps all routes that need the standard layout */}
-              <Route path="/" element={<AppContent />}>
+              {/* Protected Routes - require authentication */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <ProfileCheck>
+                    <AppContent />
+                  </ProfileCheck>
+                </ProtectedRoute>
+              }>
                 {/* Main App Routes */}
                 <Route index element={<HomeScreen />} />
                 <Route path="search" element={<SearchDiscovery />} />
@@ -74,13 +82,15 @@ export function AppRouter() {
 
               </Route>
 
-              {/* Special routes that don't use the standard layout */}
+              {/* Public routes - no authentication required */}
               <Route
-                path="auth"
+                path="/auth"
                 element={
-                  <Suspense fallback={<RouteLoader text="Loading authentication..." />}>
-                    <Auth />
-                  </Suspense>
+                  <ProtectedRoute requireAuth={false}>
+                    <Suspense fallback={<RouteLoader text="Loading authentication..." />}>
+                      <Auth />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
               <Route

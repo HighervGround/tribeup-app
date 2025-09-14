@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -7,79 +7,41 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Settings, Trophy, Calendar, MapPin, Star } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
+import { useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
 import { formatTimeString } from '../lib/dateUtils';
 
 function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAppStore();
-  const [userStats, setUserStats] = useState([
-    { label: 'Games Played', value: '0', icon: Calendar },
-    { label: 'Games Hosted', value: '0', icon: MapPin },
-    { label: 'Achievements', value: '0', icon: Trophy },
-  ]);
-  const [recentGames, setRecentGames] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use React Query hooks for data fetching
+  const { data: stats, isLoading: statsLoading } = useUserStats(user?.id || '');
+  const { data: recentGamesData = [], isLoading: recentGamesLoading } = useUserRecentGames(user?.id || '', 5);
+  const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(user?.id || '');
+  
+  const loading = statsLoading || recentGamesLoading || achievementsLoading;
+  
+  // Transform stats data for display
+  const userStats = useMemo(() => [
+    { label: 'Games Played', value: stats?.games_played?.toString() || '0', icon: Calendar },
+    { label: 'Games Hosted', value: stats?.games_hosted?.toString() || '0', icon: MapPin },
+    { label: 'Achievements', value: achievements.length.toString(), icon: Trophy },
+  ], [stats, achievements]);
+  
+  // Transform recent games data
+  const recentGames = useMemo(() => {
+    return recentGamesData.map((participation: any) => ({
+      id: participation.games?.id || participation.id,
+      title: participation.games?.title || participation.title,
+      sport: participation.games?.sport || participation.sport,
+      date: participation.games?.date || participation.date,
+      time: participation.games?.time || participation.time,
+      location: participation.games?.location || participation.location,
+      isHost: (participation.games?.created_by || participation.created_by) === user?.id
+    }));
+  }, [recentGamesData, user?.id]);
 
-  // Load user stats and recent games
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Load real user stats (with fallback if tables don't exist yet)
-        const [stats, recentGamesData, achievements] = await Promise.all([
-          SupabaseService.getUserStats(user.id).catch(() => ({
-            user_id: user.id,
-            games_played: 0,
-            games_hosted: 0,
-            total_play_time_minutes: 0,
-            favorite_sport: null,
-            last_activity: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })),
-          SupabaseService.getUserRecentGames(user.id, 5).catch(() => []),
-          SupabaseService.getUserAchievements(user.id).catch(() => [])
-        ]);
-
-        // Update stats with real data
-        setUserStats([
-          { label: 'Games Played', value: stats.games_played.toString(), icon: Calendar },
-          { label: 'Games Hosted', value: stats.games_hosted.toString(), icon: MapPin },
-          { label: 'Achievements', value: achievements.length.toString(), icon: Trophy },
-        ]);
-
-        // Transform recent games data
-        const transformedRecentGames = recentGamesData.map((participation: any) => ({
-          id: participation.games.id,
-          title: participation.games.title,
-          sport: participation.games.sport,
-          date: participation.games.date,
-          time: participation.games.time,
-          location: participation.games.location,
-          isHost: participation.games.created_by === user.id
-        }));
-
-        setRecentGames(transformedRecentGames);
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        // Fallback to placeholder data on error
-        setUserStats([
-          { label: 'Games Played', value: '0', icon: Calendar },
-          { label: 'Games Hosted', value: '0', icon: MapPin },
-          { label: 'Achievements', value: '0', icon: Trophy },
-        ]);
-        setRecentGames([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserData();
-  }, [user?.id]);
+  // React Query handles all data loading automatically
 
   // Get user data with fallbacks
   const displayName = user?.name || 'User Profile';

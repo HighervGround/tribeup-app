@@ -21,36 +21,16 @@ import {
 import { useGames } from '../hooks/useGames';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 
 
 function OtherUserProfile() {
   const navigate = useNavigate();
   const { userId } = useParams();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Load user data from Supabase
-  useEffect(() => {
-    const loadUser = async () => {
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const userData = await SupabaseService.getUserProfile(userId);
-        setUser(userData);
-      } catch (error) {
-        console.error('Error loading user:', error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUser();
-  }, [userId]);
+  
+  // Use React Query hook for data fetching
+  const { data: user, isLoading: loading, error } = useUserProfile(userId || '');
 
   if (!user) {
     return (

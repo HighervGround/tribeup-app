@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
+import { useJoinGame, useLeaveGame, useGames } from '../hooks/useGames';
 import { formatTimeString } from '../lib/dateUtils';
 
 
@@ -27,14 +28,15 @@ const sportFilters = [
 // Simple GameCard component
 // Simple GameCard component
 function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
-  const { joinGame, leaveGame } = useAppStore();
+  const joinGameMutation = useJoinGame();
+  const leaveGameMutation = useLeaveGame();
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (game.isJoined) {
-      leaveGame(game.id);
+      leaveGameMutation.mutate(game.id);
     } else {
-      joinGame(game.id);
+      joinGameMutation.mutate(game.id);
     }
   };
 
@@ -109,26 +111,8 @@ function SearchDiscovery() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [games, setGames] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Load games from Supabase
-  useEffect(() => {
-    const loadGames = async () => {
-      setLoading(true);
-      try {
-        const gamesData = await SupabaseService.getGames();
-        setGames(gamesData);
-      } catch (error) {
-        console.error('Error loading games:', error);
-        setGames([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadGames();
-  }, []);
+  // Use React Query for consistent data loading
+  const { data: games = [], isLoading: loading, error } = useGames();
 
   const handleGameSelect = (gameId: string) => {
     navigate(`/game/${gameId}`);

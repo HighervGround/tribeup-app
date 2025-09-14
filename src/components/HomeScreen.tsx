@@ -103,10 +103,6 @@ function HomeScreen() {
     }
   };
 
-  const handleGameSelect = (gameId: string) => {
-    navigate(`/game/${gameId}`);
-  };
-
   const handleCreateGame = () => {
     navigate('/create');
   };

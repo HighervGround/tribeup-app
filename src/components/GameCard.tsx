@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
-import { useJoinGame, useLeaveGame } from '../hooks/useGames';
+import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
 
 interface GameCardProps {
   game: {
@@ -37,23 +37,13 @@ interface GameCardProps {
 export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const joinGameMutation = useJoinGame();
-  const leaveGameMutation = useLeaveGame();
+  const { toggleJoin, isLoading, getButtonText, getButtonVariant } = useGameJoinToggle();
 
   const handleCardClick = () => {
     if (onSelect) {
       onSelect(game.id);
     } else {
       navigate(`/game/${game.id}`);
-    }
-  };
-
-  const handleJoinClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (game.isJoined) {
-      leaveGameMutation.mutate(game.id);
-    } else {
-      joinGameMutation.mutate(game.id);
     }
   };
 
@@ -162,25 +152,15 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
               <span>{game.currentPlayers || game.participants}/{game.maxPlayers || game.maxParticipants}</span>
             </div>
             
-            {!game.isJoined && !compact && (
+            {!compact && (
               <Button 
                 size="sm" 
-                onClick={handleJoinClick}
+                variant={getButtonVariant(game)}
+                onClick={(e) => toggleJoin(game, e)}
                 className="transition-all duration-200"
-                disabled={game.currentPlayers >= game.maxPlayers}
+                disabled={isLoading || (game.currentPlayers >= game.maxPlayers && !game.isJoined)}
               >
-                {game.currentPlayers >= game.maxPlayers ? 'Game Full' : 'Join Game'}
-              </Button>
-            )}
-            
-            {game.isJoined && !compact && (
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={handleJoinClick}
-                className="transition-all duration-200 bg-destructive/20 text-destructive hover:bg-destructive/30"
-              >
-                Leave Game
+                {game.currentPlayers >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
               </Button>
             )}
           </div>

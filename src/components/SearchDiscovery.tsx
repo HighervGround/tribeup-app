@@ -6,7 +6,8 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { useJoinGame, useLeaveGame, useGames } from '../hooks/useGames';
+import { useGames } from '../hooks/useGames';
+import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
 import { formatTimeString } from '../lib/dateUtils';
 
 
@@ -28,17 +29,7 @@ const sportFilters = [
 // Simple GameCard component
 // Simple GameCard component
 function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
-  const joinGameMutation = useJoinGame();
-  const leaveGameMutation = useLeaveGame();
-
-  const handleJoinClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (game.isJoined) {
-      leaveGameMutation.mutate(game.id);
-    } else {
-      joinGameMutation.mutate(game.id);
-    }
-  };
+  const { toggleJoin, isLoading, getButtonText, getButtonVariant } = useGameJoinToggle();
 
   const handleCardClick = () => {
     onSelect();
@@ -89,17 +80,17 @@ function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void })
         )}
         
         <button
-          onClick={handleJoinClick}
-          disabled={joinGameMutation.isPending || leaveGameMutation.isPending}
+          onClick={(e) => toggleJoin(game, e)}
+          disabled={isLoading}
           className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-            joinGameMutation.isPending || leaveGameMutation.isPending 
+            isLoading 
               ? 'opacity-50 cursor-not-allowed' 
               : game.isJoined 
                 ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
           }`}
         >
-          {joinGameMutation.isPending || leaveGameMutation.isPending ? '...' : (game.isJoined ? 'Leave' : 'Join')}
+          {getButtonText(game)}
         </button>
       </div>
     </div>

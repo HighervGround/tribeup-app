@@ -29,7 +29,8 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppStore } from '../store/appStore';
-import { useGame, useJoinGame, useLeaveGame, useGameParticipants } from '../hooks/useGames';
+import { useGame, useGameParticipants } from '../hooks/useGames';
+import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
 import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
@@ -228,8 +229,7 @@ function GameDetails() {
   // Use React Query for game data and mutations
   const { data: game, isLoading } = useGame(gameId || '');
   const { data: participants = [], isLoading: loadingPlayers } = useGameParticipants(gameId || '');
-  const joinGameMutation = useJoinGame();
-  const leaveGameMutation = useLeaveGame();
+  const { toggleJoin, isLoading: actionLoading, getButtonText } = useGameJoinToggle();
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
@@ -244,7 +244,6 @@ function GameDetails() {
     cost: ''
   });
   const [deleteReason, setDeleteReason] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
   
   // Process participants data to mark the host correctly
   const players = useMemo(() => {
@@ -286,11 +285,8 @@ function GameDetails() {
   const tags: string[] | undefined = (game as any).tags;
 
   const handleJoinLeave = async () => {
-    // Use mutation loading state instead of local state
-    const mutationLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
-    
     // Prevent multiple rapid clicks
-    if (mutationLoading) return;
+    if (actionLoading) return;
     
     // If user is not authenticated, show quick join modal
     if (!user) {
@@ -298,18 +294,15 @@ function GameDetails() {
       return;
     }
     
-    if (game.isJoined) {
-      leaveGameMutation.mutate(game.id);
-    } else {
-      joinGameMutation.mutate(game.id);
-    }
+    // Use the centralized toggle logic
+    toggleJoin(game);
   };
 
   const handleQuickJoinSuccess = async () => {
     setShowQuickJoin(false);
     // After successful signup, join the game
-    if (gameId) {
-      joinGameMutation.mutate(gameId);
+    if (gameId && game) {
+      toggleJoin(game);
     }
   };
 
@@ -538,25 +531,23 @@ function GameDetails() {
             {/* Join Button */}
             <Button
               onClick={handleJoinLeave}
-              disabled={(!game.isJoined && isFull) || joinGameMutation.isPending || leaveGameMutation.isPending}
+              disabled={(!game.isJoined && isFull) || actionLoading}
               className="w-full h-12"
               variant={game.isJoined ? 'outline' : 'default'}
               data-action="join-game"
               title={`${game.isJoined ? 'Leave' : 'Join'} game (J)`}
             >
-              {joinGameMutation.isPending || leaveGameMutation.isPending ? (
+              {actionLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   {game.isJoined ? 'Leaving...' : 'Joining...'}
                 </>
               ) : isFull && !game.isJoined ? (
                 'Game is Full'
-              ) : game.isJoined ? (
-                'Leave Game'
               ) : !user ? (
                 'Join Game - Sign Up'
               ) : (
-                'Join Game'
+                getButtonText(game)
               )}
             </Button>
           </CardContent>

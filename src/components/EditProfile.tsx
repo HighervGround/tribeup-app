@@ -9,6 +9,7 @@ import { Badge } from './ui/badge';
 import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
+import { useUpdateUserProfile } from '../hooks/useUserProfile';
 import { useAppStore } from '../store/appStore';
 
 interface ProfileFormData {
@@ -28,7 +29,8 @@ const availableSports = [
 function EditProfile() {
   const navigate = useNavigate();
   const { user, setUser } = useAppStore();
-  const [loading, setLoading] = useState(false);
+  const updateProfileMutation = useUpdateUserProfile();
+  const loading = updateProfileMutation.isPending;
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: '',
     username: '',
@@ -178,20 +180,17 @@ function EditProfile() {
   const handleSave = async () => {
     if (!user) return;
 
-    setLoading(true);
     try {
       // Validate username availability before save
       const uname = (formData.username || '').trim();
       if (uname) {
         if (!USERNAME_REGEX.test(uname)) {
           setUsernameError('3-20 chars. Letters, numbers, dot, underscore, or hyphen.');
-          setLoading(false);
           return;
         }
         const available = await SupabaseService.isUsernameAvailable(uname, user.id);
         if (!available) {
           setUsernameError('Username is already taken');
-          setLoading(false);
           return;
         }
       }
@@ -209,25 +208,27 @@ function EditProfile() {
         }
       }
 
-      const updatedProfile = await SupabaseService.updateUserProfile(user.id, {
-        full_name: formData.fullName,
-        username: formData.username,
-        bio: formData.bio,
-        location: formData.location,
-        avatar_url: finalAvatarUrl,
-        sports_preferences: formData.sportsPreferences
+      // Use React Query mutation for profile update
+      updateProfileMutation.mutate({
+        userId: user.id,
+        profileData: {
+          full_name: formData.fullName,
+          username: formData.username,
+          bio: formData.bio,
+          location: formData.location,
+          avatar_url: finalAvatarUrl,
+          sports_preferences: formData.sportsPreferences
+        }
+      }, {
+        onSuccess: (updatedProfile) => {
+          // Update the user in the store
+          setUser(updatedProfile);
+          navigate('/profile');
+        }
       });
-
-      // Update the user in the store
-      setUser(updatedProfile);
-      
-      toast.success('Profile updated successfully!');
-      navigate('/profile');
     } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
-    } finally {
-      setLoading(false);
+      console.error('Error in profile save:', error);
+      toast.error('Failed to validate profile data');
     }
   };
 

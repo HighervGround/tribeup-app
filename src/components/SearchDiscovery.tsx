@@ -7,7 +7,7 @@ import { Badge } from './ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useGames } from '../hooks/useGames';
-import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
+import { UnifiedGameCard } from './UnifiedGameCard';
 import { formatTimeString } from '../lib/dateUtils';
 
 
@@ -26,76 +26,7 @@ const sportFilters = [
   { name: 'Rugby', value: 'rugby' },
 ];
 
-// Simple GameCard component
-// Simple GameCard component
-function SimpleGameCard({ game, onSelect }: { game: any; onSelect: () => void }) {
-  const { toggleJoin, isLoading, getButtonText, getButtonVariant } = useGameJoinToggle();
-
-  const handleCardClick = () => {
-    onSelect();
-  };
-
-  return (
-    <div 
-      className="bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md transition-shadow"
-      onClick={handleCardClick}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 pr-4">
-          <h3 className="font-semibold text-lg">{game.title}</h3>
-          <p className="text-sm text-muted-foreground">{game.sport}</p>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm font-medium">{game.cost}</div>
-          <div className="text-xs text-muted-foreground">
-            {game.currentPlayers}/{game.maxPlayers} players
-          </div>
-        </div>
-      </div>
-      
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">📍</span>
-          <span>{game.location}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-muted-foreground" />
-          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          <span>{game.date} at {formatTimeString(game.time)}</span>
-        </div>
-      </div>
-      
-      <p className="text-sm text-muted-foreground mt-3">{game.description}</p>
-      
-      <div className="flex items-center justify-between mt-3">
-        {game.isJoined ? (
-          <span className="inline-block bg-success/20 text-success dark:bg-success/30 dark:text-success text-xs px-2 py-1 rounded">
-            Joined ✓
-          </span>
-        ) : (
-          <div></div>
-        )}
-        
-        <button
-          onClick={(e) => toggleJoin(game, e)}
-          disabled={isLoading}
-          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-            isLoading 
-              ? 'opacity-50 cursor-not-allowed' 
-              : game.isJoined 
-                ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-          }`}
-        >
-          {getButtonText(game)}
-        </button>
-      </div>
-    </div>
-  );
-}
+// Using UnifiedGameCard component for consistency
 
 function SearchDiscovery() {
   const navigate = useNavigate();
@@ -237,9 +168,10 @@ function SearchDiscovery() {
         {/* Results List */}
         <div className="space-y-4">
           {filteredResults.map((game) => (
-            <SimpleGameCard
+            <UnifiedGameCard
               key={game.id}
               game={game}
+              variant="simple"
               onSelect={() => handleGameSelect(game.id)}
             />
           ))}

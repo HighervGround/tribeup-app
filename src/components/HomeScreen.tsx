@@ -6,112 +6,13 @@ import { formatEventHeader, formatCalendarInfo, formatTimeString } from '../lib/
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
-import { useGames, useJoinGame, useLeaveGame } from '../hooks/useGames';
+import { useGames } from '../hooks/useGames';
+import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 
 
 
-// Simple GameCard component
-function SimpleGameCard({ 
-  game, 
-  onSelect, 
-  onJoinLeave, 
-  isLoading 
-}: { 
-  game: any; 
-  onSelect: () => void;
-  onJoinLeave: (gameId: string) => void;
-  isLoading: boolean;
-}) {
-  const handleJoinClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onJoinLeave(game.id);
-  };
-
-  const handleCardClick = () => {
-    onSelect();
-  };
-
-  // Get category badge
-  const getCategoryBadge = () => {
-    if (game.category === 'today') {
-      return <span className="inline-block bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-xs px-2 py-1 rounded-full font-medium">Today</span>;
-    } else if (game.category === 'tomorrow') {
-      return <span className="inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">Tomorrow</span>;
-    }
-    return null;
-  };
-
-  return (
-    <div 
-      className="bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md transition-shadow"
-      onClick={handleCardClick}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 pr-4">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-lg">{game.title}</h3>
-            {getCategoryBadge()}
-          </div>
-          <p className="text-sm text-muted-foreground">{game.sport}</p>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm font-medium">{game.cost}</div>
-          <div className="text-xs text-muted-foreground">
-            {game.currentPlayers}/{game.maxPlayers} players
-          </div>
-        </div>
-      </div>
-      
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-          <span>{game.location}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-muted-foreground" />
-          <span>{game.currentPlayers}/{game.maxPlayers} players</span>
-        </div>
-        {game.distance && (
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">📏</span>
-            <span>{game.distance}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          <span>{game.date} at {formatTimeString(game.time)}</span>
-        </div>
-      </div>
-      
-      <p className="text-sm text-muted-foreground mt-3">{game.description}</p>
-      
-      <div className="flex items-center justify-between mt-3">
-        {game.isJoined ? (
-          <span className="inline-block bg-success/20 text-success dark:bg-success/30 dark:text-success text-xs px-2 py-1 rounded">
-            Joined ✓
-          </span>
-        ) : (
-          <div></div>
-        )}
-        
-        <button
-          onClick={handleJoinClick}
-          disabled={isLoading}
-          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-            isLoading 
-              ? 'opacity-50 cursor-not-allowed' 
-              : game.isJoined 
-                ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-          }`}
-        >
-          {isLoading ? '...' : (game.isJoined ? 'Leave' : 'Join')}
-        </button>
-      </div>
-    </div>
-  );
-}
+// Using UnifiedGameCard component for consistency
 
 function HomeScreen() {
   const navigate = useNavigate();
@@ -124,20 +25,11 @@ function HomeScreen() {
   // Use React Query for games
   const { data: games = [], isLoading, error, refetch } = useGames();
   
-  // Join/Leave mutations
-  const joinGameMutation = useJoinGame();
-  const leaveGameMutation = useLeaveGame();
-  
-  const handleJoinLeave = (gameId: string) => {
-    const game = games.find(g => g.id === gameId);
-    if (game?.isJoined) {
-      leaveGameMutation.mutate(gameId);
-    } else {
-      joinGameMutation.mutate(gameId);
-    }
+  // Game selection handler
+  const handleGameSelect = (gameId: string) => {
+    navigate(`/game/${gameId}`);
   };
   
-  const isJoinLeaveLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
 
   // Calculate real stats
   const stats = useMemo(() => {
@@ -359,11 +251,10 @@ function HomeScreen() {
               ) : (
                 sortedGames.map((game) => (
                   <div key={game.id}>
-                    <SimpleGameCard
+                    <UnifiedGameCard
                       game={game}
+                      variant="simple"
                       onSelect={() => handleGameSelect(game.id)}
-                      onJoinLeave={handleJoinLeave}
-                      isLoading={isJoinLeaveLoading}
                     />
                   </div>
                 ))

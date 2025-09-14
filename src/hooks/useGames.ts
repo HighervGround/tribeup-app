@@ -26,7 +26,7 @@ export function useGames() {
       return games;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes (was cacheTime in v4)
     enabled: !!user, // Only fetch when user is authenticated
   });
 }

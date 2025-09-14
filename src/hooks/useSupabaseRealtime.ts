@@ -52,11 +52,9 @@ export function useSupabaseRealtime({
   const handleGameUpdate = useCallback((payload: any) => {
     console.log('Game update received:', payload);
     
-    if (payload.eventType === 'INSERT' && payload.table === 'game_participants') {
-      toast.success('Someone joined the game!');
-    } else if (payload.eventType === 'DELETE' && payload.table === 'game_participants') {
-      toast.info('Someone left the game');
-    } else if (payload.eventType === 'UPDATE' && payload.table === 'games') {
+    // Only show toast for game detail updates, not participant changes
+    // (participant changes are handled by React Query mutations)
+    if (payload.eventType === 'UPDATE' && payload.table === 'games') {
       toast.info('Game details updated');
     }
   }, []);

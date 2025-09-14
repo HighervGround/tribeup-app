@@ -25,7 +25,7 @@ const availableSports = [
   'Baseball', 'Swimming', 'Running', 'Cycling', 'Yoga'
 ];
 
-export function EditProfile() {
+function EditProfile() {
   const navigate = useNavigate();
   const { user, setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
@@ -415,3 +415,5 @@ export function EditProfile() {
     </div>
   );
 }
+
+export default EditProfile;

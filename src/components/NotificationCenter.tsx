@@ -59,7 +59,7 @@ const getNotificationBackground = (type: string) => {
   }
 };
 
-export function NotificationCenter() {
+function NotificationCenter() {
   const navigate = useNavigate();
   const { navigateToGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [isLoading, setIsLoading] = useState(false);

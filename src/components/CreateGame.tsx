@@ -54,7 +54,7 @@ const quickTimes = [
   '21:00'
 ];
 
-export function CreateGame() {
+function CreateGame() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1069,3 +1069,5 @@ export function CreateGame() {
     </div>
   );
 }
+
+export default CreateGame;

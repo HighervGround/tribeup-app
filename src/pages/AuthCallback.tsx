@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
-export function AuthCallback() {
+function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -91,3 +91,5 @@ export function AuthCallback() {
     </div>
   );
 }
+
+export default AuthCallback;

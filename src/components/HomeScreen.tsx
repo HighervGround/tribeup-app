@@ -113,7 +113,7 @@ function SimpleGameCard({
   );
 }
 
-export function HomeScreen() {
+function HomeScreen() {
   const navigate = useNavigate();
   const { user } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
@@ -398,3 +398,5 @@ export function HomeScreen() {
     </div>
   );
 }
+
+export default HomeScreen;

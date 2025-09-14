@@ -30,7 +30,6 @@ import {
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppStore } from '../store/appStore';
 import { useGame, useJoinGame, useLeaveGame } from '../hooks/useGames';
-import { useGameActions } from '../hooks/useGameActions';
 import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
@@ -221,14 +220,15 @@ function WeatherInfo({ game }: { game: any }) {
   );
 }
 
-export function GameDetails() {
+function GameDetails() {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { user } = useAppStore();
-  const { toggleGameParticipation } = useGameActions();
   
-  // Use React Query for game data
+  // Use React Query for game data and mutations
   const { data: game, isLoading } = useGame(gameId || '');
+  const joinGameMutation = useJoinGame();
+  const leaveGameMutation = useLeaveGame();
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [players, setPlayers] = useState([] as any[]);
@@ -247,34 +247,7 @@ export function GameDetails() {
   const [deleteReason, setDeleteReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   
-  // Handle loading and error states
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-2xl mx-auto space-y-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded mb-2"></div>
-            <div className="h-4 bg-muted rounded w-2/3 mb-4"></div>
-            <div className="h-48 bg-muted rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!game) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-2xl font-bold mb-4">Game Not Found</h1>
-          <p className="text-muted-foreground mb-4">The game you're looking for doesn't exist or has been removed.</p>
-          <Button onClick={() => navigate('/')}>Back to Home</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Load players for this game
+  // Load players for this game - MUST be called before any early returns
   useEffect(() => {
     if (gameId && game) {
       const loadPlayers = async () => {
@@ -303,7 +276,7 @@ export function GameDetails() {
     }
   }, [gameId, game?.creator_id]);
   
-  // Show loading state while fetching game data
+  // Handle loading and error states - AFTER all hooks
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -335,8 +308,11 @@ export function GameDetails() {
   const tags: string[] | undefined = (game as any).tags;
 
   const handleJoinLeave = async () => {
+    // Use mutation loading state instead of local state
+    const mutationLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
+    
     // Prevent multiple rapid clicks
-    if (actionLoading) return;
+    if (mutationLoading) return;
     
     // If user is not authenticated, show quick join modal
     if (!user) {
@@ -344,11 +320,10 @@ export function GameDetails() {
       return;
     }
     
-    setActionLoading(true);
-    try {
-      await toggleGameParticipation(game.id);
-    } finally {
-      setActionLoading(false);
+    if (game.isJoined) {
+      leaveGameMutation.mutate(game.id);
+    } else {
+      joinGameMutation.mutate(game.id);
     }
   };
 
@@ -356,7 +331,7 @@ export function GameDetails() {
     setShowQuickJoin(false);
     // After successful signup, join the game
     if (gameId) {
-      await toggleGameParticipation(gameId);
+      joinGameMutation.mutate(gameId);
     }
   };
 
@@ -585,13 +560,13 @@ export function GameDetails() {
             {/* Join Button */}
             <Button
               onClick={handleJoinLeave}
-              disabled={(!game.isJoined && isFull) || actionLoading}
+              disabled={(!game.isJoined && isFull) || joinGameMutation.isPending || leaveGameMutation.isPending}
               className="w-full h-12"
               variant={game.isJoined ? 'outline' : 'default'}
               data-action="join-game"
               title={`${game.isJoined ? 'Leave' : 'Join'} game (J)`}
             >
-              {actionLoading ? (
+              {joinGameMutation.isPending || leaveGameMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   {game.isJoined ? 'Leaving...' : 'Joining...'}

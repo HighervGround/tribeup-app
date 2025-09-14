@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
-import { useGameActions } from '../hooks/useGameActions';
+import { useJoinGame, useLeaveGame } from '../hooks/useGames';
 
 interface GameCardProps {
   game: {
@@ -37,7 +37,8 @@ interface GameCardProps {
 export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const { toggleGameParticipation } = useGameActions();
+  const joinGameMutation = useJoinGame();
+  const leaveGameMutation = useLeaveGame();
 
   const handleCardClick = () => {
     if (onSelect) {
@@ -49,7 +50,11 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleGameParticipation(game.id);
+    if (game.isJoined) {
+      leaveGameMutation.mutate(game.id);
+    } else {
+      joinGameMutation.mutate(game.id);
+    }
   };
 
   return (

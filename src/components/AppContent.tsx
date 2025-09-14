@@ -7,7 +7,7 @@ import { useResponsive } from './ui/use-responsive';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { toast } from 'sonner';
 
-export function AppContent() {
+function AppContent() {
   const { isMobile } = useResponsive();
   const location = useLocation();
   const { announceToScreenReader } = useAccessibility();
@@ -123,3 +123,5 @@ export function AppContent() {
     </>
   );
 }
+
+export default AppContent;

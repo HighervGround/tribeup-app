@@ -46,7 +46,7 @@ const defaultPreferences: AccessibilityPreferences = {
   contrastLevel: 'normal',
 };
 
-export function AccessibilitySettings() {
+function AccessibilitySettings() {
   const navigate = useNavigate();
   const [preferences, setPreferences] = useState<AccessibilityPreferences>(defaultPreferences);
   const [hasChanges, setHasChanges] = useState(false);

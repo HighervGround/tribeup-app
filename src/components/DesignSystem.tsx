@@ -61,7 +61,7 @@ const brandColors = [
   { name: 'Perennial', hex: '#6A2A60', usage: 'Accent color, premium' },
 ];
 
-export function DesignSystem({ onBack }: DesignSystemProps) {
+function DesignSystem({ onBack }: DesignSystemProps) {
   const [darkMode, setDarkMode] = useState(false);
 
   React.useEffect(() => {
@@ -685,3 +685,5 @@ export function DesignSystem({ onBack }: DesignSystemProps) {
     </div>
   );
 }
+
+export default DesignSystem;

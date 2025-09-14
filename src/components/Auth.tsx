@@ -8,7 +8,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { toast } from 'sonner';
 import { Apple, Chrome } from 'lucide-react';
 
-export function Auth() {
+function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, resetPassword, signInWithOAuth } = useAuth();
@@ -235,3 +235,5 @@ export function Auth() {
     </div>
   );
 }
+
+export default Auth;

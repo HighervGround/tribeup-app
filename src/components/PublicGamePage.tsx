@@ -23,73 +23,51 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
+import { usePublicGame, usePublicRSVPs, useCreatePublicRSVP, useQuickRSVP } from '../hooks/usePublicGame';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const [game, setGame] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [publicRsvps, setPublicRsvps] = useState<any[]>([]);
+  // Use React Query hooks for data fetching
+  const { data: game, isLoading: gameLoading, error: gameError } = usePublicGame(gameId || '');
+  const { data: publicRsvps = [], isLoading: rsvpsLoading } = usePublicRSVPs(gameId || '');
+  const createRsvpMutation = useCreatePublicRSVP();
+  const quickRsvpMutation = useQuickRSVP();
+  
+  const loading = gameLoading || rsvpsLoading;
+  const submitting = createRsvpMutation.isPending || quickRsvpMutation.isPending;
+  
   const [rsvpForm, setRsvpForm] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    message: '',
+    attending: true
   });
-  const [submitting, setSubmitting] = useState(false);
   const [rsvpSuccess, setRsvpSuccess] = useState(false);
+  const [showQuickRsvp, setShowQuickRsvp] = useState(false);
   const [hasRsvped, setHasRsvped] = useState(false);
   const [userRsvp, setUserRsvp] = useState<any>(null);
 
-  useEffect(() => {
-    const loadGameData = async () => {
-      if (!gameId) return;
-      
-      try {
-        setLoading(true);
-        
-        // Load game details and public RSVPs in parallel
-        const [gameData, rsvpData] = await Promise.all([
-          SupabaseService.getGameById(gameId),
-          SupabaseService.getPublicRSVPs(gameId)
-        ]);
-        
-        setGame(gameData);
-        setPublicRsvps(rsvpData);
-      } catch (error) {
-        console.error('Error loading game data:', error);
-        toast.error('Failed to load game details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadGameData();
-  }, [gameId]);
+  // React Query handles all data loading automatically
 
   const handleRsvpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gameId) return;
     
-    setSubmitting(true);
-    
-    try {
-      await SupabaseService.createPublicRSVP(gameId, rsvpForm);
-      
-      setRsvpSuccess(true);
-      toast.success('RSVP submitted successfully!');
-      
-      // Refresh RSVPs list
-      const updatedRsvps = await SupabaseService.getPublicRSVPs(gameId);
-      setPublicRsvps(updatedRsvps);
-      
-      // Reset form
-      setRsvpForm({ name: '', email: '', phone: '' });
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to submit RSVP. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
+    createRsvpMutation.mutate({ gameId, rsvpData: rsvpForm }, {
+      onSuccess: () => {
+        setRsvpSuccess(true);
+        // Reset form
+        setRsvpForm({ 
+          name: '', 
+          email: '', 
+          phone: '',
+          message: '',
+          attending: true
+        });
+      }
+    });
   };
 
   const handleRSVP = async (e: React.FormEvent) => {

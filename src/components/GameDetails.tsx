@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppStore } from '../store/appStore';
-import { useGame, useJoinGame, useLeaveGame } from '../hooks/useGames';
+import { useGame, useJoinGame, useLeaveGame, useGameParticipants } from '../hooks/useGames';
 import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
@@ -227,12 +227,11 @@ function GameDetails() {
   
   // Use React Query for game data and mutations
   const { data: game, isLoading } = useGame(gameId || '');
+  const { data: participants = [], isLoading: loadingPlayers } = useGameParticipants(gameId || '');
   const joinGameMutation = useJoinGame();
   const leaveGameMutation = useLeaveGame();
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [players, setPlayers] = useState([] as any[]);
-  const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);

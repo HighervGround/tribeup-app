@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -246,34 +246,13 @@ function GameDetails() {
   const [deleteReason, setDeleteReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   
-  // Load players for this game - MUST be called before any early returns
-  useEffect(() => {
-    if (gameId && game) {
-      const loadPlayers = async () => {
-        setLoadingPlayers(true);
-        try {
-          const gamePlayers = await SupabaseService.getGameParticipants(gameId);
-          console.log('🔍 Loaded players:', gamePlayers);
-          
-          // Mark the host correctly
-          const playersWithHost = gamePlayers.map(player => ({
-            ...player,
-            isHost: player.id === game?.creator_id
-          }));
-          
-          console.log('🔍 Players with host info:', playersWithHost);
-          setPlayers(playersWithHost);
-        } catch (error) {
-          console.error('Error loading players:', error);
-          setPlayers([]);
-        } finally {
-          setLoadingPlayers(false);
-        }
-      };
-      
-      loadPlayers();
-    }
-  }, [gameId, game?.creator_id]);
+  // Process participants data to mark the host correctly
+  const players = useMemo(() => {
+    return participants.map(player => ({
+      ...player,
+      isHost: player.id === game?.creator_id
+    }));
+  }, [participants, game?.creator_id]);
   
   // Handle loading and error states - AFTER all hooks
   if (isLoading) {

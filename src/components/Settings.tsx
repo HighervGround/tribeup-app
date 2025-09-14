@@ -30,7 +30,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../providers/AuthProvider';
 import { toast } from 'sonner';
 
-export function Settings() {
+function Settings() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, effectiveTheme, toggleTheme, setTheme } = useTheme();

@@ -44,7 +44,7 @@ const sportsOptions = [
   { name: 'Cycling', icon: '🚴', color: 'bg-success' },
 ];
 
-export function Onboarding({ onComplete }: OnboardingProps) {
+function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'pending'>('pending');
@@ -387,5 +387,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       </div>
     </div>
   );
-}export default Onboarding;
+}
+
+export default Onboarding;
 

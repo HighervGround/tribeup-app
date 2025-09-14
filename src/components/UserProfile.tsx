@@ -9,7 +9,7 @@ import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
 import { formatTimeString } from '../lib/dateUtils';
 
-export function UserProfile() {
+function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAppStore();
   const [userStats, setUserStats] = useState([

@@ -11,19 +11,24 @@ CREATE TABLE IF NOT EXISTS public.user_stats (
     PRIMARY KEY (user_id)
 );
 
--- Create game_participation table for detailed participation tracking
-CREATE TABLE IF NOT EXISTS public.game_participation (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    game_id UUID REFERENCES public.games(id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ DEFAULT NOW(),
-    left_at TIMESTAMPTZ,
-    status TEXT DEFAULT 'joined' CHECK (status IN ('joined', 'left', 'completed')),
-    play_time_minutes INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, game_id)
-);
+-- Create game_participants table for detailed participation tracking (skip if exists)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'game_participants' AND table_schema = 'public') THEN
+        CREATE TABLE public.game_participants (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+            game_id UUID REFERENCES public.games(id) ON DELETE CASCADE,
+            joined_at TIMESTAMPTZ DEFAULT NOW(),
+            left_at TIMESTAMPTZ,
+            status TEXT DEFAULT 'joined' CHECK (status IN ('joined', 'left', 'completed')),
+            play_time_minutes INTEGER DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(user_id, game_id)
+        );
+    END IF;
+END $$;
 
 -- Create achievements table for tracking user achievements
 CREATE TABLE IF NOT EXISTS public.achievements (
@@ -51,7 +56,7 @@ CREATE TABLE IF NOT EXISTS public.user_achievements (
 
 -- Enable RLS on all tables
 ALTER TABLE public.user_stats ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.game_participation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.game_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_achievements ENABLE ROW LEVEL SECURITY;
 
@@ -65,14 +70,14 @@ CREATE POLICY "Users can update their own stats" ON public.user_stats
 CREATE POLICY "Users can insert their own stats" ON public.user_stats
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Create RLS policies for game_participation
-CREATE POLICY "Users can view all participation" ON public.game_participation
+-- Create RLS policies for game_participants
+CREATE POLICY "Users can view all participation" ON public.game_participants
     FOR SELECT USING (true);
 
-CREATE POLICY "Users can update their own participation" ON public.game_participation
+CREATE POLICY "Users can update their own participation" ON public.game_participants
     FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert their own participation" ON public.game_participation
+CREATE POLICY "Users can insert their own participation" ON public.game_participants
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Create RLS policies for achievements
@@ -89,10 +94,10 @@ CREATE POLICY "Users can insert their own achievements" ON public.user_achieveme
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_user_stats_last_activity ON public.user_stats(last_activity);
 
-CREATE INDEX IF NOT EXISTS idx_game_participation_user_id ON public.game_participation(user_id);
-CREATE INDEX IF NOT EXISTS idx_game_participation_game_id ON public.game_participation(game_id);
-CREATE INDEX IF NOT EXISTS idx_game_participation_status ON public.game_participation(status);
-CREATE INDEX IF NOT EXISTS idx_game_participation_joined_at ON public.game_participation(joined_at);
+CREATE INDEX IF NOT EXISTS idx_game_participants_user_id ON public.game_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_game_participants_game_id ON public.game_participants(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_participants_status ON public.game_participants(status);
+CREATE INDEX IF NOT EXISTS idx_game_participants_joined_at ON public.game_participants(joined_at);
 
 CREATE INDEX IF NOT EXISTS idx_achievements_category ON public.achievements(category);
 CREATE INDEX IF NOT EXISTS idx_achievements_is_active ON public.achievements(is_active);
@@ -137,7 +142,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create trigger for participation changes
 CREATE TRIGGER trigger_update_user_stats_on_participation
-    AFTER INSERT OR UPDATE ON public.game_participation
+    AFTER INSERT OR UPDATE ON public.game_participants
     FOR EACH ROW
     EXECUTE FUNCTION update_user_stats_on_participation();
 
@@ -191,7 +196,7 @@ CREATE TRIGGER update_user_stats_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_game_participation_updated_at
-    BEFORE UPDATE ON public.game_participation
+CREATE TRIGGER update_game_participants_updated_at
+    BEFORE UPDATE ON public.game_participants
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

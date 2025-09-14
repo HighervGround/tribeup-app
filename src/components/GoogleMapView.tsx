@@ -45,7 +45,7 @@ interface GoogleMapViewProps {
   className?: string;
 }
 
-export function GoogleMapView({
+function GoogleMapView({
   games = [],
   selectedGameId,
   onGameSelect,

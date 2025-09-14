@@ -681,8 +681,11 @@ export class SupabaseService {
     // Record participation for stats tracking (only if table exists)
     try {
       await this.recordGameParticipation(currentUser.id, gameId, 'joined');
-    } catch (participationError) {
-      console.warn('Failed to record game participation (table may not exist yet):', participationError);
+    } catch (participationError: any) {
+      // Only log if it's not a missing column error (which is expected during migration)
+      if (!participationError?.message?.includes("Could not find the 'status' column")) {
+        console.warn('Failed to record game participation:', participationError);
+      }
       // Don't throw here as the main join operation succeeded
     }
   }
@@ -701,8 +704,11 @@ export class SupabaseService {
     // Record participation for stats tracking (only if table exists)
     try {
       await this.recordGameParticipation(currentUser.id, gameId, 'left');
-    } catch (participationError) {
-      console.warn('Failed to record game participation (table may not exist yet):', participationError);
+    } catch (participationError: any) {
+      // Only log if it's not a missing column error (which is expected during migration)
+      if (!participationError?.message?.includes("Could not find the 'status' column")) {
+        console.warn('Failed to record game participation:', participationError);
+      }
       // Don't throw here as the main leave operation succeeded
     }
   }
@@ -745,14 +751,36 @@ export class SupabaseService {
   }
 
   static async getGameById(gameId: string): Promise<any> {
-    const { data, error } = await supabase
-      .from('games')
-      .select('*')
-      .eq('id', gameId)
-      .single();
+    // Get current user to check join status
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    if (userId) {
+      // For authenticated users, get game with join status
+      const { data, error } = await supabase
+        .from('games')
+        .select(`
+          *,
+          game_participants!left(user_id)
+        `)
+        .eq('id', gameId)
+        .single();
 
-    if (error) throw error;
-    return transformGameFromDB(data, false);
+      if (error) throw error;
+      
+      const isJoined = data.game_participants?.some((p: any) => p.user_id === userId) || false;
+      return transformGameFromDB(data, isJoined);
+    } else {
+      // For unauthenticated users, get game without join status
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+
+      if (error) throw error;
+      return transformGameFromDB(data, false);
+    }
   }
 
   // Notifications methods

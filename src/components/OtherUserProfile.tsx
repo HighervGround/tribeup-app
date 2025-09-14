@@ -24,7 +24,7 @@ import { SupabaseService } from '../lib/supabaseService';
 
 
 
-export function OtherUserProfile() {
+function OtherUserProfile() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const [user, setUser] = useState<any>(null);

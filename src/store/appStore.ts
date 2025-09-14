@@ -318,88 +318,15 @@ export const useAppStore = create<AppState & AppActions>()(
       },
       
       joinGame: async (gameId) => {
-        const { setError, setGames, user } = get();
-        try {
-          console.log('🔧 Joining game:', gameId);
-          await SupabaseService.joinGame(gameId);
-          
-          // Optimistically update the local state instead of full refresh
-          set((state) => {
-            const gameIndex = state.games.findIndex(g => g.id === gameId);
-            if (gameIndex !== -1) {
-              state.games[gameIndex] = {
-                ...state.games[gameIndex],
-                isJoined: true,
-                currentPlayers: Math.min(state.games[gameIndex].currentPlayers + 1, state.games[gameIndex].maxPlayers)
-              };
-            }
-          });
-          
-          // Check for new achievements after joining (only if tables exist)
-          if (user?.id) {
-            try {
-              const newAchievements = await SupabaseService.checkAndAwardAchievements(user.id);
-              if (newAchievements.length > 0) {
-                console.log('New achievements earned:', newAchievements.map(a => a.name));
-                // You could show a toast notification here
-              }
-            } catch (achievementError) {
-              console.warn('Failed to check achievements (tables may not exist yet):', achievementError);
-            }
-          }
-          
-        } catch (error) {
-          console.error('❌ Join game error:', error);
-          setError(error instanceof Error ? error.message : 'Failed to join game');
-          
-          // Revert optimistic update on error
-          set((state) => {
-            const gameIndex = state.games.findIndex(g => g.id === gameId);
-            if (gameIndex !== -1) {
-              state.games[gameIndex] = {
-                ...state.games[gameIndex],
-                isJoined: false,
-                currentPlayers: Math.max(state.games[gameIndex].currentPlayers - 1, 0)
-              };
-            }
-          });
-        }
+        console.warn('🚫 Zustand joinGame method is deprecated - use React Query mutations instead');
+        // This method is disabled to prevent conflicts with React Query mutations
+        // Use useJoinGame() hook instead
       },
       
       leaveGame: async (gameId) => {
-        const { setError } = get();
-        try {
-          console.log('🔧 Leaving game:', gameId);
-          await SupabaseService.leaveGame(gameId);
-          
-          // Optimistically update the local state instead of full refresh
-          set((state) => {
-            const gameIndex = state.games.findIndex(g => g.id === gameId);
-            if (gameIndex !== -1) {
-              state.games[gameIndex] = {
-                ...state.games[gameIndex],
-                isJoined: false,
-                currentPlayers: Math.max(state.games[gameIndex].currentPlayers - 1, 0)
-              };
-            }
-          });
-          
-        } catch (error) {
-          console.error('❌ Leave game error:', error);
-          setError(error instanceof Error ? error.message : 'Failed to leave game');
-          
-          // Revert optimistic update on error
-          set((state) => {
-            const gameIndex = state.games.findIndex(g => g.id === gameId);
-            if (gameIndex !== -1) {
-              state.games[gameIndex] = {
-                ...state.games[gameIndex],
-                isJoined: true,
-                currentPlayers: Math.min(state.games[gameIndex].currentPlayers + 1, state.games[gameIndex].maxPlayers)
-              };
-            }
-          });
-        }
+        console.warn('🚫 Zustand leaveGame method is deprecated - use React Query mutations instead');
+        // This method is disabled to prevent conflicts with React Query mutations
+        // Use useLeaveGame() hook instead
       },
       
       // UI actions

@@ -38,7 +38,7 @@ const routes: NavRoute[] = [
   { path: '/chat/direct/user1', label: 'Direct Chat', icon: MessageSquare, description: 'Direct message interface' },
 ];
 
-export function NavigationTest() {
+function NavigationTest() {
   const navigate = useNavigate();
   const location = useLocation();
   const [testedRoutes, setTestedRoutes] = React.useState<Set<string>>(new Set());

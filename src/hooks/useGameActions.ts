@@ -8,24 +8,18 @@ export function useGameActions() {
   const joinGameMutation = useJoinGame();
   const leaveGameMutation = useLeaveGame();
 
-  // Join a game
+  // Join a game - DEPRECATED: Use useJoinGame() hook directly
   const handleJoinGame = useCallback(async (gameId: string) => {
-    try {
-      joinGameMutation.mutate(gameId);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    console.warn('🚫 useGameActions.handleJoinGame is deprecated - use useJoinGame() hook directly');
+    joinGameMutation.mutate(gameId);
+    return true;
   }, [joinGameMutation]);
 
-  // Leave a game
+  // Leave a game - DEPRECATED: Use useLeaveGame() hook directly
   const handleLeaveGame = useCallback(async (gameId: string) => {
-    try {
-      leaveGameMutation.mutate(gameId);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    console.warn('🚫 useGameActions.handleLeaveGame is deprecated - use useLeaveGame() hook directly');
+    leaveGameMutation.mutate(gameId);
+    return true;
   }, [leaveGameMutation]);
 
   // Toggle game participation

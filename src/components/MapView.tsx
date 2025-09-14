@@ -50,7 +50,7 @@ interface MapViewProps {
 }
 
 // Simple map implementation (in a real app, you'd use Google Maps, Mapbox, etc.)
-export function MapView({
+function MapView({
   games = [],
   selectedGameId,
   onGameSelect,

@@ -24,7 +24,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useNotifications } from '../hooks/useNotifications';
 import { toast } from 'sonner';
 
-export function NotificationSettings() {
+function NotificationSettings() {
   const {
     isSupported,
     permission,

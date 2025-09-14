@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 
-export function TermsOfService() {
+function TermsOfService() {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">

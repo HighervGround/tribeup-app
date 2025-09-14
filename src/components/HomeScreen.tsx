@@ -20,7 +20,10 @@ function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
-  const { onlineCount, isLoading: presenceLoading } = useUserPresence();
+  // Temporarily disabled to debug HMR cascade
+  // const { onlineCount, isLoading: presenceLoading } = useUserPresence();
+  const onlineCount = 0;
+  const presenceLoading = false;
   
   // Use React Query for games
   const { data: games = [], isLoading, error, refetch } = useGames();

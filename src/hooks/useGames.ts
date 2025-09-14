@@ -103,9 +103,8 @@ export function useJoinGame() {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
       
-      toast.success('Joined game!', {
-        description: 'You\'re now part of this game',
-      });
+      // Toast removed to prevent double notifications
+      // Components can handle their own success feedback
     },
   });
 }
@@ -160,9 +159,8 @@ export function useLeaveGame() {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
       
-      toast.success('Left game successfully', {
-        description: 'You\'ve left this game',
-      });
+      // Toast removed to prevent double notifications
+      // Components can handle their own success feedback
     },
   });
 }

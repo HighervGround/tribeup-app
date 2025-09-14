@@ -178,7 +178,11 @@ function EditProfile() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    console.log('🔧 Starting profile save...', { user: user?.id, formData });
+    if (!user) {
+      console.error('❌ No user found for profile save');
+      return;
+    }
 
     try {
       // Validate username availability before save
@@ -221,9 +225,14 @@ function EditProfile() {
         }
       }, {
         onSuccess: (updatedProfile) => {
+          console.log('✅ Profile update successful:', updatedProfile);
           // Update the user in the store
           setUser(updatedProfile);
           navigate('/profile');
+        },
+        onError: (error) => {
+          console.error('❌ Profile update failed:', error);
+          toast.error('Failed to update profile: ' + error.message);
         }
       });
     } catch (error) {

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { toast } from 'sonner';
 import { useJoinGame, useLeaveGame } from './useGames';
 
 interface Game {
@@ -25,9 +26,17 @@ export function useGameJoinToggle() {
     e?.stopPropagation();
     
     if (game.isJoined) {
-      leaveGameMutation.mutate(game.id);
+      leaveGameMutation.mutate(game.id, {
+        onSuccess: () => {
+          toast.success('Left game successfully');
+        }
+      });
     } else {
-      joinGameMutation.mutate(game.id);
+      joinGameMutation.mutate(game.id, {
+        onSuccess: () => {
+          toast.success('Joined game!');
+        }
+      });
     }
   }, [joinGameMutation, leaveGameMutation]);
   

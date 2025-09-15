@@ -70,33 +70,35 @@ export function useNotifications() {
       console.log('🔊 Notification sound played');
     }
 
-    // Only show toast for important notifications, not system messages
+    // Show ONE notification - prefer browser notification if permission granted, otherwise toast
     const importantTypes = ['new_message', 'game_reminder', 'join_request'];
     if (importantTypes.includes(notification.type)) {
-      toast(notification.title, {
-        description: notification.message,
-        action: notification.actionUrl ? {
-          label: 'View',
-          onClick: () => {
-            // In a real app, you'd navigate to the URL
-            console.log('Navigate to:', notification.actionUrl);
-          }
-        } : undefined,
-        duration: 4000
-      });
-    }
-
-    // Only show browser notifications for critical notifications
-    if ('Notification' in window && Notification.permission === 'granted' && 
-        ['new_message', 'game_reminder'].includes(notification.type)) {
-      new Notification(notification.title, {
-        body: notification.message,
-        icon: '/favicon.ico', // Your app icon
-        badge: '/favicon.ico',
-        vibrate: [200, 100, 200],
-        timestamp: notification.timestamp.getTime(),
-        silent: false
-      });
+      
+      // Try browser notification first for critical notifications
+      if ('Notification' in window && Notification.permission === 'granted' && 
+          ['new_message', 'game_reminder'].includes(notification.type)) {
+        new Notification(notification.title, {
+          body: notification.message,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          vibrate: [200, 100, 200],
+          timestamp: notification.timestamp.getTime(),
+          silent: false
+        });
+      } else {
+        // Fallback to toast notification if browser notifications not available
+        toast(notification.title, {
+          description: notification.message,
+          action: notification.actionUrl ? {
+            label: 'View',
+            onClick: () => {
+              // In a real app, you'd navigate to the URL
+              console.log('Navigate to:', notification.actionUrl);
+            }
+          } : undefined,
+          duration: 4000
+        });
+      }
     }
   }, [settings.pushNotifications, settings.soundEnabled]);
 

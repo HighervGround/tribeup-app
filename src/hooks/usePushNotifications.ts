@@ -86,13 +86,16 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
 
       switch (permission) {
         case 'granted':
+          // Only show toast for successful permission grant
           toast.success('Notifications enabled!');
           break;
         case 'denied':
-          toast.error('Notifications blocked. You can enable them in your browser settings.');
+          // Show error only when explicitly denied
+          console.log('Notifications blocked by user');
           break;
         case 'default':
-          toast.info('Notification permission pending');
+          // Don't show toast for pending state
+          console.log('Notification permission pending');
           break;
       }
 
@@ -147,7 +150,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         isLoading: false
       }));
 
-      toast.success('Push notifications enabled!');
+      // Removed excessive success toast - user can see the switch change
       return subscriptionData;
 
     } catch (error) {
@@ -157,6 +160,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         isLoading: false,
         error: 'Failed to subscribe to push notifications'
       }));
+      // Only show error toast for actual failures
       toast.error('Failed to enable push notifications');
       return null;
     }
@@ -189,7 +193,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         isLoading: false
       }));
 
-      toast.success('Push notifications disabled');
+      // Removed toast - user can see the switch change
       return true;
 
     } catch (error) {

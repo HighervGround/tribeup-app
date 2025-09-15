@@ -221,7 +221,7 @@ function EditProfile() {
           bio: formData.bio,
           location: formData.location,
           avatar_url: finalAvatarUrl,
-          sports_preferences: formData.sportsPreferences
+          preferred_sports: formData.sportsPreferences
         }
       }, {
         onSuccess: (updatedProfile) => {

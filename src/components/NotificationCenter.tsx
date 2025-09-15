@@ -123,12 +123,12 @@ function NotificationCenter() {
 
   const handleMarkAllRead = () => {
     markAllAsRead();
-    toast.success(`All notifications marked as read`);
+    // Removed toast - action is clear from UI feedback
   };
 
   const handleClearAll = () => {
     clearAll();
-    toast.success('All notifications cleared');
+    // Removed toast - action is clear from UI feedback
   };
 
   const formatTime = (date: Date) => {
@@ -321,7 +321,7 @@ function NotificationCenter() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     markAsRead(notification.id);
-                                    toast.success('Marked as read');
+                                    // Removed toast - visual feedback is sufficient
                                   }}
                                   aria-label="Mark as read"
                                   className="h-8 w-8 p-0"
@@ -336,7 +336,7 @@ function NotificationCenter() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   deleteNotification(notification.id);
-                                  toast.success('Notification deleted');
+                                  // Removed toast - action is clear from UI
                                 }}
                                 aria-label="Delete notification"
                                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"

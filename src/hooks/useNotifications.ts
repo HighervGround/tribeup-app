@@ -70,28 +70,35 @@ export function useNotifications() {
       console.log('🔊 Notification sound played');
     }
 
-    // Show toast notification
-    toast(notification.title, {
-      description: notification.message,
-      action: notification.actionUrl ? {
-        label: 'View',
-        onClick: () => {
-          // In a real app, you'd navigate to the URL
-          console.log('Navigate to:', notification.actionUrl);
-        }
-      } : undefined,
-      duration: 5000
-    });
-
-    // Request browser permission for native notifications
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(notification.title, {
-        body: notification.message,
-        icon: '/favicon.ico', // Your app icon
-        badge: '/favicon.ico',
-        vibrate: [200, 100, 200],
-        timestamp: notification.timestamp.getTime()
-      });
+    // Show ONE notification - prefer browser notification if permission granted, otherwise toast
+    const importantTypes = ['new_message', 'game_reminder', 'join_request'];
+    if (importantTypes.includes(notification.type)) {
+      
+      // Try browser notification first for critical notifications
+      if ('Notification' in window && Notification.permission === 'granted' && 
+          ['new_message', 'game_reminder'].includes(notification.type)) {
+        new Notification(notification.title, {
+          body: notification.message,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          vibrate: [200, 100, 200],
+          timestamp: notification.timestamp.getTime(),
+          silent: false
+        });
+      } else {
+        // Fallback to toast notification if browser notifications not available
+        toast(notification.title, {
+          description: notification.message,
+          action: notification.actionUrl ? {
+            label: 'View',
+            onClick: () => {
+              // In a real app, you'd navigate to the URL
+              console.log('Navigate to:', notification.actionUrl);
+            }
+          } : undefined,
+          duration: 4000
+        });
+      }
     }
   }, [settings.pushNotifications, settings.soundEnabled]);
 
@@ -146,7 +153,7 @@ export function useNotifications() {
 
   const requestPermission = useCallback(async () => {
     if (!('Notification' in window)) {
-      toast.error('Browser notifications not supported');
+      console.log('Browser notifications not supported');
       return false;
     }
 
@@ -155,17 +162,18 @@ export function useNotifications() {
     }
 
     if (Notification.permission === 'denied') {
-      toast.error('Notifications are blocked. Please enable them in your browser settings.');
+      console.log('Notifications are blocked by user');
       return false;
     }
 
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
+      // Only show success toast when permission is explicitly granted
       toast.success('Notifications enabled!');
       return true;
     } else {
-      toast.error('Notification permission denied');
+      console.log('Notification permission denied by user');
       return false;
     }
   }, []);

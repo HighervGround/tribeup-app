@@ -272,7 +272,7 @@ function NotificationSettings() {
                 gameReminders: true,
                 soundEnabled: true
               });
-              toast.success('All notifications enabled');
+              // Removed toast - settings change is visible in UI
             }}
           >
             <Bell className="w-4 h-4 mr-2" />
@@ -289,7 +289,7 @@ function NotificationSettings() {
                 gameReminders: false,
                 soundEnabled: false
               });
-              toast.success('All notifications disabled');
+              // Removed toast - settings change is visible in UI
             }}
           >
             <BellOff className="w-4 h-4 mr-2" />
@@ -308,7 +308,7 @@ function NotificationSettings() {
                 messageNotifications: true,
                 soundEnabled: true
               });
-              toast.success('Settings reset to defaults');
+              // Removed toast - settings change is visible in UI
             }}
           >
             <RefreshCw className="w-4 h-4 mr-2" />

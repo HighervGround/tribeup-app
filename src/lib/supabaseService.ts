@@ -118,18 +118,38 @@ export class SupabaseService {
   }
 
   static async getUserProfile(userId: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      console.log('🔍 Getting user profile for:', userId);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('getUserProfile timeout')), 8000);
+      });
+      
+      const queryPromise = supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-    if (error) {
-      if (error.code === 'PGRST116') return null; // No rows returned
+      if (error) {
+        console.log('❌ getUserProfile error:', error.code, error.message);
+        if (error.code === 'PGRST116') return null; // No rows returned
+        throw error;
+      }
+
+      console.log('✅ User profile loaded:', data?.id);
+      return transformUserFromDB(data);
+    } catch (error) {
+      console.error('❌ getUserProfile failed:', error);
+      if (error instanceof Error && error.message === 'getUserProfile timeout') {
+        // Return null on timeout to prevent infinite loading
+        return null;
+      }
       throw error;
     }
-
-    return transformUserFromDB(data);
   }
 
   // Username availability check (optionally exclude current user)

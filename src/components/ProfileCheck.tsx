@@ -87,12 +87,12 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           }
         } else {
           console.log('ProfileCheck: Loading user profile from Supabase');
-          // Try to load user profile with timeout
+          // Try to load user profile with timeout (reduced from 10s to 5s)
           const profilePromise = SupabaseService.getUserProfile(user.id);
           const timeoutPromise = new Promise((_, reject) => {
             checkTimeoutRef.current = setTimeout(() => {
               reject(new Error('Profile check timeout'));
-            }, 10000); // 10 second timeout
+            }, 5000); // 5 second timeout
           });
           
           const userProfile = await Promise.race([profilePromise, timeoutPromise]);
@@ -104,7 +104,7 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           
           console.log('ProfileCheck: Loaded user profile', userProfile);
           
-          if (!userProfile || !userProfile.name) {
+          if (!userProfile || !(userProfile as any).name) {
             // Profile doesn't exist or is incomplete, redirect to onboarding
             console.log('ProfileCheck: Profile incomplete or missing, redirecting to onboarding');
             hasChecked.current = true;

@@ -100,8 +100,10 @@ export function useJoinGame() {
     onSuccess: (_, gameId) => {
       console.log('✅ Successfully joined game:', gameId);
       
-      // Invalidate and refetch
+      // Invalidate and refetch all related queries
+      queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+      queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
       // Toast removed to prevent double notifications
       // Components can handle their own success feedback
@@ -156,8 +158,10 @@ export function useLeaveGame() {
     onSuccess: (_, gameId) => {
       console.log('✅ Successfully left game:', gameId);
       
-      // Invalidate and refetch
+      // Invalidate and refetch all related queries
+      queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+      queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
       // Toast removed to prevent double notifications
       // Components can handle their own success feedback

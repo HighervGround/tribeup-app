@@ -26,7 +26,8 @@ import { supabase } from '../lib/supabase';
 
 interface DevUser {
   id: string;
-  name: string;
+  name?: string;
+  full_name?: string;
   username: string;
   email: string;
   role: 'user' | 'moderator' | 'admin';
@@ -93,6 +94,8 @@ const DevTools: React.FC = () => {
     name: '',
     username: '',
     email: '',
+    bio: '',
+    location: '',
     role: 'user' as 'user' | 'moderator' | 'admin'
   });
 
@@ -106,25 +109,22 @@ const DevTools: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, username, email, role, avatar_url')
+        .select('id, full_name, username, email, avatar_url')
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) throw error;
 
-      const users: DevUser[] = data.map(u => ({
-        id: u.id,
-        name: u.full_name || u.username || 'Unnamed User',
-        username: u.username || '',
-        email: u.email || '',
-        role: u.role || 'user',
-        avatar: u.avatar_url || ''
+      // Map data to include mock role since column doesn't exist yet
+      const usersWithMockRoles = (data || []).map(user => ({
+        ...user,
+        role: user.id.startsWith('test_') ? 'user' : 'user' // Default to user role for now
       }));
 
-      setDevUsers(users);
-    } catch (error) {
+      setDevUsers(usersWithMockRoles);
+    } catch (error: any) {
       console.error('Failed to load dev users:', error);
-      toast.error('Failed to load users');
+      toast.error('Failed to load dev users: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -138,9 +138,9 @@ const DevTools: React.FC = () => {
       await supabase.auth.signOut();
       
       // Create a mock session for the dev user
-      const mockUser = {
+      setUser({
         id: devUser.id,
-        name: devUser.name,
+        name: devUser.name || devUser.full_name || 'Unknown User',
         username: devUser.username,
         email: devUser.email,
         avatar: devUser.avatar || '',
@@ -151,20 +151,18 @@ const DevTools: React.FC = () => {
           largeText: false,
           reducedMotion: false,
           colorBlindFriendly: false,
-          sports: [],
           notifications: {
-            push: true,
             email: true,
+            push: true,
             gameReminders: true
           },
           privacy: {
-            locationSharing: true,
-            profileVisibility: 'public' as const
+            profileVisibility: 'public' as const,
+            locationSharing: true
           }
         }
-      };
+      });
 
-      setUser(mockUser);
       toast.success(`Switched to ${devUser.name}`, {
         description: `Role: ${devUser.role}`
       });
@@ -188,34 +186,79 @@ const DevTools: React.FC = () => {
     try {
       setLoading(true);
       
-      // Create user in auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newUserForm.email,
-        password: 'testpassword123',
-        email_confirm: true
+      // Create mock user entry for development purposes
+      const mockUserId = crypto.randomUUID();
+      
+      // Create user profile using RPC function to bypass RLS for development
+      const { error: profileError } = await supabase.rpc('create_dev_user', {
+        user_id: mockUserId,
+        user_name: newUserForm.name,
+        user_username: newUserForm.username,
+        user_email: newUserForm.email,
+        user_bio: newUserForm.bio || '',
+        user_location: newUserForm.location || ''
       });
-
-      if (authError) throw authError;
-
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          full_name: newUserForm.name,
-          username: newUserForm.username,
-          email: newUserForm.email,
-          role: newUserForm.role
-        });
 
       if (profileError) throw profileError;
 
-      toast.success(`Created test user: ${newUserForm.name}`);
-      setNewUserForm({ name: '', username: '', email: '', role: 'user' });
+      toast.success(`Created mock test user: ${newUserForm.name}`, {
+        description: 'Note: This is a development mock user without full auth'
+      });
+      setNewUserForm({ name: '', username: '', email: '', bio: '', location: '', role: 'user' });
       loadDevUsers();
     } catch (error: any) {
       console.error('Failed to create test user:', error);
       toast.error('Failed to create test user: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateTestUser = () => {
+    const randomUser = generateRandomUser();
+    setNewUserForm({
+      ...randomUser,
+      role: 'user'
+    });
+  };
+
+  const createBulkTestUsers = async (count: number = 5) => {
+    try {
+      setLoading(true);
+      const createdUsers: string[] = [];
+      
+      for (let i = 0; i < count; i++) {
+        const randomUser = generateRandomUser();
+        const mockUserId = crypto.randomUUID();
+        
+        // Create user profile using RPC function to bypass RLS for development
+        const { error: profileError } = await supabase.rpc('create_dev_user', {
+          user_id: mockUserId,
+          user_name: randomUser.name,
+          user_username: randomUser.username,
+          user_email: randomUser.email,
+          user_bio: randomUser.bio,
+          user_location: randomUser.location
+        });
+
+        if (profileError) {
+          console.error('Profile error for user', randomUser.name, profileError);
+          continue;
+        }
+
+        createdUsers.push(randomUser.name);
+        
+        // Small delay to avoid overwhelming the database
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      toast.success(`Created ${createdUsers.length} mock test users`, {
+        description: createdUsers.join(', ')
+      });
+      loadDevUsers();
+    } catch (error: any) {
+      console.error('Failed to create bulk test users:', error);
+      toast.error('Failed to create test users: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -354,10 +397,10 @@ const DevTools: React.FC = () => {
                   {devUsers.map(devUser => (
                     <div key={devUser.id} className="flex items-center gap-2 p-2 border rounded-lg">
                       <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center text-xs">
-                        {devUser.name.charAt(0)}
+                        {devUser.name?.charAt(0) || devUser.full_name?.charAt(0) || 'U'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{devUser.name}</div>
+                        <div className="text-sm font-medium truncate">{devUser.name || devUser.full_name || 'Unknown User'}</div>
                         <div className="text-xs text-muted-foreground truncate">@{devUser.username}</div>
                       </div>
                       <Select
@@ -395,6 +438,30 @@ const DevTools: React.FC = () => {
                   <UserPlus className="w-4 h-4" />
                   Create Test User
                 </h3>
+                
+                {/* Quick Actions */}
+                <div className="flex gap-2 mb-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={generateTestUser}
+                    disabled={loading}
+                    className="flex-1"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Generate Random
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => createBulkTestUsers(5)}
+                    disabled={loading}
+                    className="flex-1"
+                  >
+                    Create 5 Users
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   <Input
                     placeholder="Full Name"
@@ -425,8 +492,19 @@ const DevTools: React.FC = () => {
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Input
+                    placeholder="Location (optional)"
+                    value={newUserForm.location}
+                    onChange={(e) => setNewUserForm(prev => ({ ...prev, location: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Bio (optional)"
+                    value={newUserForm.bio}
+                    onChange={(e) => setNewUserForm(prev => ({ ...prev, bio: e.target.value }))}
+                  />
                 </div>
                 <Button onClick={createTestUser} disabled={loading} className="w-full">
+                  <UserPlus className="w-4 h-4 mr-2" />
                   Create Test User
                 </Button>
               </div>

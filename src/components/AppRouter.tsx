@@ -97,7 +97,7 @@ export function AppRouter() {
                 path="onboarding"
                 element={
                   <Suspense fallback={<RouteLoader text="Loading onboarding..." />}>
-                    <Onboarding onComplete={() => window.location.href = '/'} />
+                    <Onboarding onComplete={() => {}} />
                   </Suspense>
                 }
               />

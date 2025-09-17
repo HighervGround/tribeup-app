@@ -16,6 +16,7 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
   const { user: appUser } = useAppStore();
   const [checking, setChecking] = useState(true);
   const hasChecked = useRef(false);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const checkProfile = async () => {
@@ -70,10 +71,13 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
             // Only redirect if we're not already on the onboarding page
             if (window.location.pathname !== '/onboarding') {
               console.log('ProfileCheck: Redirecting to onboarding');
+              hasChecked.current = true;
+              setChecking(false);
               navigate('/onboarding', { 
                 replace: true,
                 state: { fromProfileCheck: true }
               });
+              return;
             } else {
               console.log('ProfileCheck: Already on onboarding page, not redirecting');
             }
@@ -83,14 +87,28 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           }
         } else {
           console.log('ProfileCheck: Loading user profile from Supabase');
-          // Try to load user profile
-          const userProfile = await SupabaseService.getUserProfile(user.id);
+          // Try to load user profile with timeout
+          const profilePromise = SupabaseService.getUserProfile(user.id);
+          const timeoutPromise = new Promise((_, reject) => {
+            checkTimeoutRef.current = setTimeout(() => {
+              reject(new Error('Profile check timeout'));
+            }, 10000); // 10 second timeout
+          });
+          
+          const userProfile = await Promise.race([profilePromise, timeoutPromise]);
+          
+          if (checkTimeoutRef.current) {
+            clearTimeout(checkTimeoutRef.current);
+            checkTimeoutRef.current = null;
+          }
+          
           console.log('ProfileCheck: Loaded user profile', userProfile);
           
           if (!userProfile || !userProfile.name) {
             // Profile doesn't exist or is incomplete, redirect to onboarding
             console.log('ProfileCheck: Profile incomplete or missing, redirecting to onboarding');
             hasChecked.current = true;
+            setChecking(false);
             navigate('/onboarding', { replace: true });
             return;
           }
@@ -98,7 +116,8 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       } catch (error) {
         console.error('ProfileCheck: Error checking profile:', error);
         hasChecked.current = true;
-        navigate('/onboarding', { replace: true });
+        setChecking(false);
+        // Don't redirect on error, just continue to prevent infinite loops
         return;
       }
 
@@ -107,8 +126,29 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       setChecking(false);
     };
 
-    checkProfile();
+    // Add a small delay to prevent race conditions
+    const timeoutId = setTimeout(checkProfile, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+    };
   }, [user?.id, navigate]); // Only depend on user ID, not appUser to prevent store update loops
+
+  // Force timeout after 15 seconds to prevent infinite loading
+  useEffect(() => {
+    const forceTimeout = setTimeout(() => {
+      if (checking) {
+        console.warn('ProfileCheck: Force timeout after 15 seconds');
+        hasChecked.current = true;
+        setChecking(false);
+      }
+    }, 15000);
+
+    return () => clearTimeout(forceTimeout);
+  }, [checking]);
 
   if (checking) {
     return (

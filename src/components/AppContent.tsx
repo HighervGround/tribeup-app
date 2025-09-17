@@ -3,7 +3,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { BottomNavigation } from './BottomNavigation';
 import { DesktopLayout } from './DesktopLayout';
-import DevTools from './DevTools';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
 import { useAccessibility } from '../hooks/useAccessibility';
@@ -107,8 +106,6 @@ function AppContent() {
 
       </div>
 
-      {/* Development Tools */}
-      <DevTools />
 
       {/* Toast notifications for desktop */}
       <Toaster 

@@ -108,11 +108,15 @@ function AuthCallback() {
           setTimeout(() => navigate(`/game/${pendingGameId}`), 1500);
         } else {
           // Check if profile is complete
-          const isComplete = userProfile.name && userProfile.username;
-          if (!isComplete) {
-            setTimeout(() => navigate('/onboarding'), 1500);
+          if (userProfile) {
+            const isComplete = userProfile.name && userProfile.username;
+            if (!isComplete) {
+              setTimeout(() => navigate('/onboarding'), 1500);
+            } else {
+              setTimeout(() => navigate('/'), 1500);
+            }
           } else {
-            setTimeout(() => navigate('/'), 1500);
+            setTimeout(() => navigate('/onboarding'), 1500);
           }
         }
 

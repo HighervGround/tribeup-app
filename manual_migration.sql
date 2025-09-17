@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON public.admin_audit_log(cr
 
 -- 7) CREATE DEV USER CREATION FUNCTION (bypasses RLS for development)
 CREATE OR REPLACE FUNCTION public.create_dev_user(
-  user_id text,
+  user_id uuid,
   user_name text,
   user_username text,
   user_email text,
@@ -142,3 +142,32 @@ BEGIN
   );
 END;
 $$;
+
+-- Grant execute permissions on the function with correct signature
+-- Note: anon access is for development only - remove in production
+GRANT EXECUTE ON FUNCTION public.create_dev_user(uuid, text, text, text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_dev_user(uuid, text, text, text, text, text) TO anon; -- DEV ONLY
+GRANT EXECUTE ON FUNCTION public.create_dev_user(uuid, text, text, text, text, text) TO service_role;
+
+-- 8) CREATE DEV USER LISTING FUNCTION (PostgREST-compatible)
+CREATE OR REPLACE FUNCTION public.get_dev_users()
+RETURNS SETOF public.users
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+STABLE
+AS $$
+  SELECT *
+  FROM public.users
+  ORDER BY created_at DESC
+  LIMIT 50;
+$$;
+
+-- Grant execute permissions on the dev user listing function
+-- Note: anon access is for development only - remove in production
+GRANT EXECUTE ON FUNCTION public.get_dev_users() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_dev_users() TO anon; -- DEV ONLY
+GRANT EXECUTE ON FUNCTION public.get_dev_users() TO service_role;
+
+-- 9) TRIGGER POSTGREST SCHEMA RELOAD
+SELECT pg_notify('pgrst', 'reload schema');

@@ -107,21 +107,40 @@ const DevTools: React.FC = () => {
   const loadDevUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, username, email, avatar_url')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      
+      // Try RPC function first, fallback to direct query if function doesn't exist
+      let data, error;
+      
+      try {
+        const rpcResult = await supabase.rpc('get_dev_users');
+        data = rpcResult.data;
+        error = rpcResult.error;
+      } catch (rpcError) {
+        console.log('RPC function not available, using direct query');
+        // Fallback to direct query
+        const directResult = await supabase
+          .from('users')
+          .select('id, full_name, username, email, avatar_url, role')
+          .order('created_at', { ascending: false })
+          .limit(20);
+        data = directResult.data;
+        error = directResult.error;
+      }
 
       if (error) throw error;
 
-      // Map data to include mock role since column doesn't exist yet
-      const usersWithMockRoles = (data || []).map(user => ({
-        ...user,
-        role: user.id.startsWith('test_') ? 'user' : 'user' // Default to user role for now
+      // Map data to DevUser interface
+      const usersWithRoles = (data || []).map((user: any) => ({
+        id: user.id,
+        name: user.full_name,
+        full_name: user.full_name,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar_url,
+        role: user.role || 'user'
       }));
 
-      setDevUsers(usersWithMockRoles);
+      setDevUsers(usersWithRoles);
     } catch (error: any) {
       console.error('Failed to load dev users:', error);
       toast.error('Failed to load dev users: ' + error.message);

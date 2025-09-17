@@ -11,12 +11,6 @@ export default function App() {
       <QueryProvider>
         <AuthProvider>
           <AppRouter />
-          <Toaster 
-            position="top-right"
-            richColors
-            closeButton
-            duration={4000}
-          />
         </AuthProvider>
       </QueryProvider>
     </ErrorBoundary>

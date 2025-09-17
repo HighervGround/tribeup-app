@@ -63,13 +63,17 @@ export function useJoinGame() {
       await SupabaseService.joinGame(gameId);
     },
     onMutate: async (gameId) => {
-      // Cancel outgoing refetches
+      // Cancel outgoing refetches for all related queries
       await queryClient.cancelQueries({ queryKey: gameKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: gameKeys.detail(gameId) });
+      await queryClient.cancelQueries({ queryKey: gameKeys.participants(gameId) });
       
-      // Snapshot previous value
+      // Snapshot previous values
       const previousGames = queryClient.getQueryData(gameKeys.lists());
+      const previousGame = queryClient.getQueryData(gameKeys.detail(gameId));
+      const previousParticipants = queryClient.getQueryData(gameKeys.participants(gameId));
       
-      // Optimistically update
+      // Optimistically update games list
       queryClient.setQueryData(gameKeys.lists(), (old: any) => {
         if (!old) return old;
         return old.map((game: any) => 
@@ -82,8 +86,28 @@ export function useJoinGame() {
             : game
         );
       });
+
+      // Optimistically update game detail
+      queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          isJoined: true,
+          currentPlayers: Math.min(old.currentPlayers + 1, old.maxPlayers)
+        };
+      });
+
+      // Optimistically update participants list
+      if (user) {
+        queryClient.setQueryData(gameKeys.participants(gameId), (old: any) => {
+          if (!old) return [{ id: user.id, name: user.name, avatar: user.avatar }];
+          const isAlreadyJoined = old.some((p: any) => p.id === user.id);
+          if (isAlreadyJoined) return old;
+          return [...old, { id: user.id, name: user.name, avatar: user.avatar }];
+        });
+      }
       
-      return { previousGames };
+      return { previousGames, previousGame, previousParticipants };
     },
     onError: (error, gameId, context) => {
       console.error('❌ Join game error:', error);
@@ -91,6 +115,12 @@ export function useJoinGame() {
       // Rollback on error
       if (context?.previousGames) {
         queryClient.setQueryData(gameKeys.lists(), context.previousGames);
+      }
+      if (context?.previousGame) {
+        queryClient.setQueryData(gameKeys.detail(gameId), context.previousGame);
+      }
+      if (context?.previousParticipants) {
+        queryClient.setQueryData(gameKeys.participants(gameId), context.previousParticipants);
       }
       
       toast.error('Failed to join game', {
@@ -121,13 +151,17 @@ export function useLeaveGame() {
       await SupabaseService.leaveGame(gameId);
     },
     onMutate: async (gameId) => {
-      // Cancel outgoing refetches
+      // Cancel outgoing refetches for all related queries
       await queryClient.cancelQueries({ queryKey: gameKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: gameKeys.detail(gameId) });
+      await queryClient.cancelQueries({ queryKey: gameKeys.participants(gameId) });
       
-      // Snapshot previous value
+      // Snapshot previous values
       const previousGames = queryClient.getQueryData(gameKeys.lists());
+      const previousGame = queryClient.getQueryData(gameKeys.detail(gameId));
+      const previousParticipants = queryClient.getQueryData(gameKeys.participants(gameId));
       
-      // Optimistically update
+      // Optimistically update games list
       queryClient.setQueryData(gameKeys.lists(), (old: any) => {
         if (!old) return old;
         return old.map((game: any) => 
@@ -140,8 +174,27 @@ export function useLeaveGame() {
             : game
         );
       });
+
+      // Optimistically update game detail
+      queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          isJoined: false,
+          currentPlayers: Math.max(old.currentPlayers - 1, 0)
+        };
+      });
+
+      // Optimistically update participants list by removing current user
+      const { user } = useAppStore.getState();
+      if (user) {
+        queryClient.setQueryData(gameKeys.participants(gameId), (old: any) => {
+          if (!old) return [];
+          return old.filter((p: any) => p.id !== user.id);
+        });
+      }
       
-      return { previousGames };
+      return { previousGames, previousGame, previousParticipants };
     },
     onError: (error, gameId, context) => {
       console.error('❌ Leave game error:', error);
@@ -149,6 +202,12 @@ export function useLeaveGame() {
       // Rollback on error
       if (context?.previousGames) {
         queryClient.setQueryData(gameKeys.lists(), context.previousGames);
+      }
+      if (context?.previousGame) {
+        queryClient.setQueryData(gameKeys.detail(gameId), context.previousGame);
+      }
+      if (context?.previousParticipants) {
+        queryClient.setQueryData(gameKeys.participants(gameId), context.previousParticipants);
       }
       
       toast.error('Failed to leave game', {

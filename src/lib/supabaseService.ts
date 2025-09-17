@@ -776,12 +776,13 @@ export class SupabaseService {
     const userId = user?.id;
     
     if (userId) {
-      // For authenticated users, get game with join status
+      // For authenticated users, get game with join status and creator info
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
-          game_participants!left(user_id)
+          game_participants!left(user_id),
+          creator:users!creator_id(id, full_name, username, avatar_url)
         `)
         .eq('id', gameId)
         .single();
@@ -791,10 +792,13 @@ export class SupabaseService {
       const isJoined = data.game_participants?.some((p: any) => p.user_id === userId) || false;
       return transformGameFromDB(data, isJoined);
     } else {
-      // For unauthenticated users, get game without join status
+      // For unauthenticated users, get game without join status but with creator info
       const { data, error } = await supabase
         .from('games')
-        .select('*')
+        .select(`
+          *,
+          creator:users!creator_id(id, full_name, username, avatar_url)
+        `)
         .eq('id', gameId)
         .single();
 

@@ -119,7 +119,7 @@ function OtherUserProfile() {
                 <Avatar className="w-24 h-24">
                   <AvatarFallback className="text-2xl">{user.avatar}</AvatarFallback>
                 </Avatar>
-                {user.isVerified && (
+                {(user as any).isVerified && (
                   <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                     <Shield className="w-3 h-3 text-primary-foreground" />
                   </div>
@@ -140,7 +140,7 @@ function OtherUserProfile() {
 
               <div className="flex items-center gap-4 pt-2">
                 <div className="text-center">
-                  <div className="text-xl">{user.rating}</div>
+                  <div className="text-xl">{(user as any).rating || '0.0'}</div>
                   <div className="text-sm text-muted-foreground flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current text-warning" />
                     Rating
@@ -148,12 +148,12 @@ function OtherUserProfile() {
                 </div>
                 <Separator orientation="vertical" className="h-8" />
                 <div className="text-center">
-                  <div className="text-xl">{user.gamesHosted}</div>
+                  <div className="text-xl">{(user as any).gamesHosted || 0}</div>
                   <div className="text-sm text-muted-foreground">Hosted</div>
                 </div>
                 <Separator orientation="vertical" className="h-8" />
                 <div className="text-center">
-                  <div className="text-xl">{user.gamesJoined}</div>
+                  <div className="text-xl">{(user as any).gamesJoined || 0}</div>
                   <div className="text-sm text-muted-foreground">Joined</div>
                 </div>
               </div>
@@ -170,7 +170,7 @@ function OtherUserProfile() {
         </Card>
 
         {/* Achievements */}
-        {user.achievements.length > 0 && (
+        {(user as any).achievements && (user as any).achievements.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -180,7 +180,7 @@ function OtherUserProfile() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-3">
-                {user.achievements.map((achievement) => (
+                {(user as any).achievements.map((achievement: any) => (
                   <div key={achievement.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                     <div className="text-2xl">{achievement.icon}</div>
                     <div>
@@ -201,9 +201,9 @@ function OtherUserProfile() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {user.favoriteSports.map((sport: string) => (
+              {(user as any).favoriteSports?.map((sport: string) => (
                 <Badge key={sport} variant="secondary">{sport}</Badge>
-              ))}
+              )) || <span className="text-muted-foreground">No favorite sports listed</span>}
             </div>
           </CardContent>
         </Card>
@@ -215,12 +215,12 @@ function OtherUserProfile() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {user.favoriteSpots.map((spot: string) => (
+              {(user as any).favoriteSpots?.map((spot: string) => (
                 <div key={spot} className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">{spot}</span>
                 </div>
-              ))}
+              )) || <span className="text-muted-foreground">No favorite spots listed</span>}
             </div>
           </CardContent>
         </Card>
@@ -232,7 +232,7 @@ function OtherUserProfile() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {user.recentGames.map((game: any, index: number) => (
+              {(user as any).recentGames?.map((game: any, index: number) => (
                 <div key={game.id}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -250,9 +250,9 @@ function OtherUserProfile() {
                       {game.role === 'host' ? 'Host' : 'Player'}
                     </Badge>
                   </div>
-                  {index < user.recentGames.length - 1 && <Separator className="mt-3" />}
+                  {index < ((user as any).recentGames?.length || 0) - 1 && <Separator className="mt-3" />}
                 </div>
-              ))}
+              )) || <span className="text-muted-foreground">No recent games</span>}
             </div>
           </CardContent>
         </Card>
@@ -262,7 +262,7 @@ function OtherUserProfile() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="w-4 h-4" />
-              <span className="text-sm">Member since {formatJoinDate(user.joinedDate)}</span>
+              <span className="text-sm">Member since {formatJoinDate((user as any).joinedDate || (user as any).created_at || new Date().toISOString())}</span>
             </div>
           </CardContent>
         </Card>

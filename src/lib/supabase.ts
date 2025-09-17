@@ -92,6 +92,7 @@ export const transformUserFromDB = (dbUser: Database['public']['Tables']['users'
   avatar: dbUser.avatar_url || '',
   bio: dbUser.bio || '',
   location: dbUser.location || '',
+  role: dbUser.role || 'user',
   preferences: {
     theme: 'auto' as const,
     highContrast: false,

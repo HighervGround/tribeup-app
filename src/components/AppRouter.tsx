@@ -18,6 +18,7 @@ const Settings = lazy(() => import('./Settings'));
 const AccessibilitySettings = lazy(() => import('./AccessibilitySettings'));
 const NotificationSettings = lazy(() => import('./NotificationSettings'));
 const DesignSystem = lazy(() => import('./DesignSystem'));
+const AdminDashboard = lazy(() => import('./AdminDashboard'));
 
 const Onboarding = lazy(() => import('./Onboarding'));
 const NavigationTest = lazy(() => import('./NavigationTest'));
@@ -73,8 +74,11 @@ export function AppRouter() {
                 <Route path="settings/accessibility" element={<AccessibilitySettings />} />
                 <Route path="settings/notifications" element={<NotificationSettings />} />
 
+                {/* Admin Routes */}
+                <Route path="admin" element={<AdminDashboard />} />
+
                 {/* Design System Routes */}
-                <Route path="design" element={<DesignSystem />} />
+                <Route path="design" element={<DesignSystem onBack={() => {}} />} />
     
 
                 {/* Development Routes */}

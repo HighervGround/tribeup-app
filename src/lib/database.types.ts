@@ -205,6 +205,7 @@ export type Database = {
           id: string
           location: string | null
           preferred_sports: string[] | null
+          role: 'user' | 'moderator' | 'admin'
           stats: Json | null
           username: string | null
         }
@@ -217,6 +218,7 @@ export type Database = {
           id?: string
           location?: string | null
           preferred_sports?: string[] | null
+          role?: 'user' | 'moderator' | 'admin'
           stats?: Json | null
           username?: string | null
         }
@@ -229,6 +231,7 @@ export type Database = {
           id?: string
           location?: string | null
           preferred_sports?: string[] | null
+          role?: 'user' | 'moderator' | 'admin'
           stats?: Json | null
           username?: string | null
         }

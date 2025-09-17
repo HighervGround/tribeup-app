@@ -24,16 +24,19 @@ import {
   Accessibility,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../providers/AuthProvider';
 import { toast } from 'sonner';
+import { useAppStore } from '../store/appStore';
 
 function Settings() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, effectiveTheme, toggleTheme, setTheme } = useTheme();
+  const { user } = useAppStore();
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [gameReminders, setGameReminders] = useState(true);
@@ -62,6 +65,17 @@ function Settings() {
         { label: 'Delete Account', action: () => console.log('Delete account'), danger: true },
       ]
     },
+    ...(user?.role === 'admin' ? [{
+      title: 'Administration',
+      icon: SettingsIcon,
+      items: [
+        { 
+          label: 'Admin Dashboard', 
+          action: () => navigate('/admin'),
+          description: 'Manage users, games, and platform settings'
+        },
+      ]
+    }] : []),
     {
       title: 'Notifications',
       icon: Bell,

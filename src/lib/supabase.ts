@@ -58,7 +58,7 @@ if (typeof globalThis !== 'undefined') {
 export type { Database } from './database.types';
 
 // Helper functions for data transformation
-export const transformGameFromDB = (dbGame: Database['public']['Tables']['games']['Row'], isJoined: boolean = false): any => ({
+export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any => ({
   id: dbGame.id,
   title: dbGame.title,
   sport: dbGame.sport,
@@ -74,7 +74,13 @@ export const transformGameFromDB = (dbGame: Database['public']['Tables']['games'
   imageUrl: dbGame.image_url || '',
   sportColor: getSportColor(dbGame.sport),
   isJoined,
-  createdBy: dbGame.creator_id,
+  createdBy: dbGame.creator?.full_name || dbGame.creator?.username || dbGame.creator_id,
+  creatorId: dbGame.creator_id,
+  creatorData: dbGame.creator ? {
+    id: dbGame.creator.id,
+    name: dbGame.creator.full_name || dbGame.creator.username || 'Unknown User',
+    avatar: dbGame.creator.avatar_url || ''
+  } : null,
   createdAt: dbGame.created_at,
 });
 

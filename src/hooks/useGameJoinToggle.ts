@@ -25,16 +25,28 @@ export function useGameJoinToggle() {
     // Prevent event bubbling if provided (useful for cards)
     e?.stopPropagation();
     
+    console.log('🎯 toggleJoin called with game:', game.id, 'isJoined:', game.isJoined);
+    
     if (game.isJoined) {
+      console.log('🔄 Attempting to leave game:', game.id);
       leaveGameMutation.mutate(game.id, {
         onSuccess: () => {
+          console.log('✅ Leave game success callback');
           toast.success('Left game successfully');
+        },
+        onError: (error) => {
+          console.error('❌ Leave game error callback:', error);
         }
       });
     } else {
+      console.log('🔄 Attempting to join game:', game.id);
       joinGameMutation.mutate(game.id, {
         onSuccess: () => {
+          console.log('✅ Join game success callback');
           toast.success('Joined game!');
+        },
+        onError: (error) => {
+          console.error('❌ Join game error callback:', error);
         }
       });
     }

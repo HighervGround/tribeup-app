@@ -665,15 +665,15 @@ function GameDetails() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => navigateToUser('host1')}
+                  onClick={() => navigateToUser(game.creatorId || game.creatorData?.id)}
                   className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                   data-action="view-profile"
                 >
                   <Avatar>
-                    <AvatarFallback>{game.createdBy?.charAt(0) || 'U'}</AvatarFallback>
+                    <AvatarFallback>{game.creatorData?.name?.charAt(0) || game.createdBy?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div>{game.createdBy || 'Unknown'}</div>
+                    <div>{game.creatorData?.name || game.createdBy || 'Unknown'}</div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Star className="w-3 h-3 fill-current text-warning" />
                       No rating yet

@@ -6,6 +6,7 @@ import { Progress } from './ui/progress';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ArrowLeft, CheckCircle, Loader2, MapPin, Clock, Users, DollarSign, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
@@ -43,7 +44,7 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'What & When', fields: ['sport', 'date', 'time'] },
+  { id: 1, title: 'What & When', fields: ['sport', 'date', 'time', 'duration'] },
   { id: 2, title: 'Where & Who', fields: ['location', 'maxPlayers', 'cost'] },
   { id: 3, title: 'Skill & Requirements', fields: ['skillLevel'] },
   { id: 4, title: 'Review & Create', fields: [] },
@@ -87,6 +88,7 @@ function CreateGame() {
     sport: '',
     date: getDefaultDate(), // Default to tomorrow
     time: '',
+    duration: '60', // Default to 60 minutes
     location: '',
     latitude: null as number | null,
     longitude: null as number | null,
@@ -371,6 +373,14 @@ function CreateGame() {
         if (cost > 500) return 'That seems expensive - double check?';
         return null;
         
+      case 'duration':
+        if (!value) return null;
+        const duration = parseInt(value);
+        if (duration < 15) return 'Duration should be at least 15 minutes';
+        if (duration > 480) return 'Duration seems too long - max 8 hours';
+        if (duration > 240) return 'That\'s a long game - are you sure?';
+        return null;
+        
       default:
         return null;
     }
@@ -460,12 +470,18 @@ function CreateGame() {
       if (!formData.sport) stepErrors.sport = 'Please select a sport.';
       if (!formData.date) stepErrors.date = 'Please choose a date.';
       if (!formData.time) stepErrors.time = 'Please choose a time.';
+      if (!formData.duration) stepErrors.duration = 'Please set a duration.';
       if (formData.date) {
         const today = new Date();
         const chosen = new Date(formData.date + 'T00:00:00');
         if (chosen < new Date(today.toDateString())) {
           stepErrors.date = 'Date cannot be in the past.';
         }
+      }
+      if (formData.duration) {
+        const duration = parseInt(formData.duration);
+        if (duration < 15) stepErrors.duration = 'Duration should be at least 15 minutes.';
+        if (duration > 480) stepErrors.duration = 'Duration seems too long - max 8 hours.';
       }
     }
     if (currentStep === 2) {
@@ -513,6 +529,7 @@ function CreateGame() {
         sport: formData.sport,
         date: formData.date,
         time: formData.time,
+        duration: parseInt(formData.duration) || 60,
         location: formData.location,
         latitude: formData.latitude,
         longitude: formData.longitude,
@@ -553,7 +570,7 @@ function CreateGame() {
             value={value} 
             onChange={(e) => handleInputChange(name, e.target.value)}
             className={`w-full p-3 border rounded-lg transition-colors bg-background text-foreground ${
-              error ? 'border-destructive bg-destructive/10 dark:bg-destructive/20' : 
+              error ? 'border-destructive bg-destructive/10' : 
               isValid ? 'border-green-500 bg-green-50 dark:bg-green-950/50 dark:border-green-400' : 
               'border-input hover:border-ring focus:border-ring focus:ring-2 focus:ring-ring/20'
             }`}
@@ -759,6 +776,49 @@ function CreateGame() {
                     <p className="text-sm text-destructive">{errors.time}</p>
                   )}
                 </div>
+
+                {/* Duration Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-foreground">
+                    Duration <span className="text-destructive">*</span>
+                  </label>
+                  
+                  {/* Quick Duration Buttons */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {['30', '60', '90', '120'].map((durationOption) => (
+                      <button
+                        key={durationOption}
+                        type="button"
+                        onClick={() => handleInputChange('duration', durationOption)}
+                        className={`px-2 py-2 text-xs rounded-md border transition-colors ${
+                          formData.duration === durationOption
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-input hover:bg-muted hover:border-ring'
+                        }`}
+                      >
+                        {durationOption} min
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Custom Duration Input */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Or enter custom duration (minutes):</label>
+                    <Input
+                      type="number"
+                      value={formData.duration}
+                      onChange={(e) => handleInputChange('duration', e.target.value)}
+                      className={errors.duration ? 'border-destructive' : ''}
+                      placeholder="Duration in minutes"
+                      min="15"
+                      max="480"
+                    />
+                  </div>
+                  
+                  {errors.duration && (
+                    <p className="text-sm text-destructive">{errors.duration}</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -883,14 +943,36 @@ function CreateGame() {
                 </div>
 
                 {renderField('maxPlayers', 'Max Players', 'number')}
-                {renderField('cost', 'Cost', 'select', [
-                  { value: 'FREE', label: 'Free' },
-                  { value: '$5', label: '$5 per person' },
-                  { value: '$10', label: '$10 per person' },
-                  { value: '$15', label: '$15 per person' },
-                  { value: '$20', label: '$20 per person' },
-                  { value: 'custom', label: 'Custom amount' },
-                ])}
+                
+                {/* Cost Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Cost <span className="text-destructive">*</span>
+                  </label>
+                  <Select value={formData.cost} onValueChange={(value) => handleInputChange('cost', value)}>
+                    <SelectTrigger className={errors.cost ? 'border-destructive' : ''}>
+                      <SelectValue placeholder="Select cost" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FREE">Free</SelectItem>
+                      <SelectItem value="$5">$5 per person</SelectItem>
+                      <SelectItem value="$10">$10 per person</SelectItem>
+                      <SelectItem value="$15">$15 per person</SelectItem>
+                      <SelectItem value="$20">$20 per person</SelectItem>
+                      <SelectItem value="custom">Custom amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.cost && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <span>⚠️</span> {errors.cost}
+                    </p>
+                  )}
+                  {formData.cost && !errors.cost && (
+                    <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                      <span>✅</span> Looks good!
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1073,7 +1155,17 @@ function CreateGame() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-muted-foreground">Time:</span>
-                        <span className="text-sm">{formData.time}</span>
+                        <span className="text-sm">
+                          {formData.time ? new Date(`2000-01-01T${formData.time}:00`).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          }) : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Duration:</span>
+                        <span className="text-sm">{formData.duration} minutes</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-muted-foreground">Skill Level:</span>
@@ -1126,7 +1218,11 @@ function CreateGame() {
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription>
                     Ready to create "{formData.title}" for {formData.maxPlayers} players 
-                    on {formData.date} at {formData.time}?
+                    on {formData.date} at {formData.time ? new Date(`2000-01-01T${formData.time}:00`).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    }) : ''}?
                   </AlertDescription>
                 </Alert>
                 

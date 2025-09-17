@@ -22,6 +22,7 @@ export interface Game {
   sport: string;
   date: string;
   time: string;
+  duration: number;
   location: string;
   latitude?: number;
   longitude?: number;

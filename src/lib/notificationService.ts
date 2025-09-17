@@ -8,7 +8,7 @@ export interface NotificationPreferences {
 }
 
 export class NotificationService {
-  private static vapidPublicKey = 'BKxQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQ'; // Replace with actual VAPID key
+  private static vapidPublicKey = 'BKxQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQ'; // Replace with actual VAPID key
 
   // Request notification permission and register service worker
   static async requestPermission(): Promise<boolean> {
@@ -33,9 +33,24 @@ export class NotificationService {
   // Register service worker for push notifications
   private static async registerServiceWorker(): Promise<void> {
     try {
-      // Skip service worker registration to prevent caching issues
-      console.log('Service worker registration skipped to prevent loading issues');
-      return;
+      const registration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/'
+      });
+      
+      console.log('Service Worker registered successfully:', registration);
+      
+      // Wait for service worker to be ready
+      await navigator.serviceWorker.ready;
+      
+      // Subscribe to push notifications if permission is granted
+      if (Notification.permission === 'granted') {
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
+        });
+        
+        await this.storeSubscription(subscription);
+      }
     } catch (error) {
       console.error('Service Worker registration failed:', error);
     }

@@ -800,10 +800,13 @@ export class SupabaseService {
       id: notification.id,
       type: notification.type,
       title: notification.title,
-      content: notification.message,
+      message: notification.message,
+      timestamp: new Date(notification.created_at),
       read: notification.read,
-      data: notification.data,
-      createdAt: notification.created_at
+      actionUrl: notification.data?.actionUrl,
+      gameId: notification.data?.gameId,
+      userId: notification.data?.userId,
+      data: notification.data
     }));
   }
 
@@ -896,12 +899,38 @@ export class SupabaseService {
   }
 
   static subscribeToNotifications(callback: (payload: any) => void) {
-    // Temporarily disabled to prevent WebSocket connection failures
-    console.log('Realtime subscriptions disabled to prevent WebSocket failures');
-    return { unsubscribe: () => {} };
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      console.warn('Cannot subscribe to notifications: user not authenticated');
+      return { unsubscribe: () => {} };
+    }
+
+    return supabase
+      .channel('notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${currentUser.id}`
+      }, (payload) => {
+        // Transform the payload to match the expected format
+        const notification = {
+          id: payload.new.id,
+          type: payload.new.type,
+          title: payload.new.title,
+          message: payload.new.message,
+          timestamp: new Date(payload.new.created_at),
+          read: payload.new.read,
+          actionUrl: payload.new.data?.actionUrl,
+          gameId: payload.new.data?.gameId,
+          userId: payload.new.data?.userId,
+          data: payload.new.data
+        };
+        callback(notification);
+      })
+      .subscribe();
   }
 
-  // Subscribe to all games (INSERT) to keep the home feed fresh
   static subscribeToAllGames(callback: (payload: any) => void) {
     // Temporarily disabled to prevent WebSocket connection failures
     console.log('Realtime subscriptions disabled to prevent WebSocket failures');

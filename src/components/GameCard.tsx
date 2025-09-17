@@ -39,10 +39,17 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { toggleJoin, isLoading, getButtonText, getButtonVariant } = useGameJoinToggle();
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent navigation if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a')) {
+      return;
+    }
+    
     if (onSelect) {
       onSelect(game.id);
     } else {
+      console.log('🎯 Navigating to game details:', game.id);
       navigate(`/game/${game.id}`);
     }
   };
@@ -149,7 +156,7 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
-              <span>{game.currentPlayers || game.participants}/{game.maxPlayers || game.maxParticipants}</span>
+              <span>{game.participants}/{game.maxParticipants}</span>
             </div>
             
             {!compact && (
@@ -158,9 +165,9 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
                 variant={getButtonVariant(game)}
                 onClick={(e) => toggleJoin(game, e)}
                 className="transition-all duration-200"
-                disabled={isLoading || (game.currentPlayers >= game.maxPlayers && !game.isJoined)}
+                disabled={isLoading || (game.participants >= game.maxParticipants && !game.isJoined)}
               >
-                {game.currentPlayers >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
+                {game.participants >= game.maxParticipants && !game.isJoined ? 'Game Full' : getButtonText(game)}
               </Button>
             )}
           </div>

@@ -130,13 +130,17 @@ export function useJoinGame() {
     onSuccess: (_, gameId) => {
       console.log('✅ Successfully joined game:', gameId);
       
-      // Invalidate and refetch all related queries
+      // Force refetch to ensure UI is updated with latest data
+      queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId) });
+      queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId) });
+      queryClient.refetchQueries({ queryKey: gameKeys.lists() });
+      
+      // Also invalidate to mark as stale
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
-      // Toast removed to prevent double notifications
-      // Components can handle their own success feedback
+      // Toast removed - components handle their own success feedback
     },
   });
 }
@@ -217,13 +221,17 @@ export function useLeaveGame() {
     onSuccess: (_, gameId) => {
       console.log('✅ Successfully left game:', gameId);
       
-      // Invalidate and refetch all related queries
+      // Force refetch to ensure UI is updated with latest data
+      queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId) });
+      queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId) });
+      queryClient.refetchQueries({ queryKey: gameKeys.lists() });
+      
+      // Also invalidate to mark as stale
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
-      // Toast removed to prevent double notifications
-      // Components can handle their own success feedback
+      // Toast removed - components handle their own success feedback
     },
   });
 }

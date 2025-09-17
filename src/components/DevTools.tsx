@@ -33,6 +33,57 @@ interface DevUser {
   avatar?: string;
 }
 
+// Test data generators
+const FIRST_NAMES = [
+  'Alex', 'Jordan', 'Taylor', 'Casey', 'Morgan', 'Riley', 'Avery', 'Quinn',
+  'Blake', 'Cameron', 'Drew', 'Emery', 'Finley', 'Harper', 'Hayden', 'Jamie',
+  'Kendall', 'Logan', 'Parker', 'Reese', 'Sage', 'Skyler', 'Tatum', 'River'
+];
+
+const LAST_NAMES = [
+  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+  'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson',
+  'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White'
+];
+
+const LOCATIONS = [
+  'New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Houston, TX', 'Phoenix, AZ',
+  'Philadelphia, PA', 'San Antonio, TX', 'San Diego, CA', 'Dallas, TX', 'San Jose, CA',
+  'Austin, TX', 'Jacksonville, FL', 'Fort Worth, TX', 'Columbus, OH', 'Charlotte, NC',
+  'San Francisco, CA', 'Indianapolis, IN', 'Seattle, WA', 'Denver, CO', 'Boston, MA'
+];
+
+const BIOS = [
+  'Love playing sports and meeting new people!',
+  'Always up for a good game and some friendly competition.',
+  'Sports enthusiast looking to stay active and have fun.',
+  'Passionate about fitness and building community through sports.',
+  'Weekend warrior seeking new challenges and teammates.',
+  'Just moved to the area and looking to join some games!',
+  'Former college athlete staying active in the community.',
+  'Casual player who enjoys the social aspect of sports.',
+  'Competitive but fair - let\'s play some great games!',
+  'New to the sport but eager to learn and improve.'
+];
+
+const generateRandomUser = () => {
+  const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+  const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+  const fullName = `${firstName} ${lastName}`;
+  const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${Math.floor(Math.random() * 99) + 1}`;
+  const email = `${username}@testuser.com`;
+  const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+  const bio = BIOS[Math.floor(Math.random() * BIOS.length)];
+  
+  return {
+    name: fullName,
+    username,
+    email,
+    location,
+    bio
+  };
+};
+
 const DevTools: React.FC = () => {
   const { user, setUser } = useAppStore();
   const [isVisible, setIsVisible] = useState(false);

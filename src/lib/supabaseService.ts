@@ -87,6 +87,7 @@ export class SupabaseService {
         username: userData.username || `user_${Math.random().toString(36).substring(2, 10)}`,
         bio: userData.bio || '',
         location: userData.location || '',
+        role: userData.role || 'user',
         preferred_sports: Array.isArray(userData.selectedSports)
           ? (userData.selectedSports
               .filter((s: any): s is string => typeof s === 'string' && s.trim().length > 0))

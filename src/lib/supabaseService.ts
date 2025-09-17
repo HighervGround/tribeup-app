@@ -905,7 +905,7 @@ export class SupabaseService {
       return { unsubscribe: () => {} };
     }
 
-    return supabase
+    const channel = supabase
       .channel('notifications')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -929,6 +929,8 @@ export class SupabaseService {
         callback(notification);
       })
       .subscribe();
+
+    return channel;
   }
 
   static subscribeToAllGames(callback: (payload: any) => void) {

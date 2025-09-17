@@ -618,7 +618,7 @@ export class SupabaseService {
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
-          game_participants!left(user_id)
+          game_participants(user_id)
         `);
 
       if (error) throw error;
@@ -852,7 +852,7 @@ export class SupabaseService {
 
     // Record participation for stats tracking (only if table exists)
     try {
-      await this.recordGameParticipation(currentUser.id, gameId, 'joined');
+      await SupabaseService.recordGameParticipation(currentUser.id, gameId, 'joined');
       console.log('✅ Game participation recorded');
     } catch (participationError: any) {
       // Only log if it's not a missing column error (which is expected during migration)
@@ -884,7 +884,7 @@ export class SupabaseService {
 
     // Record participation for stats tracking (only if table exists)
     try {
-      await this.recordGameParticipation(currentUser.id, gameId, 'left');
+      await SupabaseService.recordGameParticipation(currentUser.id, gameId, 'left');
       console.log('✅ Game participation recorded');
     } catch (participationError: any) {
       // Only log if it's not a missing column error (which is expected during migration)
@@ -944,7 +944,7 @@ export class SupabaseService {
         .from('games')
         .select(`
           *,
-          game_participants!left(user_id),
+          game_participants(user_id),
           creator:users!creator_id(id, full_name, username, avatar_url)
         `)
         .eq('id', gameId)
@@ -1085,39 +1085,10 @@ export class SupabaseService {
       .subscribe();
   }
 
-  static async subscribeToNotifications(callback: (payload: any) => void) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.warn('Cannot subscribe to notifications: user not authenticated');
-      return { unsubscribe: () => {} };
-    }
-
-    const channel = supabase
-      .channel('notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        // Transform the payload to match the expected format
-        const notification = {
-          id: payload.new.id,
-          type: payload.new.type,
-          title: payload.new.title,
-          message: payload.new.message,
-          timestamp: new Date(payload.new.created_at),
-          read: payload.new.read,
-          actionUrl: payload.new.data?.actionUrl,
-          gameId: payload.new.data?.gameId,
-          userId: payload.new.data?.userId,
-          data: payload.new.data
-        };
-        callback(notification);
-      })
-      .subscribe();
-
-    return channel;
+  static subscribeToNotifications(callback: (notification: any) => void) {
+    // Temporarily disabled to prevent WebSocket connection failures
+    console.log('Realtime notifications disabled to prevent WebSocket failures');
+    return { unsubscribe: () => {} };
   }
 
   static subscribeToAllGames(callback: (payload: any) => void) {
@@ -1175,7 +1146,7 @@ export class SupabaseService {
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
-          game_participants!left(user_id)
+          game_participants(user_id)
         `)
         .order('date', { ascending: true })
         .limit(50);
@@ -1237,7 +1208,7 @@ export class SupabaseService {
           .from('games')
           .select(`
             id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id,
-            game_participants!left(user_id)
+            game_participants(user_id)
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])

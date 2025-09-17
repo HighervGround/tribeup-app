@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { ClickableAvatar } from './ui/clickable-avatar';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -664,22 +665,27 @@ function GameDetails() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => navigateToUser(game.creatorId || game.creatorData?.id)}
-                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                  data-action="view-profile"
-                >
-                  <Avatar>
-                    <AvatarFallback>{game.creatorData?.name?.charAt(0) || game.createdBy?.charAt(0) || 'U'}</AvatarFallback>
-                  </Avatar>
+                <div className="flex items-center gap-3">
+                  <ClickableAvatar
+                    userId={game.creatorId || game.creatorData?.id}
+                    src={game.creatorData?.avatar}
+                    alt={game.creatorData?.name || game.createdBy || 'Unknown'}
+                    size="md"
+                  />
                   <div>
-                    <div>{game.creatorData?.name || game.createdBy || 'Unknown'}</div>
+                    <button 
+                      onClick={() => navigateToUser(game.creatorId || game.creatorData?.id)}
+                      className="hover:text-primary transition-colors cursor-pointer font-medium"
+                      data-action="view-profile"
+                    >
+                      {game.creatorData?.name || game.createdBy || 'Unknown'}
+                    </button>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Star className="w-3 h-3 fill-current text-warning" />
                       No rating yet
                     </div>
                   </div>
-                </button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -698,9 +704,12 @@ function GameDetails() {
                 <div key={player.id}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>{player.avatar}</AvatarFallback>
-                      </Avatar>
+                      <ClickableAvatar
+                        userId={player.id}
+                        src={player.avatar}
+                        alt={player.name}
+                        size="md"
+                      />
                       <div>
                         <div className="flex items-center gap-2">
                           <button 
@@ -708,7 +717,7 @@ function GameDetails() {
                               console.log('🔍 Clicking on player:', player);
                               navigateToUser(player.id);
                             }}
-                            className="hover:text-primary transition-colors cursor-pointer"
+                            className="hover:text-primary transition-colors cursor-pointer font-medium"
                           >
                             {player.name}
                           </button>

@@ -33,6 +33,14 @@ export interface Game {
   isJoined: boolean;
   createdBy: string;
   createdAt: string;
+  // Host profile data
+  creatorId?: string;
+  creatorData?: {
+    id: string;
+    name: string;
+    avatar?: string;
+    username?: string;
+  };
 }
 
 export interface UserPreferences {

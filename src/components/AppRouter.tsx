@@ -4,6 +4,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSpinner } from './ui/loading-spinner';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ProfileCheck } from './ProfileCheck';
+import AppContent from './AppContent';
 
 // Lazy load components for better performance
 const HomeScreen = lazy(() => import('./HomeScreen'));
@@ -19,7 +20,6 @@ const NotificationSettings = lazy(() => import('./NotificationSettings'));
 const DesignSystem = lazy(() => import('./DesignSystem'));
 
 const Onboarding = lazy(() => import('./Onboarding'));
-const AppContent = lazy(() => import('./AppContent'));
 const NavigationTest = lazy(() => import('./NavigationTest'));
 const Auth = lazy(() => import('./Auth'));
 

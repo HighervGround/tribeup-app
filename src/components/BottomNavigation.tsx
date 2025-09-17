@@ -3,7 +3,9 @@ import React, { forwardRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { ClickableAvatar } from './ui/clickable-avatar';
 import { useNotifications } from '../hooks/useNotifications';
+import { useAppStore } from '../store/appStore';
 import { Home, Search, Plus, Bell, User } from 'lucide-react';
 
 const navItems = [
@@ -18,6 +20,7 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount } = useNotifications();
+  const { user } = useAppStore();
 
   return (
     <div ref={ref} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
@@ -43,7 +46,17 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
                 aria-current={isActive ? 'page' : undefined}
               >
                 <div className="relative">
-                  <Icon className="w-5 h-5" />
+                  {item.path === '/profile' && user ? (
+                    <ClickableAvatar
+                      src={user.avatar}
+                      alt={user.name}
+                      size="sm"
+                      onClick={() => navigate('/profile')}
+                      className="w-5 h-5"
+                    />
+                  ) : (
+                    <Icon className="w-5 h-5" />
+                  )}
                   {item.showBadge && unreadCount > 0 && (
                     <Badge 
                       variant="destructive" 

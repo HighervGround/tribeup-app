@@ -1,10 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { BottomNavigation } from './BottomNavigation';
 import { DesktopLayout } from './DesktopLayout';
-import { Toaster } from './ui/sonner';
-import { useResponsive } from './ui/use-responsive';
+import DevTools from './DevTools';
+import { useAppStore } from '../store/appStore';
+import { useUserPresence } from '../hooks/useUserPresence';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { useResponsive } from '../hooks/useResponsive';
 import { toast } from 'sonner';
 
 function AppContent() {
@@ -103,6 +106,9 @@ function AppContent() {
         </DesktopLayout>
 
       </div>
+
+      {/* Development Tools */}
+      <DevTools />
 
       {/* Toast notifications for desktop */}
       <Toaster 

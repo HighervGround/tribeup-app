@@ -88,14 +88,6 @@ function AppContent() {
 
         </div>
 
-        {/* Toast notifications for mobile */}
-        <Toaster 
-          position="top-center"
-          toastOptions={{
-            duration: 4000,
-            className: 'animate-slide-in-down',
-          }}
-        />
       </>
     );
   }
@@ -115,8 +107,11 @@ function AppContent() {
       {/* Toast notifications for desktop */}
       <Toaster 
         position="bottom-right"
+        theme="system"
+        richColors
+        closeButton
+        duration={4000}
         toastOptions={{
-          duration: 4000,
           className: 'animate-slide-in-down',
         }}
       />

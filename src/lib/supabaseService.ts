@@ -898,9 +898,9 @@ export class SupabaseService {
       .subscribe();
   }
 
-  static subscribeToNotifications(callback: (payload: any) => void) {
-    const currentUser = this.getCurrentUser();
-    if (!currentUser) {
+  static async subscribeToNotifications(callback: (payload: any) => void) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       console.warn('Cannot subscribe to notifications: user not authenticated');
       return { unsubscribe: () => {} };
     }
@@ -911,7 +911,7 @@ export class SupabaseService {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
-        filter: `user_id=eq.${currentUser.id}`
+        filter: `user_id=eq.${user.id}`
       }, (payload) => {
         // Transform the payload to match the expected format
         const notification = {
@@ -1239,7 +1239,7 @@ export class SupabaseService {
     const earnedAchievementIds = new Set(userAchievements?.map(ua => ua.achievement_id) || []);
 
     // Check each achievement
-    const newAchievements = [];
+    const newAchievements: any[] = [];
     for (const achievement of achievements || []) {
       if (earnedAchievementIds.has(achievement.id)) continue;
 

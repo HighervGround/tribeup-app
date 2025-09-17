@@ -230,13 +230,14 @@ function GameDetails() {
   // Use React Query for game data and mutations
   const { data: game, isLoading } = useGame(gameId || '');
   const { data: participants = [], isLoading: loadingPlayers } = useGameParticipants(gameId || '');
-  const { toggleJoin, isLoading: actionLoading, getButtonText } = useGameJoinToggle();
+  const { toggleJoin, isLoading: joinLoading, getButtonText } = useGameJoinToggle();
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [editFormData, setEditFormData] = useState({
     title: '',
     description: '',
@@ -396,7 +397,7 @@ function GameDetails() {
   };
 
   // Check if current user is the game creator
-  const isGameCreator = user && game && game.createdBy === user.id;
+  const isGameCreator = user && game && (game.createdBy === user.id || game.creatorId === user.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -430,7 +431,7 @@ function GameDetails() {
             </Button>
             {isGameCreator && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger>
                   <Button 
                     variant="ghost" 
                     size="icon"

@@ -12,52 +12,7 @@ export function useUserPresence() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
     let presenceChannel: any;
-
-    const updatePresence = async () => {
-      try {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Update user's last seen timestamp
-        await supabase
-          .from('user_presence')
-          .upsert({
-            user_id: user.id,
-            last_seen: new Date().toISOString(),
-            is_online: true
-          });
-
-        // Get all users who were active in the last 5 minutes
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        
-        const { data: presenceData, error } = await supabase
-          .from('user_presence')
-          .select('user_id, last_seen, is_online')
-          .gte('last_seen', fiveMinutesAgo)
-          .eq('is_online', true);
-
-        if (error) {
-          console.error('Error fetching user presence:', error);
-          return;
-        }
-
-        // Transform data and update state
-        const users = (presenceData || []).map(p => ({
-          userId: p.user_id,
-          lastSeen: new Date(p.last_seen),
-          isOnline: p.is_online
-        }));
-
-        setOnlineUsers(users);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error updating presence:', error);
-        setIsLoading(false);
-      }
-    };
 
     // Set up real-time presence tracking
     const setupPresence = async () => {
@@ -81,7 +36,7 @@ export function useUserPresence() {
         .on('presence', { event: 'sync' }, () => {
           const state = presenceChannel.presenceState();
           const users = Object.values(state).flat().map((presence: any) => ({
-            userId: presence.user_id,
+            userId: presence.user_id || presence.key,
             lastSeen: new Date(),
             isOnline: true
           }));
@@ -90,9 +45,27 @@ export function useUserPresence() {
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }) => {
           console.log('User joined:', key, newPresences);
+          // Update online users when someone joins
+          setOnlineUsers(prev => {
+            const existingUserIds = prev.map(u => u.userId);
+            const newUsers = newPresences
+              .filter((p: any) => !existingUserIds.includes(p.user_id || key))
+              .map((p: any) => ({
+                userId: p.user_id || key,
+                lastSeen: new Date(),
+                isOnline: true
+              }));
+            return [...prev, ...newUsers];
+          });
         })
         .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
           console.log('User left:', key, leftPresences);
+          // Remove users who left
+          setOnlineUsers(prev => 
+            prev.filter(user => 
+              !leftPresences.some((p: any) => (p.user_id || key) === user.userId)
+            )
+          );
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
@@ -102,21 +75,12 @@ export function useUserPresence() {
             });
           }
         });
-
-      // Update presence every 30 seconds
-      intervalId = setInterval(updatePresence, 30000);
-      
-      // Initial update
-      updatePresence();
     };
 
     setupPresence();
 
     // Cleanup
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
       if (presenceChannel) {
         presenceChannel.unsubscribe();
       }

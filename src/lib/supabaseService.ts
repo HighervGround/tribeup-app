@@ -595,9 +595,12 @@ export class SupabaseService {
       let query = supabase
         .from('games')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
-        .gte('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
-        .limit(20);
+;
+
+      // Default to future games only unless specific date range is provided
+      if (!latitude && !longitude) {
+        query = query.gte('date', new Date().toISOString().split('T')[0]);
+      }
 
       if (latitude && longitude) {
         query = query
@@ -609,7 +612,7 @@ export class SupabaseService {
 
       // If no user, return games without join status
       if (!userId) {
-        const { data: gamesData, error } = await query;
+        const { data: gamesData, error } = await query.order('date', { ascending: true }).limit(50);
         if (error) throw error;
         return (gamesData || []).map((game: any) => transformGameFromDB(game, false));
       }
@@ -619,7 +622,9 @@ export class SupabaseService {
         .select(`
           *,
           game_participants(user_id)
-        `);
+        `)
+        .order('date', { ascending: true })
+        .limit(50);
 
       if (error) throw error;
 
@@ -1542,5 +1547,382 @@ export class SupabaseService {
         console.warn(`Failed to check achievements for user ${participant.user_id}:`, achievementError);
       }
     }
+  }
+
+  // WAITLIST SYSTEM METHODS
+  static async joinWaitlist(gameId: string): Promise<{ success: boolean; position: number; message: string }> {
+    const { data, error } = await supabase.rpc('join_waitlist', {
+      game_uuid: gameId
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async leaveWaitlist(gameId: string): Promise<{ success: boolean; message: string }> {
+    const { data, error } = await supabase.rpc('leave_waitlist', {
+      game_uuid: gameId
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async joinFromWaitlist(gameId: string): Promise<{ success: boolean; message: string }> {
+    const { data, error } = await supabase.rpc('join_from_waitlist', {
+      game_uuid: gameId
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async getGameWaitlist(gameId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('game_waitlist')
+      .select(`
+        *,
+        user:users!game_waitlist_user_id_fkey(id, full_name, username, avatar_url)
+      `)
+      .eq('game_id', gameId)
+      .order('position', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(entry => ({
+      id: entry.id,
+      position: entry.position,
+      joinedAt: entry.joined_at,
+      status: entry.status,
+      expiresAt: entry.expires_at,
+      user: {
+        id: entry.user.id,
+        name: entry.user.full_name || entry.user.username,
+        username: entry.user.username,
+        avatarUrl: entry.user.avatar_url
+      }
+    }));
+  }
+
+  static async getUserWaitlistStatus(gameId: string): Promise<{ isOnWaitlist: boolean; position?: number; status?: string }> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) return { isOnWaitlist: false };
+
+    const { data, error } = await supabase
+      .from('game_waitlist')
+      .select('position, status')
+      .eq('game_id', gameId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    return data ? {
+      isOnWaitlist: true,
+      position: data.position,
+      status: data.status
+    } : { isOnWaitlist: false };
+  }
+
+  // RECURRING GAMES METHODS
+  static async createRecurringTemplate(templateData: {
+    title: string;
+    sport: string;
+    location: string;
+    latitude?: number;
+    longitude?: number;
+    cost?: string;
+    maxPlayers: number;
+    description?: string;
+    imageUrl?: string;
+    recurrenceType: 'weekly' | 'biweekly' | 'monthly';
+    dayOfWeek?: number;
+    dayOfMonth?: number;
+    timeOfDay: string;
+    startDate: string;
+    endDate?: string;
+    maxOccurrences?: number;
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc('create_recurring_template', {
+      p_title: templateData.title,
+      p_sport: templateData.sport,
+      p_location: templateData.location,
+      p_latitude: templateData.latitude || null,
+      p_longitude: templateData.longitude || null,
+      p_cost: templateData.cost || 'Free',
+      p_max_players: templateData.maxPlayers,
+      p_description: templateData.description || '',
+      p_image_url: templateData.imageUrl || null,
+      p_recurrence_type: templateData.recurrenceType,
+      p_recurrence_interval: 1,
+      p_day_of_week: templateData.dayOfWeek || null,
+      p_day_of_month: templateData.dayOfMonth || null,
+      p_time_of_day: templateData.timeOfDay,
+      p_start_date: templateData.startDate,
+      p_end_date: templateData.endDate || null,
+      p_max_occurrences: templateData.maxOccurrences || null
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async getRecurringTemplates(userId?: string): Promise<any[]> {
+    let query = supabase
+      .from('recurring_game_templates')
+      .select(`
+        *,
+        creator:users!recurring_game_templates_creator_id_fkey(id, full_name, username, avatar_url),
+        _count:recurring_game_instances(count)
+      `)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (userId) {
+      query = query.eq('creator_id', userId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data || []).map(template => ({
+      id: template.id,
+      title: template.title,
+      sport: template.sport,
+      location: template.location,
+      recurrenceType: template.recurrence_type,
+      dayOfWeek: template.day_of_week,
+      dayOfMonth: template.day_of_month,
+      timeOfDay: template.time_of_day,
+      startDate: template.start_date,
+      endDate: template.end_date,
+      maxOccurrences: template.max_occurrences,
+      isActive: template.is_active,
+      createdAt: template.created_at,
+      creator: {
+        id: template.creator.id,
+        name: template.creator.full_name || template.creator.username,
+        username: template.creator.username,
+        avatarUrl: template.creator.avatar_url
+      },
+      instanceCount: template._count?.[0]?.count || 0
+    }));
+  }
+
+  static async updateRecurringTemplate(templateId: string, updates: any): Promise<boolean> {
+    const { data, error } = await supabase.rpc('update_recurring_template', {
+      template_id: templateId,
+      updates: updates
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async cancelRecurringTemplate(templateId: string, cancelFutureGames: boolean = true): Promise<boolean> {
+    const { data, error } = await supabase.rpc('cancel_recurring_template', {
+      template_id: templateId,
+      cancel_future_games: cancelFutureGames
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async getRecurringGameInstances(templateId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('recurring_game_instances')
+      .select(`
+        *,
+        game:games!recurring_game_instances_game_id_fkey(*)
+      `)
+      .eq('template_id', templateId)
+      .order('scheduled_date', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(instance => ({
+      id: instance.id,
+      scheduledDate: instance.scheduled_date,
+      instanceNumber: instance.instance_number,
+      status: instance.status,
+      game: instance.game ? transformGameFromDB(instance.game, false) : null
+    }));
+  }
+
+  // RATING AND REVIEW METHODS
+  static async submitGameReview(reviewData: {
+    gameId: string;
+    overallRating: number;
+    organizationRating?: number;
+    skillLevelRating?: number;
+    funRating?: number;
+    reviewText?: string;
+    wouldPlayAgain?: boolean;
+    recommendToOthers?: boolean;
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc('submit_game_review', {
+      p_game_id: reviewData.gameId,
+      p_overall_rating: reviewData.overallRating,
+      p_organization_rating: reviewData.organizationRating || null,
+      p_skill_level_rating: reviewData.skillLevelRating || null,
+      p_fun_rating: reviewData.funRating || null,
+      p_review_text: reviewData.reviewText || null,
+      p_would_play_again: reviewData.wouldPlayAgain ?? true,
+      p_recommend_to_others: reviewData.recommendToOthers ?? true
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async submitPlayerRating(ratingData: {
+    gameId: string;
+    ratedPlayerId: string;
+    skillRating: number;
+    sportsmanshipRating: number;
+    communicationRating: number;
+    feedbackText?: string;
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc('submit_player_rating', {
+      p_game_id: ratingData.gameId,
+      p_rated_player_id: ratingData.ratedPlayerId,
+      p_skill_rating: ratingData.skillRating,
+      p_sportsmanship_rating: ratingData.sportsmanshipRating,
+      p_communication_rating: ratingData.communicationRating,
+      p_feedback_text: ratingData.feedbackText || null
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async getGameReviews(gameId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('game_reviews')
+      .select(`
+        *,
+        reviewer:users!game_reviews_reviewer_id_fkey(id, full_name, username, avatar_url)
+      `)
+      .eq('game_id', gameId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(review => ({
+      id: review.id,
+      overallRating: review.overall_rating,
+      organizationRating: review.organization_rating,
+      skillLevelRating: review.skill_level_rating,
+      funRating: review.fun_rating,
+      reviewText: review.review_text,
+      wouldPlayAgain: review.would_play_again,
+      recommendToOthers: review.recommend_to_others,
+      createdAt: review.created_at,
+      updatedAt: review.updated_at,
+      reviewer: {
+        id: review.reviewer.id,
+        name: review.reviewer.full_name || review.reviewer.username,
+        username: review.reviewer.username,
+        avatarUrl: review.reviewer.avatar_url
+      }
+    }));
+  }
+
+  static async getGameRatingSummary(gameId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('game_rating_summary')
+      .select('*')
+      .eq('game_id', gameId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    return data ? {
+      totalReviews: data.total_reviews,
+      avgOverallRating: data.avg_overall_rating,
+      avgOrganizationRating: data.avg_organization_rating,
+      avgSkillLevelRating: data.avg_skill_level_rating,
+      avgFunRating: data.avg_fun_rating,
+      wouldPlayAgainCount: data.would_play_again_count,
+      recommendCount: data.recommend_count,
+      lastUpdated: data.last_updated
+    } : null;
+  }
+
+  static async getUserRatingSummary(userId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('user_rating_summary')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    return data ? {
+      totalRatingsReceived: data.total_ratings_received,
+      avgSkillRating: data.avg_skill_rating,
+      avgSportsmanshipRating: data.avg_sportsmanship_rating,
+      avgCommunicationRating: data.avg_communication_rating,
+      avgOverallPlayerRating: data.avg_overall_player_rating,
+      gamesOrganized: data.games_organized,
+      avgGameRating: data.avg_game_rating,
+      lastUpdated: data.last_updated
+    } : null;
+  }
+
+  static async getReviewableGames(): Promise<any[]> {
+    const { data, error } = await supabase.rpc('get_reviewable_games');
+
+    if (error) throw error;
+
+    return (data || []).map(game => ({
+      gameId: game.game_id,
+      title: game.game_title,
+      date: game.game_date,
+      time: game.game_time,
+      sport: game.sport,
+      hasReviewed: game.has_reviewed
+    }));
+  }
+
+  static async getPlayerRatings(gameId: string, playerId?: string): Promise<any[]> {
+    let query = supabase
+      .from('player_ratings')
+      .select(`
+        *,
+        rater:users!player_ratings_rater_id_fkey(id, full_name, username, avatar_url),
+        rated_player:users!player_ratings_rated_player_id_fkey(id, full_name, username, avatar_url)
+      `)
+      .eq('game_id', gameId);
+
+    if (playerId) {
+      query = query.eq('rated_player_id', playerId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(rating => ({
+      id: rating.id,
+      skillRating: rating.skill_rating,
+      sportsmanshipRating: rating.sportsmanship_rating,
+      communicationRating: rating.communication_rating,
+      feedbackText: rating.feedback_text,
+      createdAt: rating.created_at,
+      rater: {
+        id: rating.rater.id,
+        name: rating.rater.full_name || rating.rater.username,
+        username: rating.rater.username,
+        avatarUrl: rating.rater.avatar_url
+      },
+      ratedPlayer: {
+        id: rating.rated_player.id,
+        name: rating.rated_player.full_name || rating.rated_player.username,
+        username: rating.rated_player.username,
+        avatarUrl: rating.rated_player.avatar_url
+      }
+    }));
   }
 }

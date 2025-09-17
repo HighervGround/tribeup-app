@@ -85,6 +85,7 @@ export function useNotifications() {
       // Try browser notification first for critical notifications
       if ('Notification' in window && Notification.permission === 'granted' && 
           ['new_message', 'game_reminder'].includes(notification.type)) {
+        // Show browser notification only
         new Notification(notification.title, {
           body: notification.message,
           icon: '/favicon.ico',
@@ -93,7 +94,7 @@ export function useNotifications() {
           silent: false
         } as NotificationOptions & { vibrate?: number[] });
       } else {
-        // Fallback to toast notification if browser notifications not available
+        // Show toast notification only (fallback when browser notifications not available)
         toast(notification.title, {
           description: notification.message,
           action: notification.actionUrl ? {
@@ -106,6 +107,12 @@ export function useNotifications() {
           duration: 4000
         });
       }
+    } else {
+      // For non-important notifications, always use toast
+      toast(notification.title, {
+        description: notification.message,
+        duration: 3000
+      });
     }
   }, [settings.pushNotifications, settings.soundEnabled]);
 

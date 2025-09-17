@@ -25,6 +25,11 @@ interface FormData {
   maxPlayers: string;
   cost: string;
   requirements: string;
+  skillLevel: string;
+  minEloRating: string;
+  maxEloRating: string;
+  minReputation: string;
+  competitiveMode: boolean;
 }
 
 const sportOptions = [
@@ -40,7 +45,8 @@ const sportOptions = [
 const steps = [
   { id: 1, title: 'What & When', fields: ['sport', 'date', 'time'] },
   { id: 2, title: 'Where & Who', fields: ['location', 'maxPlayers', 'cost'] },
-  { id: 3, title: 'Review & Create', fields: [] },
+  { id: 3, title: 'Skill & Requirements', fields: ['skillLevel'] },
+  { id: 4, title: 'Review & Create', fields: [] },
 ];
 
 const quickTimes = [
@@ -86,7 +92,12 @@ function CreateGame() {
     longitude: null as number | null,
     maxPlayers: '10',
     cost: 'FREE',
-    imageUrl: ''
+    imageUrl: '',
+    skillLevel: 'mixed',
+    minEloRating: '',
+    maxEloRating: '',
+    minReputation: '70',
+    competitiveMode: false
   });
 
   // Sport-based defaults
@@ -464,6 +475,9 @@ function CreateGame() {
       else if (Number.isNaN(mp) || mp <= 0) stepErrors.maxPlayers = 'Enter a valid number greater than 0.';
       if (!formData.cost) stepErrors.cost = 'Please select a cost option.';
     }
+    if (currentStep === 3) {
+      if (!formData.skillLevel) stepErrors.skillLevel = 'Please select a skill level.';
+    }
     
     console.log('[CreateGame] Validation - Step:', currentStep, 'Errors:', stepErrors, 'FormData:', formData);
     setErrors(stepErrors);
@@ -505,7 +519,12 @@ function CreateGame() {
         maxPlayers: parseInt(formData.maxPlayers) || 10,
         cost: formData.cost || 'Free',
         description: '', // Default empty description
-        imageUrl: formData.imageUrl
+        imageUrl: formData.imageUrl,
+        skillLevel: formData.skillLevel,
+        minEloRating: formData.minEloRating ? parseInt(formData.minEloRating) : null,
+        maxEloRating: formData.maxEloRating ? parseInt(formData.maxEloRating) : null,
+        minReputation: formData.minReputation ? parseInt(formData.minReputation) : 70,
+        competitiveMode: formData.competitiveMode
       };
       console.log('[CreateGame] creating game with data =', gameData);
       await SupabaseService.createGame(gameData as any);
@@ -885,6 +904,155 @@ function CreateGame() {
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
                     3
                   </div>
+                  Skill & Requirements
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Skill Level Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-foreground">
+                    Skill Level
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: 'beginner', label: 'Beginner', description: 'New to the sport' },
+                      { value: 'intermediate', label: 'Intermediate', description: 'Some experience' },
+                      { value: 'advanced', label: 'Advanced', description: 'Experienced player' },
+                      { value: 'competitive', label: 'Competitive', description: 'High skill level' },
+                      { value: 'mixed', label: 'Mixed', description: 'All skill levels welcome' }
+                    ].map((skill) => (
+                      <button
+                        key={skill.value}
+                        type="button"
+                        onClick={() => handleInputChange('skillLevel', skill.value)}
+                        className={`p-3 rounded-lg border-2 text-left transition-all duration-200 ${
+                          formData.skillLevel === skill.value
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-input hover:border-ring text-foreground bg-background'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{skill.label}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{skill.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Competitive Mode Toggle */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-foreground">Competitive Mode</label>
+                      <p className="text-xs text-muted-foreground">Stricter skill matching and ELO tracking</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('competitiveMode', (!formData.competitiveMode).toString())}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.competitiveMode ? 'bg-primary' : 'bg-muted'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.competitiveMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* ELO Rating Requirements (shown when competitive mode is enabled) */}
+                {formData.competitiveMode && (
+                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                    <h4 className="text-sm font-medium mb-2">ELO Rating Requirements</h4>
+                    <div className="text-sm text-muted-foreground">
+                      {formData.minEloRating && formData.maxEloRating ? (
+                        `Players must have ELO between ${formData.minEloRating} and ${formData.maxEloRating}`
+                      ) : formData.minEloRating ? (
+                        `Players must have ELO of at least ${formData.minEloRating}`
+                      ) : formData.maxEloRating ? (
+                        `Players must have ELO no higher than ${formData.maxEloRating}`
+                      ) : null}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Minimum ELO</label>
+                        <Input
+                          type="number"
+                          value={formData.minEloRating}
+                          onChange={(e) => handleInputChange('minEloRating', e.target.value)}
+                          placeholder="e.g. 1200"
+                          min="100"
+                          max="3000"
+                        />
+                        <p className="text-xs text-muted-foreground">Leave empty for no minimum</p>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Maximum ELO</label>
+                        <Input
+                          type="number"
+                          value={formData.maxEloRating}
+                          onChange={(e) => handleInputChange('maxEloRating', e.target.value)}
+                          placeholder="e.g. 1800"
+                          min="100"
+                          max="3000"
+                        />
+                        <p className="text-xs text-muted-foreground">Leave empty for no maximum</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Reputation Requirement */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">Minimum Reputation</label>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      value={formData.minReputation}
+                      onChange={(e) => handleInputChange('minReputation', e.target.value)}
+                      placeholder="70"
+                      min="0"
+                      max="100"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Players need at least this reputation score to join (0-100). 
+                      Lower values allow players with poor attendance history.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Skill Level Info */}
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {formData.skillLevel === 'mixed' && 
+                      "Mixed skill level games welcome players of all abilities. Great for casual, fun games!"
+                    }
+                    {formData.skillLevel === 'beginner' && 
+                      "Beginner games are perfect for new players learning the sport. Experienced players may find it too easy."
+                    }
+                    {formData.skillLevel === 'competitive' && 
+                      "Competitive games are for skilled players who want serious competition. ELO ratings will be tracked."
+                    }
+                    {(formData.skillLevel === 'intermediate' || formData.skillLevel === 'advanced') && 
+                      `${formData.skillLevel.charAt(0).toUpperCase() + formData.skillLevel.slice(1)} level games are for players with some experience in the sport.`
+                    }
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {currentStep === 4 && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
+                    4
+                  </div>
                   Review & Create
                 </CardTitle>
               </CardHeader>
@@ -907,6 +1075,13 @@ function CreateGame() {
                         <span className="text-sm font-medium text-muted-foreground">Time:</span>
                         <span className="text-sm">{formData.time}</span>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Skill Level:</span>
+                        <span className="text-sm capitalize">{formData.skillLevel}</span>
+                        {formData.competitiveMode && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Competitive</span>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -922,8 +1097,28 @@ function CreateGame() {
                         <span className="text-sm font-medium text-muted-foreground">Cost:</span>
                         <span className="text-sm">{formData.cost}</span>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">Min Reputation:</span>
+                        <span className="text-sm">{formData.minReputation}%</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* ELO Requirements Display */}
+                  {formData.competitiveMode && (formData.minEloRating || formData.maxEloRating) && (
+                    <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                      <h4 className="text-sm font-medium mb-2">ELO Requirements</h4>
+                      <div className="text-sm text-muted-foreground">
+                        {formData.minEloRating && formData.maxEloRating ? (
+                          `Players must have ELO between ${formData.minEloRating} and ${formData.maxEloRating}`
+                        ) : formData.minEloRating ? (
+                          `Players must have ELO of at least ${formData.minEloRating}`
+                        ) : formData.maxEloRating ? (
+                          `Players must have ELO no higher than ${formData.maxEloRating}`
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Ready to Create Alert */}
@@ -945,7 +1140,7 @@ function CreateGame() {
             </Card>
           </div>
         )}
-
+        
         {/* Submit Error Display */}
         {submitError && (
           <div className="mt-4">

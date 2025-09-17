@@ -70,7 +70,7 @@ export function useSupabaseRealtime({
         createdAt: newMessage.created_at,
         user: {
           id: newMessage.user_id,
-          name: user?.name || 'Unknown User',
+          name: user?.name || user?.username || user?.email?.split('@')[0] || `User ${user?.id?.slice(0, 8) || 'Guest'}`,
           avatar: user?.avatar || ''
         }
       }]);

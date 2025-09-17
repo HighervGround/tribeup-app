@@ -78,7 +78,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   creatorId: dbGame.creator_id,
   creatorData: dbGame.creator ? {
     id: dbGame.creator.id,
-    name: dbGame.creator.full_name || dbGame.creator.username || 'Unknown User',
+    name: dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`,
     avatar: dbGame.creator.avatar_url || ''
   } : null,
   createdAt: dbGame.created_at,
@@ -86,8 +86,8 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
 
 export const transformUserFromDB = (dbUser: Database['public']['Tables']['users']['Row']): any => ({
   id: dbUser.id,
-  name: dbUser.full_name || dbUser.username || 'Unknown User',
-  username: dbUser.username || '',
+  name: dbUser.full_name || dbUser.username || dbUser.email?.split('@')[0] || `User ${dbUser.id.slice(0, 8)}`,
+  username: dbUser.username || dbUser.email?.split('@')[0] || `user_${dbUser.id.slice(0, 8)}`,
   email: dbUser.email,
   avatar: dbUser.avatar_url || '',
   bio: dbUser.bio || '',

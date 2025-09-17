@@ -1035,7 +1035,7 @@ export class SupabaseService {
       
       return {
         id: user?.id ?? 'unknown',
-        name: user?.full_name || user?.username || 'Unknown User',
+        name: user?.full_name || user?.username || user?.email?.split('@')[0] || `User ${user?.id?.slice(0, 8) || 'Guest'}`,
         avatar: user?.avatar_url || null, // Use actual avatar URL from user profile
         isHost: false, // We'll determine this separately by checking if user is game creator
         rating: 4.5 // Default rating - in real app this would come from a ratings table

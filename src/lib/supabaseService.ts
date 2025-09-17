@@ -183,6 +183,8 @@ export class SupabaseService {
   }
 
   static async updateUserProfile(userId: string, updates: any) {
+    console.log('🔧 updateUserProfile called with:', { userId, updates });
+    
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -191,7 +193,7 @@ export class SupabaseService {
         avatar_url: updates.avatar_url,
         bio: updates.bio,
         location: updates.location,
-        preferred_sports: updates.sports_preferences
+        preferred_sports: updates.preferred_sports || updates.sports_preferences
       })
       .eq('id', userId)
       .select()
@@ -275,7 +277,8 @@ export class SupabaseService {
           .from('games')
           .select(`
             *,
-            game_participants(user_id)
+            game_participants(user_id),
+            creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
@@ -329,7 +332,10 @@ export class SupabaseService {
         // If no user, get games without join status
         const { data: gamesData, error } = await supabase
           .from('games')
-          .select('*')
+          .select(`
+            *,
+            creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
+          `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
@@ -884,7 +890,7 @@ export class SupabaseService {
       return {
         id: user?.id ?? 'unknown',
         name: user?.full_name || user?.username || 'Unknown User',
-        avatar: user?.full_name?.charAt(0) || user?.username?.charAt(0) || 'U',
+        avatar: user?.avatar_url || null, // Use actual avatar URL from user profile
         isHost: false, // We'll determine this separately by checking if user is game creator
         rating: 4.5 // Default rating - in real app this would come from a ratings table
       };

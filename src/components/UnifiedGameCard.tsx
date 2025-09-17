@@ -3,6 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { ClickableAvatar } from './ui/clickable-avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
@@ -24,8 +25,9 @@ interface Game {
   cost?: string;
   category?: string;
   host?: {
+    id?: string;
     name: string;
-    avatar: string;
+    avatar?: string;
   };
   rating?: number;
   [key: string]: any;
@@ -135,6 +137,19 @@ export function UnifiedGameCard({
                 </div>
               </div>
               
+              {/* Host info */}
+              {game.host && (
+                <div className="flex items-center gap-2 text-sm">
+                  <ClickableAvatar
+                    userId={game.host.id}
+                    src={game.host.avatar}
+                    alt={game.host.name}
+                    size="sm"
+                  />
+                  <span className="text-muted-foreground">Hosted by {game.host.name}</span>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Users className="w-4 h-4" />
@@ -178,6 +193,19 @@ export function UnifiedGameCard({
             )}
           </div>
           <p className="text-sm text-muted-foreground">{game.sport}</p>
+          
+          {/* Host info for simple variant */}
+          {game.host && (
+            <div className="flex items-center gap-2 mt-2 text-sm">
+              <ClickableAvatar
+                userId={game.host.id}
+                src={game.host.avatar}
+                alt={game.host.name}
+                size="sm"
+              />
+              <span className="text-muted-foreground">Hosted by {game.host.name}</span>
+            </div>
+          )}
         </div>
         <div className="text-right flex-shrink-0">
           {game.cost && <div className="text-sm font-medium">{game.cost}</div>}

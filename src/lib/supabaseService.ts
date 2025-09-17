@@ -193,7 +193,8 @@ export class SupabaseService {
         avatar_url: updates.avatar_url,
         bio: updates.bio,
         location: updates.location,
-        preferred_sports: updates.preferred_sports || updates.sports_preferences
+        preferred_sports: updates.preferred_sports || updates.sports_preferences,
+        role: updates.role
       })
       .eq('id', userId)
       .select()
@@ -211,6 +212,173 @@ export class SupabaseService {
     } catch (error) {
       return false;
     }
+  }
+
+  // Admin functionality
+  static async hasAdminRole(userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) return false;
+      return data.role === 'admin';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  static async hasModeratorRole(userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) return false;
+      return data.role === 'moderator' || data.role === 'admin';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  static async updateUserRole(userId: string, role: 'user' | 'moderator' | 'admin'): Promise<void> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    const isAdmin = await this.hasAdminRole(currentUser.id);
+    if (!isAdmin) throw new Error('Only admins can update user roles');
+
+    const { error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    // Log admin action
+    await this.logAdminAction('update_user_role', 'user', userId, { role });
+  }
+
+  static async deleteGame(gameId: string, reason?: string): Promise<void> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    // Get game details and check permissions
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('creator_id, date, time, title')
+      .eq('id', gameId)
+      .single();
+
+    if (gameError) throw gameError;
+
+    const isCreator = game.creator_id === currentUser.id;
+    const isModerator = await this.hasModeratorRole(currentUser.id);
+    
+    if (!isCreator && !isModerator) {
+      throw new Error('Only game creators, moderators, or admins can delete games');
+    }
+
+    // Check time restrictions for regular creators (admins/moderators can override)
+    if (isCreator && !isModerator) {
+      const gameDateTime = new Date(`${game.date}T${game.time}`);
+      const now = new Date();
+      const hoursUntilGame = (gameDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursUntilGame < 4) {
+        throw new Error('Cannot delete game within 4 hours of start time');
+      }
+    }
+
+    // Notify participants before deletion
+    await this.notifyGameParticipants(gameId, 'game_cancelled', {
+      title: 'Game Cancelled',
+      message: `The game "${game.title}" has been cancelled${reason ? `: ${reason}` : '.'}`
+    });
+
+    // Delete game participants first
+    await supabase
+      .from('game_participants')
+      .delete()
+      .eq('game_id', gameId);
+
+    // Delete chat messages
+    await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('game_id', gameId);
+
+    // Delete the game
+    const { error } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', gameId);
+
+    if (error) throw error;
+
+    // Log admin action if done by moderator/admin
+    if (isModerator && !isCreator) {
+      await this.logAdminAction('delete_game', 'game', gameId, { 
+        reason: reason || 'admin_deletion',
+        game_title: game.title 
+      });
+    }
+  }
+
+  static async getAllUsers(): Promise<User[]> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    const isAdmin = await this.hasAdminRole(currentUser.id);
+    if (!isAdmin) throw new Error('Only admins can view all users');
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data.map(transformUserFromDB);
+  }
+
+  static async logAdminAction(action: string, targetType: string, targetId?: string, details?: any): Promise<void> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) return;
+
+    const { error } = await supabase.rpc('log_admin_action', {
+      p_action: action,
+      p_target_type: targetType,
+      p_target_id: targetId,
+      p_details: details
+    });
+
+    if (error) {
+      console.error('Failed to log admin action:', error);
+    }
+  }
+
+  static async getAdminAuditLog(limit = 50): Promise<any[]> {
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    const isAdmin = await this.hasAdminRole(currentUser.id);
+    if (!isAdmin) throw new Error('Only admins can view audit logs');
+
+    const { data, error } = await supabase
+      .from('admin_audit_log')
+      .select(`
+        *,
+        admin:admin_id(full_name, username, email)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data;
   }
 
   // Mock data for immediate fallback
@@ -620,47 +788,6 @@ export class SupabaseService {
     return transformGameFromDB(data, false);
   }
 
-  static async deleteGame(gameId: string, reason?: string): Promise<void> {
-    const currentUser = await this.getCurrentUser();
-    if (!currentUser) throw new Error('User not authenticated');
-
-    // First check if user is the creator and get game details
-    const { data: gameData, error: fetchError } = await supabase
-      .from('games')
-      .select('creator_id, date, time, title')
-      .eq('id', gameId)
-      .single();
-
-    if (fetchError) throw fetchError;
-    if (gameData.creator_id !== currentUser.id) {
-      throw new Error('Only the game creator can delete this game');
-    }
-
-    // Check time restrictions (can't delete within 4 hours of game time)
-    const gameDateTime = new Date(`${gameData.date}T${gameData.time}`);
-    const now = new Date();
-    const hoursUntilGame = (gameDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    if (hoursUntilGame < 4) {
-      throw new Error('Cannot delete game within 4 hours of start time');
-    }
-
-    // Notify participants before deletion
-    await this.notifyGameParticipants(gameId, 'game_cancelled', {
-      title: 'Game Cancelled',
-      message: `The game "${gameData.title}" has been cancelled${reason ? `: ${reason}` : '.'}`
-    });
-
-    // Archive the game instead of hard delete to preserve data
-    // Note: archived column doesn't exist in database
-    // const { error } = await supabase
-    //   .from('games')
-    //   .update({ archived: true })
-    //   .eq('id', gameId);
-    const error = null; // No-op since archived column doesn't exist
-
-    if (error) throw error;
-  }
 
   private static async notifyGameParticipants(gameId: string, type: string, notification: { title: string; message: string }): Promise<void> {
     try {

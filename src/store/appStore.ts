@@ -12,6 +12,7 @@ export interface User {
   username?: string;
   bio?: string;
   location?: string;
+  role: 'user' | 'moderator' | 'admin';
   preferences: UserPreferences;
 }
 

@@ -406,6 +406,7 @@ export class SupabaseService {
         sport: 'basketball',
         date: today.toISOString().split('T')[0],
         time: '18:00',
+        duration: 90,
         location: 'Local Community Center',
         cost: 'Free',
         maxPlayers: 10,
@@ -423,6 +424,7 @@ export class SupabaseService {
         sport: 'soccer',
         date: tomorrow.toISOString().split('T')[0],
         time: '19:30',
+        duration: 120,
         location: 'City Park Field',
         cost: '$5',
         maxPlayers: 22,
@@ -647,6 +649,7 @@ export class SupabaseService {
     longitude?: number;
     date: string;
     time: string;
+    duration: number;
     cost: string;
     maxPlayers: number;
     description: string;
@@ -696,6 +699,7 @@ export class SupabaseService {
         sport: gameData.sport,
         date: gameData.date,
         time: gameData.time,
+        duration: gameData.duration,
         location: gameData.location,
         latitude: gameData.latitude,
         longitude: gameData.longitude,
@@ -731,6 +735,7 @@ export class SupabaseService {
     description: string;
     date: string;
     time: string;
+    duration: number;
     location: string;
     latitude: number | null;
     longitude: number | null;
@@ -780,6 +785,7 @@ export class SupabaseService {
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.date !== undefined) updateData.date = updates.date;
     if (updates.time !== undefined) updateData.time = updates.time;
+    if (updates.duration !== undefined) updateData.duration = updates.duration;
     if (updates.location !== undefined) updateData.location = updates.location;
     if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
     if (updates.longitude !== undefined) updateData.longitude = updates.longitude;

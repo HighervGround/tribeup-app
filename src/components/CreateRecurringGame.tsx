@@ -24,6 +24,7 @@ export const CreateRecurringGame: React.FC<CreateRecurringGameProps> = ({
     longitude: undefined as number | undefined,
     cost: 'Free',
     maxPlayers: 10,
+    duration: 60,
     description: '',
     imageUrl: '',
     recurrenceType: 'weekly' as 'weekly' | 'biweekly' | 'monthly',

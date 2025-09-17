@@ -64,6 +64,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   sport: dbGame.sport,
   date: dbGame.date,
   time: dbGame.time,
+  duration: dbGame.duration || 60, // Default to 60 minutes if not set
   location: dbGame.location,
   latitude: dbGame.latitude,
   longitude: dbGame.longitude,

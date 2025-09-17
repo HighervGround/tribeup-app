@@ -242,6 +242,7 @@ function GameDetails() {
     title: '',
     description: '',
     location: '',
+    duration: 60,
     maxPlayers: 0,
     cost: ''
   });
@@ -353,6 +354,7 @@ function GameDetails() {
       title: game.title,
       description: game.description,
       location: game.location,
+      duration: game.duration || 60,
       maxPlayers: game.maxPlayers,
       cost: game.cost
     });
@@ -808,6 +810,20 @@ function GameDetails() {
                 value={editFormData.location}
                 onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
                 placeholder="Game location"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="edit-duration" className="text-sm font-medium">
+                Duration (minutes)
+              </label>
+              <Input
+                id="edit-duration"
+                type="number"
+                min="15"
+                max="480"
+                value={editFormData.duration}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 60 }))}
+                placeholder="60"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

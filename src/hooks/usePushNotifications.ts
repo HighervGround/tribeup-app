@@ -63,9 +63,17 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     }
 
     try {
-      // Skip service worker registration to prevent caching issues
-      console.log('Service worker registration skipped to prevent loading issues');
-      return null;
+      const registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
+        scope: '/'
+      });
+      
+      console.log('Service Worker registered successfully:', registration);
+      setServiceWorkerRegistration(registration);
+      
+      // Wait for service worker to be ready
+      await navigator.serviceWorker.ready;
+      
+      return registration;
     } catch (error) {
       console.error('Service Worker registration failed:', error);
       setState(prev => ({ ...prev, error: 'Failed to register service worker' }));

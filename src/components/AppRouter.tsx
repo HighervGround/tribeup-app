@@ -11,6 +11,7 @@ const HomeScreen = lazy(() => import('./HomeScreen'));
 const SearchDiscovery = lazy(() => import('./SearchDiscovery'));
 const CreateGame = lazy(() => import('./CreateGame'));
 const UserProfile = lazy(() => import('./UserProfile'));
+const EditProfile = lazy(() => import('./EditProfile'));
 const GameDetails = lazy(() => import('./GameDetails'));
 const OtherUserProfile = lazy(() => import('./OtherUserProfile'));
 const NotificationCenter = lazy(() => import('./NotificationCenter'));
@@ -60,6 +61,7 @@ export function AppRouter() {
                 <Route path="search" element={<SearchDiscovery />} />
                 <Route path="create" element={<CreateGame />} />
                 <Route path="profile" element={<UserProfile />} />
+                <Route path="profile/edit" element={<EditProfile />} />
 
                 {/* Game Routes */}
                 <Route path="game/:gameId" element={<GameDetails />} />

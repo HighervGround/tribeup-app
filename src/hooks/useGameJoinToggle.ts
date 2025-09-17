@@ -43,7 +43,7 @@ export function useGameJoinToggle() {
       joinGameMutation.mutate(game.id, {
         onSuccess: () => {
           console.log('✅ Join game success callback');
-          toast.success('Joined game!');
+          toast.success('Joined game successfully!');
         },
         onError: (error) => {
           console.error('❌ Join game error callback:', error);

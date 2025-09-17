@@ -825,20 +825,29 @@ export class SupabaseService {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
 
+    console.log(`🔧 User ${currentUser.id} joining game ${gameId}`);
+
     // Use the database function
     const { error } = await supabase.rpc('join_game', {
       game_uuid: gameId
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Join game RPC error:', error);
+      throw error;
+    }
+
+    console.log('✅ Successfully joined game via RPC');
 
     // Record participation for stats tracking (only if table exists)
     try {
       await this.recordGameParticipation(currentUser.id, gameId, 'joined');
+      console.log('✅ Game participation recorded');
     } catch (participationError: any) {
       // Only log if it's not a missing column error (which is expected during migration)
-      if (!participationError?.message?.includes("Could not find the 'status' column")) {
-        console.warn('Failed to record game participation:', participationError);
+      if (!participationError?.message?.includes("Could not find the 'status' column") &&
+          !participationError?.message?.includes("column \"status\" of relation \"game_participants\" does not exist")) {
+        console.warn('⚠️ Failed to record game participation:', participationError);
       }
       // Don't throw here as the main join operation succeeded
     }
@@ -848,20 +857,29 @@ export class SupabaseService {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
 
+    console.log(`🔧 User ${currentUser.id} leaving game ${gameId}`);
+
     // Use the database function
     const { error } = await supabase.rpc('leave_game', {
       game_uuid: gameId
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Leave game RPC error:', error);
+      throw error;
+    }
+
+    console.log('✅ Successfully left game via RPC');
 
     // Record participation for stats tracking (only if table exists)
     try {
       await this.recordGameParticipation(currentUser.id, gameId, 'left');
+      console.log('✅ Game participation recorded');
     } catch (participationError: any) {
       // Only log if it's not a missing column error (which is expected during migration)
-      if (!participationError?.message?.includes("Could not find the 'status' column")) {
-        console.warn('Failed to record game participation:', participationError);
+      if (!participationError?.message?.includes("Could not find the 'status' column") &&
+          !participationError?.message?.includes("column \"status\" of relation \"game_participants\" does not exist")) {
+        console.warn('⚠️ Failed to record game participation:', participationError);
       }
       // Don't throw here as the main leave operation succeeded
     }
@@ -1441,20 +1459,59 @@ export class SupabaseService {
 
   // Method to record game participation
   static async recordGameParticipation(userId: string, gameId: string, status: 'joined' | 'left' | 'completed' = 'joined') {
-    const { data, error } = await supabase
-      .from('game_participants')
-      .upsert({
-        user_id: userId,
-        game_id: gameId,
-        status: status,
-        joined_at: status === 'joined' ? new Date().toISOString() : undefined,
-        left_at: status === 'left' || status === 'completed' ? new Date().toISOString() : undefined
-      }, {
-        onConflict: 'user_id,game_id'
-      });
+    // First check if the status column exists
+    const { data: columns, error: columnError } = await supabase
+      .from('information_schema.columns')
+      .select('column_name')
+      .eq('table_name', 'game_participants')
+      .eq('column_name', 'status');
 
-    if (error) throw error;
-    return data;
+    if (columnError) {
+      console.log('Could not check for status column, using basic participation tracking');
+      // Fall back to basic participation without status tracking
+      const { data, error } = await supabase
+        .from('game_participants')
+        .upsert({
+          user_id: userId,
+          game_id: gameId
+        }, {
+          onConflict: 'user_id,game_id'
+        });
+      
+      if (error) throw error;
+      return data;
+    }
+
+    // If status column exists, use full tracking
+    if (columns && columns.length > 0) {
+      const { data, error } = await supabase
+        .from('game_participants')
+        .upsert({
+          user_id: userId,
+          game_id: gameId,
+          status: status,
+          joined_at: status === 'joined' ? new Date().toISOString() : undefined,
+          left_at: status === 'left' || status === 'completed' ? new Date().toISOString() : undefined
+        }, {
+          onConflict: 'user_id,game_id'
+        });
+
+      if (error) throw error;
+      return data;
+    } else {
+      // Status column doesn't exist, use basic participation
+      const { data, error } = await supabase
+        .from('game_participants')
+        .upsert({
+          user_id: userId,
+          game_id: gameId
+        }, {
+          onConflict: 'user_id,game_id'
+        });
+      
+      if (error) throw error;
+      return data;
+    }
   }
 
   // Method to mark a game as completed for all participants

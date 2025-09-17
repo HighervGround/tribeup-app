@@ -48,16 +48,24 @@ export function useNotifications() {
 
   // Subscribe to real-time notifications
   useEffect(() => {
-    const subscription = SupabaseService.subscribeToNotifications((newNotification) => {
-      setNotifications(prev => [newNotification, ...prev]);
-      
-      if (settings.pushNotifications) {
-        showNotification(newNotification);
-      }
-    });
+    let subscription: any = null;
+
+    const setupSubscription = async () => {
+      subscription = await SupabaseService.subscribeToNotifications((newNotification) => {
+        setNotifications(prev => [newNotification, ...prev]);
+        
+        if (settings.pushNotifications) {
+          showNotification(newNotification);
+        }
+      });
+    };
+
+    setupSubscription();
 
     return () => {
-      subscription?.unsubscribe();
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe();
+      }
     };
   }, [settings.pushNotifications]);
 
@@ -81,10 +89,9 @@ export function useNotifications() {
           body: notification.message,
           icon: '/favicon.ico',
           badge: '/favicon.ico',
-          vibrate: [200, 100, 200],
           timestamp: notification.timestamp.getTime(),
           silent: false
-        });
+        } as NotificationOptions & { vibrate?: number[] });
       } else {
         // Fallback to toast notification if browser notifications not available
         toast(notification.title, {

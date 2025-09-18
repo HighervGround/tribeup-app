@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { NotificationService } from './notificationService';
 import { LocationCoordinates, calculateDistance } from '../hooks/useLocation';
 import { VenueService } from './venueService';
+import { envConfig } from './envConfig';
 
 export interface LocationNotificationPreferences {
   enabled: boolean;
@@ -462,8 +463,8 @@ export class LocationNotificationService {
         return;
       }
 
-      // Set up periodic location checks (every 30 minutes)
-      const checkInterval = 30 * 60 * 1000; // 30 minutes
+      // Set up periodic location checks (configurable interval)
+      const checkInterval = envConfig.get('locationMonitoringInterval');
       
       setInterval(async () => {
         navigator.geolocation.getCurrentPosition(

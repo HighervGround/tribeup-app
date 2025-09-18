@@ -12,6 +12,7 @@ import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
 import { useLocationSearch } from '../hooks/useLocationSearch';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { systemConfig } from '../lib/systemConfig';
 
 interface FormData {
   sport: string;
@@ -50,15 +51,9 @@ const steps = [
   { id: 4, title: 'Review & Create', fields: [] },
 ];
 
-const quickTimes = [
-  '09:00',
-  '12:00', 
-  '15:00',
-  '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
-  '21:00'
+// Quick times default values (will be loaded from system config)
+const DEFAULT_QUICK_TIMES = [
+  '09:00', '12:00', '15:00', '17:00', '18:00', '19:00', '20:00', '21:00'
 ];
 
 function CreateGame() {
@@ -68,6 +63,7 @@ function CreateGame() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [quickTimes, setQuickTimes] = useState<string[]>(DEFAULT_QUICK_TIMES);
   
   // Location hooks
   const { latitude: userLat, longitude: userLng, error: geoError } = useGeolocation();
@@ -88,11 +84,11 @@ function CreateGame() {
     sport: '',
     date: getDefaultDate(), // Default to tomorrow
     time: '',
-    duration: '60', // Default to 60 minutes
+    duration: '60', // Will be updated from system config
     location: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    maxPlayers: '10',
+    maxPlayers: '10', // Will be updated from system config
     cost: 'FREE',
     imageUrl: '',
     skillLevel: 'mixed',
@@ -101,6 +97,55 @@ function CreateGame() {
     minReputation: '70',
     competitiveMode: false
   });
+
+  // Load system configuration on component mount
+  useEffect(() => {
+    const loadSystemConfig = async () => {
+      try {
+        // Load quick time slots from system config
+        const timeSlots = await systemConfig.get<string[]>('quick_time_slots', [
+          '09:00', '12:00', '15:00', '17:00', '18:00', '19:00', '20:00', '21:00'
+        ]);
+        setQuickTimes(timeSlots);
+
+        // Load default max players
+        const defaultMaxPlayers = await systemConfig.get<number>('max_players_per_game', 10);
+        
+        setFormData(prev => ({
+          ...prev,
+          maxPlayers: defaultMaxPlayers.toString()
+        }));
+      } catch (error) {
+        console.error('Error loading system config:', error);
+      }
+    };
+
+    loadSystemConfig();
+  }, []);
+
+  // Update sport-specific defaults when sport changes
+  useEffect(() => {
+    const updateSportDefaults = async () => {
+      if (formData.sport) {
+        try {
+          const defaultDuration = await systemConfig.getSportDefault(
+            formData.sport, 
+            'duration', 
+            60
+          );
+          
+          setFormData(prev => ({
+            ...prev,
+            duration: defaultDuration.toString()
+          }));
+        } catch (error) {
+          console.error('Error loading sport defaults:', error);
+        }
+      }
+    };
+
+    updateSportDefaults();
+  }, [formData.sport]);
 
   // Sport-based defaults
   const sportDefaults = {

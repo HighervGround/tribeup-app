@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { envConfig } from './envConfig';
 
 export interface NotificationPreferences {
   gameReminders: boolean;
@@ -8,7 +9,7 @@ export interface NotificationPreferences {
 }
 
 export class NotificationService {
-  private static vapidPublicKey = 'BKxQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQzQ'; // Replace with actual VAPID key
+  private static vapidPublicKey = envConfig.get('vapidPublicKey');
 
   // Request notification permission and register service worker
   static async requestPermission(): Promise<boolean> {
@@ -42,14 +43,16 @@ export class NotificationService {
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;
       
-      // Subscribe to push notifications if permission is granted
-      if (Notification.permission === 'granted') {
+      // Subscribe to push notifications if permission is granted and VAPID key is configured
+      if (Notification.permission === 'granted' && this.vapidPublicKey) {
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
         });
         
         await this.storeSubscription(subscription);
+      } else if (!this.vapidPublicKey) {
+        console.warn('VAPID public key not configured, push notifications disabled');
       }
     } catch (error) {
       console.error('Service Worker registration failed:', error);

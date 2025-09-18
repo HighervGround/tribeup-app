@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { envConfig } from '../lib/envConfig';
 
 interface OnlineUser {
   id: string;
@@ -86,7 +87,7 @@ export function useUserPresence() {
                 avatar: profile?.avatar_url,
                 online_at: new Date().toISOString(),
               });
-            }, 30000); // Update every 30 seconds
+            }, envConfig.get('presenceHeartbeatInterval'));
           }
         });
 

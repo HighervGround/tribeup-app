@@ -1,6 +1,7 @@
 import { supabase, transformGameFromDB, transformUserFromDB, Database } from './supabase';
 import type { Game, User, UserPreferences } from '../store/appStore';
 import { envConfig } from './envConfig';
+import { networkService } from './networkService';
 
 // Types for database operations
 type GameRow = Database['public']['Tables']['games']['Row'];
@@ -122,7 +123,6 @@ export class SupabaseService {
   static async getUserProfile(userId: string): Promise<User | null> {
     try {
       console.log('🔍 Getting user profile for:', userId);
-      console.log('🔍 User ID type:', typeof userId, 'Length:', userId?.length);
       
       // Validate userId format
       if (!userId || userId.trim() === '') {
@@ -130,30 +130,85 @@ export class SupabaseService {
         return null;
       }
       
-      console.log('🔍 Executing query for user ID:', userId.trim());
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId.trim())
-        .maybeSingle();
-
-      if (error) {
-        console.log('❌ getUserProfile error:', error.code, error.message, error);
+      // Check if current user is authenticated - if not, return null quickly
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.log('ℹ️ Anonymous user cannot access user profiles due to RLS - returning null');
         return null;
       }
+      
+      // Only proceed with query if user is authenticated
+      console.log('🔍 Executing query for user ID:', userId.trim());
+      
+      // Use shorter timeout for user profile queries to prevent hanging
+      const data = await networkService.executeWithRetry(
+        async () => {
+          // Use explicit field selection to avoid PGRST116 coercion errors
+          const { data, error } = await supabase
+            .from('users')
+            .select(`
+              id,
+              email,
+              username,
+              full_name,
+              avatar_url,
+              bio,
+              location,
+              preferred_sports,
+              role,
+              stats,
+              created_at
+            `)
+            .eq('id', userId.trim())
+            .maybeSingle();
+          
+          if (error) {
+            // Handle PGRST116 specifically - this means data coercion failed
+            if (error.code === 'PGRST116') {
+              console.error('❌ PGRST116 Error: Cannot coerce result to single JSON object');
+              console.error('❌ This usually means multiple rows returned or data type mismatch');
+              
+              // Try a fallback query with just basic fields
+              const { data: fallbackData, error: fallbackError } = await supabase
+                .from('users')
+                .select('id, email, username, full_name, avatar_url, bio, location, role')
+                .eq('id', userId.trim())
+                .limit(1)
+                .single();
+                
+              if (fallbackError) {
+                throw fallbackError;
+              }
+              
+              console.log('✅ Fallback query succeeded, using basic user data');
+              // Create a minimal user object with fallback data
+              return {
+                ...fallbackData,
+                preferred_sports: [],
+                stats: {},
+                created_at: new Date().toISOString()
+              };
+            }
+            throw error;
+          }
+          return data;
+        },
+        `getUserProfile-${userId}`,
+        { maxRetries: 1, timeout: 3000 }
+      );
 
       if (!data) {
         console.log('❌ No user found for ID:', userId);
         // Let's also check if there are any users in the table
         const { data: allUsers, error: countError } = await supabase
           .from('users')
-          .select('id, name')
+          .select('id, full_name')
           .limit(5);
-        console.log('🔍 Sample users in database:', allUsers?.map(u => ({ id: u.id, name: u.name })));
+        console.log('🔍 Sample users in database:', allUsers?.map(u => ({ id: u.id, name: u.full_name })));
         return null;
       }
 
-      console.log('✅ User profile loaded:', data?.id, data?.name);
+      console.log('✅ User profile loaded:', data?.id, data?.full_name);
       console.log('🔍 Raw user data from DB:', {
         id: data?.id,
         full_name: data?.full_name,
@@ -161,7 +216,9 @@ export class SupabaseService {
         email: data?.email,
         avatar_url: data?.avatar_url,
         bio: data?.bio,
-        location: data?.location
+        location: data?.location,
+        preferred_sports: data?.preferred_sports,
+        role: data?.role
       });
       const transformedUser = transformUserFromDB(data);
       console.log('🔍 Transformed user (complete):', transformedUser);
@@ -172,7 +229,7 @@ export class SupabaseService {
         // Return null on timeout to prevent infinite loading
         return null;
       }
-      throw error;
+      return null; // Return null instead of throwing to prevent app crashes
     }
   }
 
@@ -486,8 +543,9 @@ export class SupabaseService {
             game_participants(user_id),
             creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
           `)
+          // Filter out games that are fully in the past (date + time has passed)
           .gte('date', new Date().toISOString().split('T')[0])
-          .order('created_at', { ascending: false })
+          .order('date', { ascending: true })
           .limit(50);
         
         const queryTime = performance.now() - queryStart;
@@ -542,6 +600,7 @@ export class SupabaseService {
             *,
             creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
           `)
+          // Filter out games that are fully in the past (date + time has passed)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
@@ -1420,42 +1479,106 @@ export class SupabaseService {
         throw error;
       }
 
-    // Calculate average rating from game reviews (skip if table doesn't exist)
-    let reviews: any[] = [];
-    try {
-      const { data } = await supabase
-        .from('game_reviews')
-        .select('rating')
-        .eq('reviewee_id', userId);
-      reviews = data || [];
-    } catch (error) {
-      console.log('⚠️ game_reviews table not found, skipping rating calculation');
-      reviews = [];
-    }
+      // If no user_stats record exists, calculate stats from actual game participation
+      let calculatedStats: any = null;
+      if (!basicStats) {
+        console.log('📊 No user_stats record found, calculating from game participation');
+        
+        // Get games hosted by user
+        const { data: hostedGames, error: hostedError } = await supabase
+          .from('games')
+          .select('id, sport')
+          .eq('creator_id', userId);
+          
+        if (hostedError) {
+          console.error('❌ Error fetching hosted games:', hostedError);
+        }
 
-    const averageRating = reviews.length > 0 
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-      : 0;
+        // Get games participated in by user
+        const { data: participatedGames, error: participatedError } = await supabase
+          .from('game_participants')
+          .select(`
+            game_id,
+            play_time_minutes,
+            games!inner(sport, date)
+          `)
+          .eq('user_id', userId);
+          
+        if (participatedError) {
+          console.error('❌ Error fetching participated games:', participatedError);
+        }
 
-    // Return combined stats
-    const defaultStats = {
-      user_id: userId,
-      games_played: 0,
-      games_hosted: 0,
-      total_play_time_minutes: 0,
-      favorite_sport: null,
-      last_activity: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+        // Calculate real stats from actual data
+        const gamesHosted = hostedGames?.length || 0;
+        const gamesPlayed = participatedGames?.length || 0;
+        const totalPlayTime = participatedGames?.reduce((sum, p) => sum + (p.play_time_minutes || 0), 0) || 0;
+        
+        // Find favorite sport from participation
+        const sportCounts: Record<string, number> = {};
+        hostedGames?.forEach(game => {
+          sportCounts[game.sport] = (sportCounts[game.sport] || 0) + 1;
+        });
+        participatedGames?.forEach(p => {
+          const sport = (p.games as any)?.sport;
+          if (sport) {
+            sportCounts[sport] = (sportCounts[sport] || 0) + 1;
+          }
+        });
+        
+        const favoriteSport = Object.keys(sportCounts).length > 0 
+          ? Object.entries(sportCounts).reduce((a, b) => sportCounts[a[0]] > sportCounts[b[0]] ? a : b)[0]
+          : null;
+
+        calculatedStats = {
+          user_id: userId,
+          games_played: gamesPlayed,
+          games_hosted: gamesHosted,
+          total_play_time_minutes: totalPlayTime,
+          favorite_sport: favoriteSport,
+          last_activity: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('📊 Calculated stats from live data:', calculatedStats);
+      }
+
+      // Calculate average rating from game reviews (skip if table doesn't exist)
+      let reviews: any[] = [];
+      try {
+        const { data } = await supabase
+          .from('game_reviews')
+          .select('rating')
+          .eq('reviewee_id', userId);
+        reviews = data || [];
+      } catch (error) {
+        console.log('⚠️ game_reviews table not found, skipping rating calculation');
+        reviews = [];
+      }
+
+      const averageRating = reviews.length > 0 
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+        : 0;
+
+      // Use calculated stats if no database record exists, otherwise use database stats
+      const finalStats = basicStats || calculatedStats || {
+        user_id: userId,
+        games_played: 0,
+        games_hosted: 0,
+        total_play_time_minutes: 0,
+        favorite_sport: null,
+        last_activity: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
       return {
-        ...(basicStats || defaultStats),
+        ...finalStats,
         average_rating: averageRating
       };
     } catch (error) {
       console.error('❌ getUserStats failed:', error);
-      console.log('⚠️ getUserStats failed, returning default stats');
+      // Only return default stats as absolute last resort
       const defaultStats = {
         user_id: userId,
         games_played: 0,
@@ -1920,19 +2043,24 @@ export class SupabaseService {
     wouldPlayAgain?: boolean;
     recommendToOthers?: boolean;
   }): Promise<string> {
-    const { data, error } = await supabase.rpc('submit_game_review', {
-      p_game_id: reviewData.gameId,
-      p_overall_rating: reviewData.overallRating,
-      p_organization_rating: reviewData.organizationRating || null,
-      p_skill_level_rating: reviewData.skillLevelRating || null,
-      p_fun_rating: reviewData.funRating || null,
-      p_review_text: reviewData.reviewText || null,
-      p_would_play_again: reviewData.wouldPlayAgain ?? true,
-      p_recommend_to_others: reviewData.recommendToOthers ?? true
-    });
+    try {
+      const { data, error } = await supabase.rpc('submit_game_review', {
+        p_game_id: reviewData.gameId,
+        p_overall_rating: reviewData.overallRating,
+        p_organization_rating: reviewData.organizationRating || null,
+        p_skill_level_rating: reviewData.skillLevelRating || null,
+        p_fun_rating: reviewData.funRating || null,
+        p_review_text: reviewData.reviewText || null,
+        p_would_play_again: reviewData.wouldPlayAgain ?? true,
+        p_recommend_to_others: reviewData.recommendToOthers ?? true
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.log('⚠️ Rating system disabled - submit_game_review function not available');
+      throw new Error('Rating system is currently disabled');
+    }
   }
 
   static async submitPlayerRating(ratingData: {
@@ -1943,17 +2071,22 @@ export class SupabaseService {
     communicationRating: number;
     feedbackText?: string;
   }): Promise<string> {
-    const { data, error } = await supabase.rpc('submit_player_rating', {
-      p_game_id: ratingData.gameId,
-      p_rated_player_id: ratingData.ratedPlayerId,
-      p_skill_rating: ratingData.skillRating,
-      p_sportsmanship_rating: ratingData.sportsmanshipRating,
-      p_communication_rating: ratingData.communicationRating,
-      p_feedback_text: ratingData.feedbackText || null
-    });
+    try {
+      const { data, error } = await supabase.rpc('submit_player_rating', {
+        p_game_id: ratingData.gameId,
+        p_rated_player_id: ratingData.ratedPlayerId,
+        p_skill_rating: ratingData.skillRating,
+        p_sportsmanship_rating: ratingData.sportsmanshipRating,
+        p_communication_rating: ratingData.communicationRating,
+        p_feedback_text: ratingData.feedbackText || null
+      });
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.log('⚠️ Rating system disabled - submit_player_rating function not available');
+      throw new Error('Rating system is currently disabled');
+    }
   }
 
   static async getGameReviews(gameId: string): Promise<any[]> {

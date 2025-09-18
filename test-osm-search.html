@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenStreetMap Search Test</title>
+</head>
+<body>
+    <h1>OpenStreetMap Search Test</h1>
+    <input type="text" id="searchInput" placeholder="Type a location..." style="width: 300px; padding: 10px;">
+    <button onclick="testSearch()" style="padding: 10px;">Search</button>
+    <div id="results" style="margin-top: 20px;"></div>
+    
+    <script>
+        async function testSearch() {
+            const query = document.getElementById('searchInput').value;
+            const results = document.getElementById('results');
+            
+            if (!query.trim()) {
+                results.innerHTML = '<div>Please enter a search term</div>';
+                return;
+            }
+            
+            results.innerHTML = '<div>Searching...</div>';
+            
+            try {
+                const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+                console.log('Search URL:', searchUrl);
+                
+                const response = await fetch(searchUrl, {
+                    headers: {
+                        'User-Agent': 'TribeUp Sports App Test'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    
+                    if (data && data.length > 0) {
+                        results.innerHTML = data.map((place, index) => 
+                            `<div style="padding: 10px; border: 1px solid #ccc; margin: 5px;">
+                                <strong>${place.name || place.display_name.split(',')[0]}</strong><br>
+                                <small>${place.display_name}</small><br>
+                                <em>Lat: ${place.lat}, Lon: ${place.lon}</em>
+                            </div>`
+                        ).join('');
+                    } else {
+                        results.innerHTML = '<div>No results found</div>';
+                    }
+                } else {
+                    const errorText = await response.text();
+                    results.innerHTML = `<div>Error: ${response.status} - ${errorText}</div>`;
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                results.innerHTML = `<div>Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-search on enter
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testSearch();
+            }
+        });
+    </script>
+</body>
+</html>

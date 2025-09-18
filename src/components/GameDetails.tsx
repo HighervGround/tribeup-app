@@ -721,6 +721,7 @@ function GameDetails() {
                               navigateToUser(player.id);
                             }}
                             className="hover:text-primary transition-colors cursor-pointer font-medium"
+                            data-action="view-profile"
                           >
                             {player.name}
                           </button>

@@ -51,7 +51,6 @@ export function useWebSocket({
 
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryCountRef = useRef(0);
@@ -80,16 +79,10 @@ export function useWebSocket({
         break;
         
       case 'user_joined':
-        setOnlineUsers(prev => new Set(prev).add(message.userId));
         toast.success(`${message.userName} joined the chat`);
         break;
         
       case 'user_left':
-        setOnlineUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(message.userId);
-          return newSet;
-        });
         break;
         
       case 'game_update':
@@ -121,8 +114,7 @@ export function useWebSocket({
         
         retryCountRef.current = 0;
         
-        // Simulate user joining
-        setOnlineUsers(new Set([userId, 'other-user']));
+        // Connection established
         
         // Start heartbeat
         heartbeatRef.current = setInterval(() => {
@@ -134,7 +126,7 @@ export function useWebSocket({
     } catch (error) {
       handleConnectionError(error);
     }
-  }, [chatId, userId, userName, createMockWebSocket]);
+  }, [chatId, userId, userName]);
 
   const disconnect = useCallback(() => {
     if (wsRef.current) {
@@ -160,7 +152,6 @@ export function useWebSocket({
     });
     
     setTypingUsers(new Set());
-    setOnlineUsers(new Set());
   }, []);
 
   const handleConnectionError = useCallback((error: any) => {
@@ -278,7 +269,6 @@ export function useWebSocket({
     // Data
     messages,
     typingUsers: Array.from(typingUsers).filter(id => id !== userId),
-    onlineUsers: Array.from(onlineUsers),
     
     // Actions
     connect,
@@ -288,7 +278,6 @@ export function useWebSocket({
     stopTyping,
     
     // Utilities
-    isUserOnline: (userId: string) => onlineUsers.has(userId),
     isUserTyping: (userId: string) => typingUsers.has(userId)
   };
 }

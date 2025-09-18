@@ -130,19 +130,12 @@ export class SupabaseService {
         return null;
       }
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('getUserProfile timeout')), 8000);
-      });
-      
-      const queryPromise = supabase
+      console.log('🔍 Executing query for user ID:', userId.trim());
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId.trim())
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
-      
-      console.log('🔍 Executing query for user ID:', userId.trim());
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+        .maybeSingle();
 
       if (error) {
         console.log('❌ getUserProfile error:', error.code, error.message, error);
@@ -1414,24 +1407,32 @@ export class SupabaseService {
 
   // User Stats methods
   static async getUserStats(userId: string) {
-    // Get basic stats from user_stats table
-    const { data: basicStats, error } = await supabase
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    try {
+      // Get basic stats from user_stats table
+      const { data: basicStats, error } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
       throw error;
     }
 
-    // Calculate average rating from game reviews
-    const { data: reviews } = await supabase
-      .from('game_reviews')
-      .select('rating')
-      .eq('reviewee_id', userId);
+    // Calculate average rating from game reviews (skip if table doesn't exist)
+    let reviews: any[] = [];
+    try {
+      const { data } = await supabase
+        .from('game_reviews')
+        .select('rating')
+        .eq('reviewee_id', userId);
+      reviews = data || [];
+    } catch (error) {
+      console.log('⚠️ game_reviews table not found, skipping rating calculation');
+      reviews = [];
+    }
 
-    const averageRating = reviews && reviews.length > 0 
+    const averageRating = reviews.length > 0 
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
       : 0;
 
@@ -1447,34 +1448,56 @@ export class SupabaseService {
       updated_at: new Date().toISOString()
     };
 
-    return {
-      ...(basicStats || defaultStats),
-      average_rating: averageRating
-    };
+      return {
+        ...(basicStats || defaultStats),
+        average_rating: averageRating
+      };
+    } catch (error) {
+      console.log('⚠️ getUserStats failed, returning default stats');
+      const defaultStats = {
+        user_id: userId,
+        games_played: 0,
+        games_hosted: 0,
+        total_play_time_minutes: 0,
+        favorite_sport: null,
+        average_rating: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      return defaultStats;
+    }
   }
 
   static async getUserRecentGames(userId: string, limit = 5) {
-    const { data, error } = await supabase
-      .from('game_participants')
-      .select(`
-        *,
-        games (
-          id,
-          title,
-          sport,
-          date,
-          time,
-          location,
-          created_by
-        )
-      `)
-      .eq('user_id', userId)
-      .eq('status', 'completed')
-      .order('joined_at', { ascending: false })
-      .limit(limit);
+    try {
+      const { data, error } = await supabase
+        .from('game_participants')
+        .select(`
+          *,
+          games (
+            id,
+            title,
+            sport,
+            date,
+            time,
+            location,
+            created_by
+          )
+        `)
+        .eq('user_id', userId)
+        .order('joined_at', { ascending: false })
+        .limit(limit);
 
-    if (error) throw error;
-    return data || [];
+      if (error) {
+        console.log('⚠️ getUserRecentGames error, returning empty array:', error.message);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.log('⚠️ getUserRecentGames failed, returning empty array');
+      return [];
+    }
   }
 
   static async getUserAchievements(userId: string) {
@@ -1930,35 +1953,26 @@ export class SupabaseService {
   }
 
   static async getGameReviews(gameId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('game_reviews')
-      .select(`
-        *,
-        reviewer:users!game_reviews_reviewer_id_fkey(id, full_name, username, avatar_url)
-      `)
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('game_reviews')
+        .select(`
+          *,
+          reviewer:users!game_reviews_reviewer_id_fkey(id, full_name, username, avatar_url)
+        `)
+        .eq('game_id', gameId)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-
-    return (data || []).map(review => ({
-      id: review.id,
-      overallRating: review.overall_rating,
-      organizationRating: review.organization_rating,
-      skillLevelRating: review.skill_level_rating,
-      funRating: review.fun_rating,
-      reviewText: review.review_text,
-      wouldPlayAgain: review.would_play_again,
-      recommendToOthers: review.recommend_to_others,
-      createdAt: review.created_at,
-      updatedAt: review.updated_at,
-      reviewer: {
-        id: review.reviewer.id,
-        name: review.reviewer.full_name || review.reviewer.username,
-        username: review.reviewer.username,
-        avatarUrl: review.reviewer.avatar_url
+      if (error) {
+        console.error('Error fetching game reviews:', error);
+        return [];
       }
-    }));
+
+      return data || [];
+    } catch (error) {
+      console.log('⚠️ game_reviews table not found, returning empty array');
+      return [];
+    }
   }
 
   static async getGameRatingSummary(gameId: string): Promise<any> {

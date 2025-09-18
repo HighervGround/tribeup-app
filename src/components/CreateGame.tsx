@@ -128,15 +128,14 @@ function CreateGame() {
     const updateSportDefaults = async () => {
       if (formData.sport) {
         try {
-          const defaultDuration = await systemConfig.getSportDefault(
-            formData.sport, 
-            'duration', 
+          const defaultDuration = await systemConfig.get(
+            `sport_${formData.sport}_duration`, 
             60
           );
           
           setFormData(prev => ({
             ...prev,
-            duration: defaultDuration.toString()
+            duration: defaultDuration ? defaultDuration.toString() : '60'
           }));
         } catch (error) {
           console.error('Error loading sport defaults:', error);

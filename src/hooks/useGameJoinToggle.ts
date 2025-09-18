@@ -53,6 +53,11 @@ export function useGameJoinToggle() {
   }, [joinGameMutation, leaveGameMutation]);
   
   /**
+   * Check if join/leave operations are currently loading
+   */
+  const isLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
+  
+  /**
    * Get the appropriate button text based on game state and loading
    * @param game - Game object with isJoined status
    * @returns Button text string
@@ -60,12 +65,7 @@ export function useGameJoinToggle() {
   const getButtonText = useCallback((game: Game) => {
     if (isLoading) return '...';
     return game.isJoined ? 'Leave' : 'Join';
-  }, [joinGameMutation.isPending, leaveGameMutation.isPending]);
-  
-  /**
-   * Check if join/leave operations are currently loading
-   */
-  const isLoading = joinGameMutation.isPending || leaveGameMutation.isPending;
+  }, [isLoading]);
   
   /**
    * Get appropriate button variant based on game state

@@ -274,7 +274,17 @@ function GameDetails() {
   const tags: string[] | undefined = game ? (game as any).tags : undefined;
 
   // Check if current user is the game creator
-  const isGameCreator = user && game && game.createdBy === user.id;
+  const isGameCreator = user && game && (game.creatorId === user.id || game.createdBy === user.id);
+  
+  // Debug logging for dropdown visibility
+  console.log('🔍 Dropdown Debug:', {
+    user: user?.id,
+    game: game?.id,
+    creatorId: game?.creatorId,
+    createdBy: game?.createdBy,
+    isGameCreator,
+    shouldShowDropdown: isGameCreator
+  });
 
   // Check if game is completed and user participated
   const isGameCompleted = useMemo(() => {
@@ -477,32 +487,45 @@ function GameDetails() {
             >
               <Share className="w-5 h-5" />
             </Button>
-            {isGameCreator && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+            <DropdownMenu onOpenChange={(open) => console.log('Dropdown open state:', open)}>
+              <DropdownMenuTrigger asChild>
+                <div>
                   <Button 
                     variant="ghost" 
                     size="icon"
                     aria-label="Game options"
+                    onClick={(e) => {
+                      console.log('Dropdown trigger clicked', e);
+                      e.stopPropagation();
+                    }}
+                    style={{ display: isGameCreator ? 'flex' : 'none' }}
                   >
                     <MoreVertical className="w-5 h-5" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleEditGame}>
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Edit Game
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => setShowDeleteDialog(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Cancel Game
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-[9999]">
+                <DropdownMenuItem onClick={(e) => {
+                  console.log('Edit game clicked');
+                  e.stopPropagation();
+                  handleEditGame();
+                }}>
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Edit Game
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    console.log('Delete game clicked');
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Cancel Game
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button 
               variant="ghost" 
               size="icon"

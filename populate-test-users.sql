@@ -77,6 +77,17 @@ INSERT INTO public.users (
 ),
 (
   gen_random_uuid(),
+  'Cole Guyton',
+  'coleguyton',
+  'coleguyton@gmail.com',
+  'TribeUp Admin and Developer',
+  'San Francisco, CA',
+  'admin',
+  NOW(),
+  NOW()
+),
+(
+  gen_random_uuid(),
   'David Kim',
   'davidk',
   'david.kim@example.com',

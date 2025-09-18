@@ -32,11 +32,25 @@ function OtherUserProfile() {
   // Use React Query hook for data fetching
   const { data: user, isLoading: loading, error } = useUserProfile(userId || '');
 
-  if (!user) {
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error or user not found
+  if (error || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl mb-4">User not found</h1>
+          <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist or has been removed.</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </div>

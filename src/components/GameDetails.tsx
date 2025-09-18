@@ -35,6 +35,7 @@ import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
 import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
+import { PostGameRatingModal } from './PostGameRatingModal';
 import { toast } from 'sonner';
 import { WeatherService, WeatherData } from '../lib/weatherService';
 import { SupabaseService } from '../lib/supabaseService';
@@ -237,6 +238,8 @@ function GameDetails() {
   const [showInvite, setShowInvite] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [editActionLoading, setEditActionLoading] = useState(false);
   const [editFormData, setEditFormData] = useState({
     title: '',
     description: '',
@@ -249,11 +252,64 @@ function GameDetails() {
   
   // Process participants data to mark the host correctly
   const players = useMemo(() => {
+    if (!participants || !game) return [];
     return participants.map(player => ({
       ...player,
       isHost: player.id === game?.creator_id
     }));
   }, [participants, game?.creator_id]);
+
+  // Precompute formatted date/time labels for header and calendar
+  const headerInfo = useMemo(() => {
+    if (!game) return { label: '', aria: '' };
+    return formatEventHeader(game.date, game.time);
+  }, [game?.date, game?.time]);
+
+  const calendarInfo = useMemo(() => {
+    if (!game) return { date: '', time: '' };
+    return formatCalendarInfo(game.date, game.time);
+  }, [game?.date, game?.time]);
+
+  const isFull = game ? game.currentPlayers >= game.maxPlayers : false;
+  const tags: string[] | undefined = game ? (game as any).tags : undefined;
+
+  // Check if current user is the game creator
+  const isGameCreator = user && game && game.createdBy === user.id;
+
+  // Check if game is completed and user participated
+  const isGameCompleted = useMemo(() => {
+    if (!game) return false;
+    const gameDateTime = new Date(`${game.date} ${game.time}`);
+    const now = new Date();
+    return gameDateTime < now;
+  }, [game?.date, game?.time]);
+
+  const userParticipated = useMemo(() => {
+    if (!user || !game) return false;
+    return game.isJoined || isGameCreator;
+  }, [user, game?.isJoined, isGameCreator]);
+
+  // Show rating modal for completed games where user participated
+  useEffect(() => {
+    if (isGameCompleted && userParticipated && user && !showRatingModal && gameId) {
+      // Check if user has already rated this game
+      const checkExistingRating = async () => {
+        try {
+          const reviews = await SupabaseService.getGameReviews(gameId);
+          const userReview = reviews.find(review => review.reviewer_id === user.id);
+          
+          if (!userReview) {
+            setShowRatingModal(true);
+          }
+        } catch (error) {
+          // No existing review found, show modal
+          setShowRatingModal(true);
+        }
+      };
+      
+      checkExistingRating();
+    }
+  }, [isGameCompleted, userParticipated, user, gameId, showRatingModal]);
   
   // Handle loading and error states - AFTER all hooks
   if (isLoading) {
@@ -279,12 +335,6 @@ function GameDetails() {
     );
   }
 
-  // Precompute formatted date/time labels for header and calendar
-  const headerInfo = formatEventHeader(game.date, game.time);
-  const calendarInfo = formatCalendarInfo(game.date, game.time);
-
-  const isFull = game.currentPlayers >= game.maxPlayers;
-  const tags: string[] | undefined = (game as any).tags;
 
   const handleJoinLeave = async () => {
     // Prevent multiple rapid clicks
@@ -363,7 +413,7 @@ function GameDetails() {
   const handleSaveEdit = async () => {
     if (!gameId) return;
     
-    setActionLoading(true);
+    setEditActionLoading(true);
     try {
       await SupabaseService.updateGame(gameId, editFormData);
       toast.success('Game updated successfully');
@@ -375,14 +425,14 @@ function GameDetails() {
         description: error.message || 'Please try again later'
       });
     } finally {
-      setActionLoading(false);
+      setEditActionLoading(false);
     }
   };
 
   const handleDeleteGame = async () => {
     if (!gameId) return;
     
-    setActionLoading(true);
+    setEditActionLoading(true);
     try {
       await SupabaseService.deleteGame(gameId, deleteReason);
       toast.success('Game cancelled successfully');
@@ -393,12 +443,9 @@ function GameDetails() {
         description: error.message || 'Please try again later'
       });
     } finally {
-      setActionLoading(false);
+      setEditActionLoading(false);
     }
   };
-
-  // Check if current user is the game creator
-  const isGameCreator = user && game && game.createdBy === user.id;
 
   return (
     <div className="min-h-screen bg-background">
@@ -857,8 +904,8 @@ function GameDetails() {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={actionLoading}>
-              {actionLoading ? (
+            <Button onClick={handleSaveEdit} disabled={editActionLoading}>
+              {editActionLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Saving...
@@ -901,9 +948,9 @@ function GameDetails() {
             <Button 
               variant="destructive" 
               onClick={handleDeleteGame} 
-              disabled={actionLoading}
+              disabled={editActionLoading}
             >
-              {actionLoading ? (
+              {editActionLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Cancelling...
@@ -915,6 +962,15 @@ function GameDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Post Game Rating Modal */}
+      <PostGameRatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        gameId={gameId!}
+        gameTitle={game?.title || ''}
+        players={players}
+      />
     </div>
   );
 }

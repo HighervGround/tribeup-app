@@ -121,6 +121,13 @@ export class SupabaseService {
   static async getUserProfile(userId: string): Promise<User | null> {
     try {
       console.log('🔍 Getting user profile for:', userId);
+      console.log('🔍 User ID type:', typeof userId, 'Length:', userId?.length);
+      
+      // Validate userId format
+      if (!userId || userId.trim() === '') {
+        console.log('❌ Invalid user ID provided:', userId);
+        return null;
+      }
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -130,18 +137,29 @@ export class SupabaseService {
       const queryPromise = supabase
         .from('users')
         .select('*')
-        .eq('id', userId)
-        .single();
+        .eq('id', userId.trim())
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
       
+      console.log('🔍 Executing query for user ID:', userId.trim());
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       if (error) {
-        console.log('❌ getUserProfile error:', error.code, error.message);
-        if (error.code === 'PGRST116') return null; // No rows returned
-        throw error;
+        console.log('❌ getUserProfile error:', error.code, error.message, error);
+        return null;
       }
 
-      console.log('✅ User profile loaded:', data?.id);
+      if (!data) {
+        console.log('❌ No user found for ID:', userId);
+        // Let's also check if there are any users in the table
+        const { data: allUsers, error: countError } = await supabase
+          .from('users')
+          .select('id, name')
+          .limit(5);
+        console.log('🔍 Sample users in database:', allUsers?.map(u => ({ id: u.id, name: u.name })));
+        return null;
+      }
+
+      console.log('✅ User profile loaded:', data?.id, data?.name);
       return transformUserFromDB(data);
     } catch (error) {
       console.error('❌ getUserProfile failed:', error);
@@ -1039,30 +1057,93 @@ export class SupabaseService {
   }
 
   static async getGameParticipants(gameId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('game_participants')
-      .select(`
-        *,
-        user:users!game_participants_user_id_fkey(id, full_name, username, avatar_url)
-      `)
-      .eq('game_id', gameId);
+    try {
+      // First, get the participant user IDs
+      const { data: participants, error: participantsError } = await supabase
+        .from('game_participants')
+        .select('user_id, joined_at')
+        .eq('game_id', gameId);
 
-    if (error) throw error;
+      if (participantsError) throw participantsError;
 
-    console.log('🔍 Raw participants data:', data);
+      console.log('🔍 Raw participants data:', participants);
 
-    return data.map(participant => {
-      const user = (participant as any).user;
-      console.log('🔍 Processing participant:', participant, 'user:', user);
-      
-      return {
-        id: user?.id ?? 'unknown',
-        name: user?.full_name || user?.username || user?.email?.split('@')[0] || `User ${user?.id?.slice(0, 8) || 'Guest'}`,
-        avatar: user?.avatar_url || null, // Use actual avatar URL from user profile
-        isHost: false, // We'll determine this separately by checking if user is game creator
-        rating: 4.5 // Default rating - in real app this would come from a ratings table
-      };
-    });
+      if (!participants || participants.length === 0) {
+        return [];
+      }
+
+      // Then fetch user details for each participant
+      const userIds = participants.map(p => p.user_id);
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, full_name, username, avatar_url, email')
+        .in('id', userIds);
+
+      if (usersError) {
+        console.error('❌ Error fetching user details:', usersError);
+        // Fallback: return participants with basic info
+        return participants.map(participant => ({
+          id: participant.user_id,
+          name: `User ${participant.user_id.slice(0, 8)}`,
+          avatar: null,
+          isHost: false,
+          rating: 4.5
+        }));
+      }
+
+      console.log('🔍 Fetched user details:', users);
+
+      // Combine participant and user data
+      return participants.map(participant => {
+        const user = users?.find(u => u.id === participant.user_id);
+        console.log('🔍 Processing participant:', participant.user_id, 'user:', user);
+        
+        return {
+          id: participant.user_id,
+          name: user?.full_name || user?.username || user?.email?.split('@')[0] || `User ${participant.user_id.slice(0, 8)}`,
+          avatar: user?.avatar_url || null,
+          isHost: false, // We'll determine this separately by checking if user is game creator
+          rating: 4.5 // Default rating - in real app this would come from a ratings table
+        };
+      });
+    } catch (error) {
+      console.error('❌ getGameParticipants failed:', error);
+      return [];
+    }
+  }
+
+  // Development helper to create test users
+  static async createTestUser(userData: {
+    id?: string;
+    full_name: string;
+    username: string;
+    email: string;
+    bio?: string;
+    location?: string;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          id: userData.id || crypto.randomUUID(),
+          full_name: userData.full_name,
+          username: userData.username,
+          email: userData.email,
+          bio: userData.bio || '',
+          location: userData.location || '',
+          role: 'user',
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      console.log('✅ Test user created:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Failed to create test user:', error);
+      throw error;
+    }
   }
 
   // Real-time subscriptions
@@ -1377,13 +1458,28 @@ export class SupabaseService {
           description,
           icon,
           category,
-          points
+          criteria,
+          points,
+          is_active
         )
       `)
       .eq('user_id', userId)
       .order('earned_at', { ascending: false });
 
     if (error) throw error;
+
+    return data || [];
+  }
+
+  static async getAllAchievements() {
+    const { data, error } = await supabase
+      .from('achievements')
+      .select('*')
+      .eq('is_active', true)
+      .order('points', { ascending: true });
+
+    if (error) throw error;
+
     return data || [];
   }
 

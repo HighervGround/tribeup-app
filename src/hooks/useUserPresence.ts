@@ -1,86 +1,108 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-interface UserPresence {
-  userId: string;
-  lastSeen: Date;
-  isOnline: boolean;
+interface OnlineUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  lastSeen: string;
 }
 
 export function useUserPresence() {
-  const [onlineUsers, setOnlineUsers] = useState<UserPresence[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [onlineCount, setOnlineCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let presenceChannel: any;
+    let heartbeatInterval: NodeJS.Timeout;
 
-    // Set up real-time presence tracking
-    const setupPresence = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Create presence channel
-      presenceChannel = supabase.channel('user-presence', {
-        config: {
-          presence: {
-            key: user.id,
-          },
-        },
-      });
-
-      // Track presence changes
-      presenceChannel
-        .on('presence', { event: 'sync' }, () => {
-          const state = presenceChannel.presenceState();
-          const users = Object.values(state).flat().map((presence: any) => ({
-            userId: presence.user_id || presence.key,
-            lastSeen: new Date(),
-            isOnline: true
-          }));
-          setOnlineUsers(users);
+    const initializePresence = async () => {
+      try {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
           setIsLoading(false);
-        })
-        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-          console.log('User joined:', key, newPresences);
-          // Update online users when someone joins
-          setOnlineUsers(prev => {
-            const existingUserIds = prev.map(u => u.userId);
-            const newUsers = newPresences
-              .filter((p: any) => !existingUserIds.includes(p.user_id || key))
-              .map((p: any) => ({
-                userId: p.user_id || key,
-                lastSeen: new Date(),
-                isOnline: true
-              }));
-            return [...prev, ...newUsers];
+          return;
+        }
+
+        // Get user profile for display info
+        const { data: profile } = await supabase
+          .from('users')
+          .select('full_name, username, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        // Create presence channel
+        presenceChannel = supabase.channel('online_users', {
+          config: {
+            presence: {
+              key: user.id,
+            },
+          },
+        });
+
+        // Track presence state
+        presenceChannel
+          .on('presence', { event: 'sync' }, () => {
+            const presenceState = presenceChannel.presenceState();
+            const users = Object.keys(presenceState).map(userId => {
+              const presence = presenceState[userId][0];
+              return {
+                id: userId,
+                name: presence.name || 'Anonymous',
+                avatar: presence.avatar,
+                lastSeen: new Date().toISOString()
+              };
+            });
+            
+            setOnlineUsers(users);
+            setOnlineCount(users.length);
+            setIsLoading(false);
+          })
+          .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+            console.log('User joined:', key, newPresences);
+          })
+          .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+            console.log('User left:', key, leftPresences);
           });
-        })
-        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-          console.log('User left:', key, leftPresences);
-          // Remove users who left
-          setOnlineUsers(prev => 
-            prev.filter(user => 
-              !leftPresences.some((p: any) => (p.user_id || key) === user.userId)
-            )
-          );
-        })
-        .subscribe(async (status) => {
+
+        // Subscribe and track presence
+        await presenceChannel.subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
+            // Send initial presence
             await presenceChannel.track({
               user_id: user.id,
+              name: profile?.full_name || profile?.username || 'Anonymous',
+              avatar: profile?.avatar_url,
               online_at: new Date().toISOString(),
             });
+
+            // Set up heartbeat to maintain presence
+            heartbeatInterval = setInterval(async () => {
+              await presenceChannel.track({
+                user_id: user.id,
+                name: profile?.full_name || profile?.username || 'Anonymous',
+                avatar: profile?.avatar_url,
+                online_at: new Date().toISOString(),
+              });
+            }, 30000); // Update every 30 seconds
           }
         });
+
+      } catch (error) {
+        console.error('Failed to initialize presence:', error);
+        setIsLoading(false);
+      }
     };
 
-    setupPresence();
+    initializePresence();
 
     // Cleanup
     return () => {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
       if (presenceChannel) {
         presenceChannel.unsubscribe();
       }
@@ -89,7 +111,7 @@ export function useUserPresence() {
 
   return {
     onlineUsers,
-    onlineCount: onlineUsers.length,
+    onlineCount,
     isLoading
   };
 }

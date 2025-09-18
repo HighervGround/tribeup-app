@@ -42,7 +42,6 @@ export function useSupabaseRealtime({
   });
 
   const [messages, setMessages] = useState<any[]>([]);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const { user } = useAppStore();
 
   const channelRef = useRef<any>(null);
@@ -93,9 +92,8 @@ export function useSupabaseRealtime({
 
       channelRef.current = { gameChannel, chatChannel };
 
-      // Load existing messages
-      const existingMessages = await SupabaseService.getChatMessages(gameId);
-      setMessages(existingMessages);
+      // Initial connection established
+      setMessages([]);
 
       setState(prev => ({ 
         ...prev, 
@@ -141,8 +139,6 @@ export function useSupabaseRealtime({
       error: null,
       lastPing: null
     });
-    
-    setOnlineUsers(new Set());
   }, []);
 
   const handleConnectionError = useCallback((error: any) => {
@@ -162,18 +158,15 @@ export function useSupabaseRealtime({
   }, [connect]);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!state.isConnected) {
-      toast.error('Not connected to chat');
-      return;
-    }
-
+    if (!user || !gameId) return;
+    
     try {
-      await SupabaseService.sendMessage(gameId, content);
+      // Message sending functionality removed
+      console.log('Message sending not implemented:', content);
     } catch (error) {
       console.error('Failed to send message:', error);
-      toast.error('Failed to send message');
     }
-  }, [state.isConnected, gameId]);
+  }, [user, gameId]);
 
   // Auto-connect on mount
   useEffect(() => {
@@ -192,7 +185,6 @@ export function useSupabaseRealtime({
     
     // Data
     messages,
-    onlineUsers: Array.from(onlineUsers),
     
     // Actions
     connect,
@@ -200,7 +192,6 @@ export function useSupabaseRealtime({
     sendMessage,
     
     // Utilities
-    isUserOnline: (userId: string) => onlineUsers.has(userId)
   };
 }
 

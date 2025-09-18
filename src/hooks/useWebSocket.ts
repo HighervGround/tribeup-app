@@ -51,14 +51,13 @@ export function useWebSocket({
 
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     switch (message.type) {
@@ -67,15 +66,20 @@ export function useWebSocket({
         break;
         
       case 'typing':
-        setTypingUsers(prev => {
-          const newSet = new Set(prev);
-          if (message.metadata?.isTyping) {
-            newSet.add(message.userId);
-          } else {
-            newSet.delete(message.userId);
+        if (message.userId && message.userId !== userId) {
+          setTypingUsers(prev => new Set(prev).add(message.userId!));
+          // Clear typing after 3 seconds
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
           }
-          return newSet;
-        });
+          typingTimeoutRef.current = setTimeout(() => {
+            setTypingUsers(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(message.userId!);
+              return newSet;
+            });
+          }, 3000);
+        }
         break;
         
       case 'user_joined':
@@ -269,6 +273,7 @@ export function useWebSocket({
     // Data
     messages,
     typingUsers: Array.from(typingUsers).filter(id => id !== userId),
+    onlineUsers: Array.from(onlineUsers).filter(id => id !== userId),
     
     // Actions
     connect,
@@ -278,6 +283,7 @@ export function useWebSocket({
     stopTyping,
     
     // Utilities
-    isUserTyping: (userId: string) => typingUsers.has(userId)
+    isUserTyping: (userId: string) => typingUsers.has(userId),
+    isUserOnline: (userId: string) => onlineUsers.has(userId)
   };
 }

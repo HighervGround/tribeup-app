@@ -5,10 +5,10 @@ import { Plus, RefreshCw, MapPin, Clock, Users } from 'lucide-react';
 import { formatEventHeader, formatCalendarInfo, formatTimeString } from '../lib/dateUtils';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
+import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
-import { OnlinePlayersWidget } from './OnlinePlayersWidget';
 
 
 
@@ -21,7 +21,8 @@ function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
-  
+  // Real-time presence tracking (no polling)
+  const { onlineCount, isLoading: presenceLoading } = useUserPresence();
   
   // Game selection handler
   const handleGameSelect = (gameId: string) => {
@@ -48,9 +49,10 @@ function HomeScreen() {
 
     return {
       totalGames: games.length,
-      thisWeekGames
+      thisWeekGames,
+      onlinePlayers: onlineCount
     };
-  }, [games]);
+  }, [games, onlineCount]);
 
   // No need for manual loading with React Query
 
@@ -190,10 +192,16 @@ function HomeScreen() {
             </div>
 
             {/* Quick Stats - Mobile */}
-            <div className="grid grid-cols-2 gap-4 mb-6 lg:hidden">
+            <div className="grid grid-cols-3 gap-4 mb-6 lg:hidden">
               <div className="bg-card rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-primary">{stats.totalGames}</div>
                 <div className="text-sm text-muted-foreground">Active Games</div>
+              </div>
+              <div className="bg-card rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-primary">
+                  {presenceLoading ? '...' : stats.onlinePlayers}
+                </div>
+                <div className="text-sm text-muted-foreground">Players Online</div>
               </div>
               <div className="bg-card rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-primary">{stats.thisWeekGames}</div>
@@ -248,22 +256,22 @@ function HomeScreen() {
 
           {/* Sidebar - Desktop Only */}
           <div className="hidden lg:block lg:col-span-4">
-            <div className="space-y-4 sticky top-6">
-              {/* Online Players Widget */}
-              <OnlinePlayersWidget />
-              
-              {/* Quick Stats */}
-              <div className="bg-card rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Active Games</span>
-                    <span className="font-semibold">{stats.totalGames}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">This Week</span>
-                    <span className="font-semibold">{stats.thisWeekGames}</span>
-                  </div>
+            <div className="bg-card rounded-lg p-6 sticky top-6">
+              <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Active Games</span>
+                  <span className="font-semibold">{stats.totalGames}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Players Online</span>
+                  <span className="font-semibold">
+                    {presenceLoading ? '...' : stats.onlinePlayers}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">This Week</span>
+                  <span className="font-semibold">{stats.thisWeekGames}</span>
                 </div>
               </div>
             </div>

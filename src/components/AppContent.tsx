@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { BottomNavigation } from './BottomNavigation';
 import { DesktopLayout } from './DesktopLayout';
 import { useAppStore } from '../store/appStore';
+import { useUserPresence } from '../hooks/useUserPresence';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { useResponsive } from '../hooks/useResponsive';
 import { toast } from 'sonner';

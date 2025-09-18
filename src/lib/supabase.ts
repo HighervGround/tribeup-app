@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
 // Environment variables - these will need to be set in your .env file
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
 // Environment variables loaded successfully - FORCE DEPLOYMENT v3 - ALL FIXES INCLUDED
 console.log('🚀 App starting with environment variables:', {
@@ -43,7 +43,7 @@ const createSupabaseClient = () =>
     },
     realtime: {
       params: {
-        eventsPerSecond: 10,
+        eventsPerSecond: 2, // Reduced from 10 to prevent excessive connections
       },
     },
   });
@@ -75,13 +75,17 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   imageUrl: dbGame.image_url || '',
   sportColor: getSportColor(dbGame.sport),
   isJoined,
-  createdBy: dbGame.creator?.full_name || dbGame.creator?.username || dbGame.creator_id,
+  createdBy: dbGame.creator?.full_name || dbGame.creator?.username || `User ${dbGame.creator_id?.slice(0, 8) || 'Unknown'}`,
   creatorId: dbGame.creator_id,
   creatorData: dbGame.creator ? {
     id: dbGame.creator.id,
     name: dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`,
     avatar: dbGame.creator.avatar_url || ''
-  } : null,
+  } : {
+    id: dbGame.creator_id,
+    name: `User ${dbGame.creator_id?.slice(0, 8) || 'Unknown'}`,
+    avatar: ''
+  },
   createdAt: dbGame.created_at,
 });
 

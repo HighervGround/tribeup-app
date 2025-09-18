@@ -106,17 +106,23 @@ function CreateGame() {
         const timeSlots = await systemConfig.get<string[]>('quick_time_slots', [
           '09:00', '12:00', '15:00', '17:00', '18:00', '19:00', '20:00', '21:00'
         ]);
-        setQuickTimes(timeSlots);
+        setQuickTimes(timeSlots || DEFAULT_QUICK_TIMES);
 
         // Load default max players
         const defaultMaxPlayers = await systemConfig.get<number>('max_players_per_game', 10);
         
         setFormData(prev => ({
           ...prev,
-          maxPlayers: defaultMaxPlayers.toString()
+          maxPlayers: (defaultMaxPlayers || 10).toString()
         }));
       } catch (error) {
         console.error('Error loading system config:', error);
+        // Ensure we have fallback values even if config loading fails
+        setQuickTimes(DEFAULT_QUICK_TIMES);
+        setFormData(prev => ({
+          ...prev,
+          maxPlayers: '10'
+        }));
       }
     };
 
@@ -195,99 +201,9 @@ function CreateGame() {
     }
   });
 
-  // Auto-populate location when GPS is available and location field is empty
-  useEffect(() => {
-    console.log('Location effect triggered:', { 
-      userLat, 
-      userLng, 
-      location: formData.location, 
-      latitude: formData.latitude,
-      geoError 
-    });
-    
-    // Only auto-fill if we have GPS coordinates and no location is set yet
-    if (userLat && userLng && !formData.location.trim()) {
-      console.log('Auto-filling location with GPS coordinates');
-      
-      // Auto-fill with coordinates and try to get address
-      const autoFillLocation = async () => {
-        try {
-          console.log('Fetching reverse geocoding for:', userLat, userLng);
-          
-          // Try Google Geocoding API first if available
-          const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_PLACES_API_KEY;
-          let response;
-          
-          if (googleApiKey) {
-            response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${userLat},${userLng}&key=${googleApiKey}`
-            );
-          } else {
-            response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1`
-            );
-          }
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          const data = await response.json();
-          console.log('Reverse geocoding response:', data);
-          
-          // Create a more readable address
-          let address = '';
-          
-          if (googleApiKey && data.results && data.results.length > 0) {
-            // Google Geocoding API response
-            address = data.results[0].formatted_address;
-          } else if (data.address) {
-            // OpenStreetMap response
-            const parts: string[] = [];
-            if (data.address.house_number && data.address.road) {
-              parts.push(`${data.address.house_number} ${data.address.road}`);
-            } else if (data.address.road) {
-              parts.push(data.address.road);
-            }
-            if (data.address.city || data.address.town || data.address.village) {
-              parts.push(data.address.city || data.address.town || data.address.village);
-            }
-            if (data.address.state) {
-              parts.push(data.address.state);
-            }
-            address = parts.join(', ');
-          }
-          
-          // Fallback to display_name if address parsing fails
-          if (!address) {
-            address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
-          }
-          
-          console.log('Setting location to:', address);
-          setFormData(prev => ({
-            ...prev,
-            location: address,
-            latitude: userLat,
-            longitude: userLng
-          }));
-        } catch (error) {
-          console.error('Reverse geocoding failed:', error);
-          // Fallback to coordinates if reverse geocoding fails
-          const fallbackLocation = `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
-          console.log('Using fallback location:', fallbackLocation);
-          
-          setFormData(prev => ({
-            ...prev,
-            location: fallbackLocation,
-            latitude: userLat,
-            longitude: userLng
-          }));
-        }
-      };
-      
-      autoFillLocation();
-    }
-  }, [userLat, userLng, geoError]);
+  // Note: Removed auto-populate location to avoid interfering with user input
+  // Users can manually click the location button to use their current location
+  // This prevents the location field from being auto-filled and interfering with search suggestions
 
   useEffect(() => {
     if (!user) {
@@ -449,7 +365,8 @@ function CreateGame() {
       
       // Auto-set max players based on sport
       if (name === 'sport' && sportDefaults[value.toLowerCase()]) {
-        newData.maxPlayers = sportDefaults[value.toLowerCase()].maxPlayers.toString();
+        const sportDefault = sportDefaults[value.toLowerCase()];
+        newData.maxPlayers = (sportDefault?.maxPlayers || 10).toString();
       }
       
       // Save location to recent locations
@@ -487,21 +404,15 @@ function CreateGame() {
       });
     }
     
-    // Auto-advance to next step when current step is complete
-    setTimeout(() => {
-      if (isStepComplete(currentStep) && !Object.keys(errors).length) {
-        if (currentStep < steps.length) {
-          setCurrentStep(currentStep + 1);
-        }
-      }
-    }, 500);
+    // Note: Removed auto-advance to give users full control over form progression
+    // Users can manually click "Next" when ready to proceed
   };
   
   const isStepComplete = (step: number): boolean => {
     const stepFields = steps[step - 1]?.fields || [];
     const isComplete = stepFields.every(field => {
       const value = formData[field as keyof typeof formData];
-      return value && value.toString().trim() !== '';
+      return value != null && value.toString().trim() !== '';
     });
     
     console.log('[CreateGame] isStepComplete - Step:', step, 'Fields:', stepFields, 'Complete:', isComplete, 'FormData:', formData);
@@ -783,7 +694,7 @@ function CreateGame() {
                   
                   {/* Quick Time Buttons */}
                   <div className="grid grid-cols-4 gap-2">
-                    {quickTimes.map((timeOption) => (
+                    {(quickTimes || DEFAULT_QUICK_TIMES).map((timeOption) => (
                       <button
                         key={timeOption}
                         type="button"

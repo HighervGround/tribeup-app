@@ -55,21 +55,42 @@ export type Database = {
       }
       game_participants: {
         Row: {
+          created_at: string | null
           game_id: string | null
           id: string
           joined_at: string | null
+          left_at: string | null
+          play_time_minutes: number | null
+          rating: number | null
+          review: string | null
+          status: 'joined' | 'left' | 'completed' | 'no_show' | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          created_at?: string | null
           game_id?: string | null
           id?: string
           joined_at?: string | null
+          left_at?: string | null
+          play_time_minutes?: number | null
+          rating?: number | null
+          review?: string | null
+          status?: 'joined' | 'left' | 'completed' | 'no_show' | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          created_at?: string | null
           game_id?: string | null
           id?: string
           joined_at?: string | null
+          left_at?: string | null
+          play_time_minutes?: number | null
+          rating?: number | null
+          review?: string | null
+          status?: 'joined' | 'left' | 'completed' | 'no_show' | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [

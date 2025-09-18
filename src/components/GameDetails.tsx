@@ -300,26 +300,27 @@ function GameDetails() {
   }, [user, game?.isJoined, isGameCreator]);
 
   // Show rating modal for completed games where user participated
-  useEffect(() => {
-    if (isGameCompleted && userParticipated && user && !showRatingModal && gameId) {
-      // Check if user has already rated this game
-      const checkExistingRating = async () => {
-        try {
-          const reviews = await SupabaseService.getGameReviews(gameId);
-          const userReview = reviews.find(review => review.reviewer_id === user.id);
-          
-          if (!userReview) {
-            setShowRatingModal(true);
-          }
-        } catch (error) {
-          // No existing review found, show modal
-          setShowRatingModal(true);
-        }
-      };
-      
-      checkExistingRating();
-    }
-  }, [isGameCompleted, userParticipated, user, gameId, showRatingModal]);
+  // DISABLED: Rating system tables/functions don't exist yet
+  // useEffect(() => {
+  //   if (isGameCompleted && userParticipated && user && !showRatingModal && gameId) {
+  //     // Check if user has already rated this game
+  //     const checkExistingRating = async () => {
+  //       try {
+  //         const reviews = await SupabaseService.getGameReviews(gameId);
+  //         const userReview = reviews.find(review => review.reviewer_id === user.id);
+  //         
+  //         if (!userReview) {
+  //           setShowRatingModal(true);
+  //         }
+  //       } catch (error) {
+  //         // No existing review found, show modal
+  //         setShowRatingModal(true);
+  //       }
+  //     };
+  //     
+  //     checkExistingRating();
+  //   }
+  // }, [isGameCompleted, userParticipated, user, gameId, showRatingModal]);
   
   // Handle loading and error states - AFTER all hooks
   if (isLoading) {

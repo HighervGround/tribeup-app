@@ -29,6 +29,9 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       }
       
       console.log('ProfileCheck: Starting profile check');
+      console.log('ProfileCheck: Current user from auth:', user);
+      console.log('ProfileCheck: Current app user from store:', appUser);
+      console.log('ProfileCheck: Current pathname:', window.location.pathname);
       
       // Don't check if we're already on the onboarding page
       if (window.location.pathname === '/onboarding') {
@@ -51,9 +54,11 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       }
 
       if (!user) {
-        console.log('ProfileCheck: No user, skipping check');
+        console.log('ProfileCheck: No authenticated user found - user needs to sign in');
+        console.log('ProfileCheck: Redirecting to auth page');
         hasChecked.current = true;
         setChecking(false);
+        // Don't redirect to onboarding if not authenticated - let ProtectedRoute handle this
         return;
       }
 
@@ -63,9 +68,25 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         
         // If we already have user data in the store, check if it's complete
         if (currentAppUser) {
-          // Check if we have the required user data
+          // Check if we have the required user data - be more lenient with existing users
           const hasRequiredData = currentAppUser.name && currentAppUser.email;
-          console.log('ProfileCheck: Has required data?', { hasRequiredData, currentAppUser });
+          const hasBasicProfile = currentAppUser.id && currentAppUser.email;
+          
+          console.log('ProfileCheck: Profile check', { 
+            hasRequiredData, 
+            hasBasicProfile, 
+            name: currentAppUser.name,
+            email: currentAppUser.email,
+            id: currentAppUser.id
+          });
+          
+          // If user has basic profile (id + email), consider them valid even without full name
+          if (hasBasicProfile) {
+            console.log('ProfileCheck: User has basic profile, allowing access');
+            hasChecked.current = true;
+            setChecking(false);
+            return;
+          }
           
           if (!hasRequiredData) {
             console.log('ProfileCheck: App user data incomplete, checking if we should redirect to onboarding');
@@ -105,9 +126,27 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           
           console.log('ProfileCheck: Loaded user profile', userProfile);
           
-          if (!userProfile || !(userProfile as any).name) {
-            // Profile doesn't exist or is incomplete, redirect to onboarding
-            console.log('ProfileCheck: Profile incomplete or missing, redirecting to onboarding');
+          if (!userProfile) {
+            // Profile doesn't exist, redirect to onboarding
+            console.log('ProfileCheck: Profile missing, redirecting to onboarding');
+            hasChecked.current = true;
+            setChecking(false);
+            navigate('/onboarding', { replace: true });
+            return;
+          }
+          
+          // For existing users, be more lenient - if they have an ID and email, let them through
+          const hasBasicData = (userProfile as any)?.id && (userProfile as any)?.email;
+          if (hasBasicData) {
+            console.log('ProfileCheck: User has basic data, allowing access');
+            hasChecked.current = true;
+            setChecking(false);
+            return;
+          }
+          
+          // Only redirect if truly incomplete
+          if (!(userProfile as any).name && !(userProfile as any).username) {
+            console.log('ProfileCheck: Profile incomplete (no name or username), redirecting to onboarding');
             hasChecked.current = true;
             setChecking(false);
             navigate('/onboarding', { replace: true });

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Location Search Test</title>
+</head>
+<body>
+    <h1>Location Search Test</h1>
+    <input type="text" id="locationInput" placeholder="Type a location..." style="width: 300px; padding: 10px;">
+    <div id="results" style="margin-top: 20px;"></div>
+    
+    <script>
+        const API_KEY = 'AIzaSyCs_MsE3qt74h6eIR04QJqmf2FYgSys4UQ';
+        
+        function initGoogleMaps() {
+            console.log('Google Maps loaded');
+            
+            const input = document.getElementById('locationInput');
+            const results = document.getElementById('results');
+            
+            input.addEventListener('input', function() {
+                const query = this.value;
+                if (query.length < 3) {
+                    results.innerHTML = '';
+                    return;
+                }
+                
+                console.log('Searching for:', query);
+                
+                const service = new google.maps.places.AutocompleteService();
+                const request = {
+                    input: query,
+                    types: ['establishment', 'geocode']
+                };
+                
+                service.getPlacePredictions(request, (predictions, status) => {
+                    console.log('Response:', { predictions, status });
+                    
+                    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                        results.innerHTML = predictions.map(p => 
+                            `<div style="padding: 5px; border: 1px solid #ccc; margin: 2px;">
+                                <strong>${p.structured_formatting.main_text}</strong><br>
+                                <small>${p.structured_formatting.secondary_text}</small>
+                            </div>`
+                        ).join('');
+                    } else {
+                        results.innerHTML = `<div>Error: ${status}</div>`;
+                    }
+                });
+            });
+        }
+        
+        // Load Google Maps
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initGoogleMaps`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

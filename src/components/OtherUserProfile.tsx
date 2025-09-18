@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import { 
   ArrowLeft, 
@@ -21,7 +21,7 @@ import {
 import { useGames } from '../hooks/useGames';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
-import { useUserProfile } from '../hooks/useUserProfile';
+import { useUserProfile, useUserStats } from '../hooks/useUserProfile';
 
 
 
@@ -31,6 +31,7 @@ function OtherUserProfile() {
   
   // Use React Query hook for data fetching
   const { data: user, isLoading: loading, error } = useUserProfile(userId || '');
+  const { data: userStats, isLoading: statsLoading } = useUserStats(userId || '');
 
   // Show loading state
   if (loading) {
@@ -131,7 +132,12 @@ function OtherUserProfile() {
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  <AvatarFallback className="text-2xl">{user.avatar}</AvatarFallback>
+                  {user.avatar && user.avatar.startsWith('http') ? (
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                  ) : null}
+                  <AvatarFallback className="text-2xl">
+                    {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                  </AvatarFallback>
                 </Avatar>
                 {(user as any).isVerified && (
                   <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
@@ -154,7 +160,9 @@ function OtherUserProfile() {
 
               <div className="flex items-center gap-4 pt-2">
                 <div className="text-center">
-                  <div className="text-xl">{(user as any).rating || '0.0'}</div>
+                  <div className="text-xl">
+                    {statsLoading ? '...' : (userStats?.averageRating?.toFixed(1) || '0.0')}
+                  </div>
                   <div className="text-sm text-muted-foreground flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current text-warning" />
                     Rating
@@ -162,22 +170,28 @@ function OtherUserProfile() {
                 </div>
                 <Separator orientation="vertical" className="h-8" />
                 <div className="text-center">
-                  <div className="text-xl">{(user as any).gamesHosted || 0}</div>
+                  <div className="text-xl">
+                    {statsLoading ? '...' : (userStats?.totalGamesHosted || 0)}
+                  </div>
                   <div className="text-sm text-muted-foreground">Hosted</div>
                 </div>
                 <Separator orientation="vertical" className="h-8" />
                 <div className="text-center">
-                  <div className="text-xl">{(user as any).gamesJoined || 0}</div>
+                  <div className="text-xl">
+                    {statsLoading ? '...' : (userStats?.totalGamesPlayed || 0)}
+                  </div>
                   <div className="text-sm text-muted-foreground">Joined</div>
                 </div>
               </div>
 
               <Button
-                onClick={handleMessage}
-                className="w-full max-w-xs"
+                disabled
+                variant="outline"
+                size="lg"
+                className="w-full max-w-xs opacity-50 cursor-not-allowed"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Send Message
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Messaging Coming Soon
               </Button>
             </div>
           </CardContent>
@@ -281,7 +295,7 @@ function OtherUserProfile() {
           </CardContent>
         </Card>
       </div>
-    // </motion.div>
+    </motion.div>
   );
 }
 

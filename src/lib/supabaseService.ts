@@ -1,5 +1,6 @@
 import { supabase, transformGameFromDB, transformUserFromDB, Database } from './supabase';
 import type { Game, User, UserPreferences } from '../store/appStore';
+import { envConfig } from './envConfig';
 
 // Types for database operations
 type GameRow = Database['public']['Tables']['games']['Row'];
@@ -160,7 +161,18 @@ export class SupabaseService {
       }
 
       console.log('✅ User profile loaded:', data?.id, data?.name);
-      return transformUserFromDB(data);
+      console.log('🔍 Raw user data from DB:', {
+        id: data?.id,
+        full_name: data?.full_name,
+        username: data?.username,
+        email: data?.email,
+        avatar_url: data?.avatar_url,
+        bio: data?.bio,
+        location: data?.location
+      });
+      const transformedUser = transformUserFromDB(data);
+      console.log('🔍 Transformed user (complete):', transformedUser);
+      return transformedUser;
     } catch (error) {
       console.error('❌ getUserProfile failed:', error);
       if (error instanceof Error && error.message === 'getUserProfile timeout') {
@@ -318,9 +330,10 @@ export class SupabaseService {
       const gameDateTime = new Date(`${game.date}T${game.time}`);
       const now = new Date();
       const hoursUntilGame = (gameDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const restrictionHours = envConfig.get('gameDeletionRestrictionHours');
       
-      if (hoursUntilGame < 4) {
-        throw new Error('Cannot delete game within 4 hours of start time');
+      if (hoursUntilGame < restrictionHours) {
+        throw new Error(`Cannot delete game within ${restrictionHours} hours of start time`);
       }
     }
 
@@ -776,13 +789,14 @@ export class SupabaseService {
       throw new Error('Only the game creator can edit this game');
     }
 
-    // Check time restrictions (can't edit within 2 hours of game time)
+    // Check time restrictions (configurable edit restriction)
     const gameDateTime = new Date(`${gameData.date}T${gameData.time}`);
     const now = new Date();
     const hoursUntilGame = (gameDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const restrictionHours = envConfig.get('gameEditRestrictionHours');
     
-    if (hoursUntilGame < 2) {
-      throw new Error('Cannot edit game within 2 hours of start time');
+    if (hoursUntilGame < restrictionHours) {
+      throw new Error(`Cannot edit game within ${restrictionHours} hours of start time`);
     }
 
     // Parse cost if provided
@@ -1400,7 +1414,8 @@ export class SupabaseService {
 
   // User Stats methods
   static async getUserStats(userId: string) {
-    const { data, error } = await supabase
+    // Get basic stats from user_stats table
+    const { data: basicStats, error } = await supabase
       .from('user_stats')
       .select('*')
       .eq('user_id', userId)
@@ -1410,8 +1425,18 @@ export class SupabaseService {
       throw error;
     }
 
-    // Return default stats if no record exists
-    return data || {
+    // Calculate average rating from game reviews
+    const { data: reviews } = await supabase
+      .from('game_reviews')
+      .select('rating')
+      .eq('reviewee_id', userId);
+
+    const averageRating = reviews && reviews.length > 0 
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+
+    // Return combined stats
+    const defaultStats = {
       user_id: userId,
       games_played: 0,
       games_hosted: 0,
@@ -1420,6 +1445,11 @@ export class SupabaseService {
       last_activity: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
+    };
+
+    return {
+      ...(basicStats || defaultStats),
+      average_rating: averageRating
     };
   }
 

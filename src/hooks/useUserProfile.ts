@@ -36,7 +36,17 @@ export function useUserStats(userId: string) {
     queryFn: async () => {
       if (!userId) throw new Error('User ID is required');
       try {
-        return await SupabaseService.getUserStats(userId);
+        const rawStats = await SupabaseService.getUserStats(userId);
+        // Map database fields to expected format
+        return {
+          totalGamesPlayed: rawStats.games_played || 0,
+          totalGamesHosted: rawStats.games_hosted || 0,
+          averageRating: rawStats.average_rating || 0,
+          totalPlayTime: rawStats.total_play_time_minutes || 0,
+          favoritesSports: rawStats.favorite_sport ? [rawStats.favorite_sport] : [],
+          completionRate: rawStats.completion_rate || 0,
+          totalDistance: rawStats.total_distance || 0,
+        };
       } catch (error) {
         // Return default stats if none exist
         return {

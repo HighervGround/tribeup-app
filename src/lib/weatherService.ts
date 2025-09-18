@@ -16,21 +16,28 @@ export interface WeatherForecast {
   daily: WeatherData[];
 }
 
+import { envConfig } from './envConfig';
+
 export class WeatherService {
-  private static readonly API_KEY = (import.meta as any).env?.VITE_OPENWEATHER_API_KEY || '3d49d90fb511ba08385a88435f10825c';
+  private static readonly API_KEY = envConfig.get('openWeatherApiKey');
   private static readonly BASE_URL = 'https://api.openweathermap.org/data/2.5';
   
-  // Weather configuration
+  // Weather configuration - now managed by environment config
   private static readonly CONFIG = {
-    temperatureUnit: 'fahrenheit',
-    updateInterval: 3600,
-    includeHourlyForecast: true,
-    rainThreshold: 0.1,
-    windThreshold: 15
+    temperatureUnit: envConfig.get('weatherTempUnit'),
+    updateInterval: envConfig.get('weatherUpdateInterval'),
+    includeHourlyForecast: envConfig.get('weatherIncludeHourly'),
+    rainThreshold: envConfig.get('weatherRainThreshold'),
+    windThreshold: envConfig.get('weatherWindThreshold')
   };
 
   // Get current weather for coordinates
   static async getCurrentWeather(lat: number, lng: number): Promise<WeatherData | null> {
+    if (!this.API_KEY) {
+      console.warn('Weather API key not configured, using mock data');
+      return this.getMockWeatherData();
+    }
+
     try {
       const response = await fetch(
         `${this.BASE_URL}/weather?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
@@ -50,6 +57,11 @@ export class WeatherService {
 
   // Get weather forecast for game time with 4-hour window analysis
   static async getGameWeather(lat: number, lng: number, gameDateTime: Date): Promise<WeatherData | null> {
+    if (!this.API_KEY) {
+      console.warn('Weather API key not configured, using mock data');
+      return this.getMockWeatherData();
+    }
+
     try {
       // Ensure coordinates are properly formatted (max 6 decimal places for precision)
       const formattedLat = parseFloat(lat.toFixed(6));
@@ -126,6 +138,11 @@ export class WeatherService {
 
   // Get weather by zipcode (more reliable for US locations)
   static async getWeatherByZipcode(zipcode: string, gameDateTime: Date): Promise<WeatherData | null> {
+    if (!this.API_KEY) {
+      console.warn('Weather API key not configured, using mock data');
+      return this.getMockWeatherData();
+    }
+
     try {
       console.log(`🌤️ Fetching weather for zipcode: ${zipcode}`);
       console.log(`🕐 Game time: ${gameDateTime.toISOString()}`);
@@ -346,7 +363,7 @@ export class WeatherService {
 
   // Check if weather API is configured
   static isConfigured(): boolean {
-    return this.API_KEY !== 'demo_key' && this.API_KEY.length > 0;
+    return !!this.API_KEY && this.API_KEY.length > 0;
   }
 
   // Get weather recommendation text

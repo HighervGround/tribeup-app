@@ -5,6 +5,7 @@ import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
 import { LoadingSpinner } from './ui/loading-spinner';
 import { User } from '@supabase/supabase-js';
+import { envConfig } from '../lib/envConfig';
 
 interface ProfileCheckProps {
   children?: React.ReactNode;
@@ -92,7 +93,7 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           const timeoutPromise = new Promise((_, reject) => {
             checkTimeoutRef.current = setTimeout(() => {
               reject(new Error('Profile check timeout'));
-            }, 5000); // 5 second timeout
+            }, envConfig.get('profileCheckTimeout'));
           });
           
           const userProfile = await Promise.race([profilePromise, timeoutPromise]);
@@ -137,15 +138,15 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
     };
   }, [user?.id, navigate]); // Only depend on user ID, not appUser to prevent store update loops
 
-  // Force timeout after 15 seconds to prevent infinite loading
+  // Force timeout to prevent infinite loading
   useEffect(() => {
     const forceTimeout = setTimeout(() => {
       if (checking) {
-        console.warn('ProfileCheck: Force timeout after 15 seconds');
+        console.warn(`ProfileCheck: Force timeout after ${envConfig.get('profileForceTimeout')}ms`);
         hasChecked.current = true;
         setChecking(false);
       }
-    }, 15000);
+    }, envConfig.get('profileForceTimeout'));
 
     return () => clearTimeout(forceTimeout);
   }, [checking]);

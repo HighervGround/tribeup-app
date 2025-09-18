@@ -1415,9 +1415,10 @@ export class SupabaseService {
         .eq('user_id', userId)
         .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      throw error;
-    }
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('❌ getUserStats database error:', error);
+        throw error;
+      }
 
     // Calculate average rating from game reviews (skip if table doesn't exist)
     let reviews: any[] = [];
@@ -1453,6 +1454,7 @@ export class SupabaseService {
         average_rating: averageRating
       };
     } catch (error) {
+      console.error('❌ getUserStats failed:', error);
       console.log('⚠️ getUserStats failed, returning default stats');
       const defaultStats = {
         user_id: userId,
@@ -1489,12 +1491,14 @@ export class SupabaseService {
         .limit(limit);
 
       if (error) {
+        console.error('❌ getUserRecentGames database error:', error);
         console.log('⚠️ getUserRecentGames error, returning empty array:', error.message);
         return [];
       }
 
       return data || [];
     } catch (error) {
+      console.error('❌ getUserRecentGames catch block error:', error);
       console.log('⚠️ getUserRecentGames failed, returning empty array');
       return [];
     }

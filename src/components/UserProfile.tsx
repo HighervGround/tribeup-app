@@ -4,22 +4,42 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Settings, Trophy, Calendar, MapPin, Star } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Settings, Trophy, Calendar, MapPin, Star, Target } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
+import { useAchievements } from '../hooks/useAchievements';
+import { AchievementGrid } from './AchievementBadge';
+import { AchievementProgressIndicator, GameProgressWidget } from './AchievementProgressIndicator';
 import { formatTimeString } from '../lib/dateUtils';
 
 function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAppStore();
+  const [activeTab, setActiveTab] = useState('overview');
   
   // Use React Query hooks for data fetching
   const { data: stats, isLoading: statsLoading } = useUserStats(user?.id || '');
   const { data: recentGamesData = [], isLoading: recentGamesLoading } = useUserRecentGames(user?.id || '', 5);
   const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(user?.id || '');
   
+  // Use achievements hook for progress tracking
+  const { userStats: achievementStats, getNextAchievements } = useAchievements();
+  const [nextAchievements, setNextAchievements] = useState<any[]>([]);
+  
   const loading = statsLoading || recentGamesLoading || achievementsLoading;
+
+  // Load next achievements
+  useEffect(() => {
+    const loadNextAchievements = async () => {
+      if (achievementStats) {
+        const next = await getNextAchievements();
+        setNextAchievements(next);
+      }
+    };
+    loadNextAchievements();
+  }, [achievementStats, getNextAchievements]);
   
   // Transform stats data for display
   const userStats = useMemo(() => [
@@ -128,50 +148,111 @@ function UserProfile() {
           </CardContent>
         </Card>
 
-        {/* Recent Games */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Games</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {loading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p>Loading recent games...</p>
+        {/* Tabs for different sections */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+            <TabsTrigger value="progress">Progress</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* Recent Games */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Games</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p>Loading recent games...</p>
+                    </div>
+                  ) : recentGames.length > 0 ? (
+                    recentGames.map((game, index) => (
+                      <div key={game.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-medium">{game.title}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(game.date).toLocaleDateString()} at {formatTimeString(game.time)}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {game.location}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {game.isHost && (
+                            <Badge variant="secondary" className="text-xs">
+                              Host
+                            </Badge>
+                          )}
+                          <Badge variant="outline">{game.sport}</Badge>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No recent games</p>
+                      <p className="text-sm">Join your first game to see it here!</p>
+                    </div>
+                  )}
                 </div>
-              ) : recentGames.length > 0 ? (
-                recentGames.map((game, index) => (
-                  <div key={game.id || index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{game.title}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(game.date).toLocaleDateString()} at {formatTimeString(game.time)}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {game.location}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {game.isHost && (
-                        <Badge variant="secondary" className="text-xs">
-                          Host
-                        </Badge>
-                      )}
-                      <Badge variant="outline">{game.sport}</Badge>
-                    </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="achievements" className="space-y-6">
+            {/* Achievement Badges */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5" />
+                  My Achievements ({achievements.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {achievements.length > 0 ? (
+                  <AchievementGrid 
+                    achievements={achievements.map(ua => ({
+                      ...ua.achievements,
+                      earned_at: ua.earned_at
+                    }))} 
+                    maxDisplay={12}
+                    size="md"
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No achievements yet</p>
+                    <p className="text-sm">Play games to unlock your first achievement!</p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No recent games</p>
-                  <p className="text-sm">Join your first game to see it here!</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="progress" className="space-y-6">
+            {/* Progress Indicators */}
+            {achievementStats && (
+              <GameProgressWidget
+                gamesPlayed={achievementStats.games_played}
+                gamesHosted={achievementStats.games_hosted}
+                nextAchievements={nextAchievements}
+              />
+            )}
+            
+            {/* Next Achievements */}
+            {nextAchievements.length > 0 && (
+              <AchievementProgressIndicator
+                achievements={nextAchievements}
+                title="Next Achievements"
+                showAll={true}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

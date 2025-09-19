@@ -33,18 +33,18 @@ function UserProfile() {
   // Load next achievements
   useEffect(() => {
     const loadNextAchievements = async () => {
-      if (achievementStats) {
+      if (stats) {
         const next = await getNextAchievements();
         setNextAchievements(next);
       }
     };
     loadNextAchievements();
-  }, [achievementStats, getNextAchievements]);
+  }, [stats, getNextAchievements]);
   
   // Transform stats data for display
   const userStats = useMemo(() => [
-    { label: 'Games Played', value: stats?.games_played?.toString() || '0', icon: Calendar },
-    { label: 'Games Hosted', value: stats?.games_hosted?.toString() || '0', icon: MapPin },
+    { label: 'Games Played', value: stats?.totalGamesPlayed?.toString() || '0', icon: Calendar },
+    { label: 'Games Hosted', value: stats?.totalGamesHosted?.toString() || '0', icon: MapPin },
     { label: 'Achievements', value: achievements.length.toString(), icon: Trophy },
   ], [stats, achievements]);
   
@@ -57,7 +57,7 @@ function UserProfile() {
       date: participation.games?.date || participation.date,
       time: participation.games?.time || participation.time,
       location: participation.games?.location || participation.location,
-      isHost: (participation.games?.created_by || participation.created_by) === user?.id
+      isHost: (participation.games?.creator_id || participation.creator_id) === user?.id
     }));
   }, [recentGamesData, user?.id]);
 
@@ -235,10 +235,10 @@ function UserProfile() {
 
           <TabsContent value="progress" className="space-y-6">
             {/* Progress Indicators */}
-            {achievementStats && (
+            {stats && (
               <GameProgressWidget
-                gamesPlayed={achievementStats.games_played}
-                gamesHosted={achievementStats.games_hosted}
+                gamesPlayed={stats.totalGamesPlayed}
+                gamesHosted={stats.totalGamesHosted}
                 nextAchievements={nextAchievements}
               />
             )}

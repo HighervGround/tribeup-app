@@ -118,7 +118,7 @@ export function useNotifications() {
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
-      await SupabaseService.markNotificationAsRead(notificationId);
+      // Update state immediately for better UX
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === notificationId 
@@ -126,24 +126,39 @@ export function useNotifications() {
             : notification
         )
       );
+      
+      // Update database in background
+      await SupabaseService.markNotificationAsRead(notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      // Revert state on error
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, read: false }
+            : notification
+        )
+      );
     }
   }, []);
 
   const markAllAsRead = useCallback(async () => {
     try {
-      // Mark all unread notifications as read
-      const unreadNotifications = notifications.filter(n => !n.read);
-      await Promise.all(unreadNotifications.map(n => SupabaseService.markNotificationAsRead(n.id)));
-      
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
-      );
+      // Get current unread notifications from state
+      setNotifications(prev => {
+        const unreadNotifications = prev.filter(n => !n.read);
+        
+        // Mark all unread notifications as read in the database
+        Promise.all(unreadNotifications.map(n => SupabaseService.markNotificationAsRead(n.id)))
+          .catch(error => console.error('Error marking all notifications as read:', error));
+        
+        // Update state immediately for better UX
+        return prev.map(notification => ({ ...notification, read: true }));
+      });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  }, [notifications]);
+  }, []);
 
   const deleteNotification = useCallback(async (notificationId: string) => {
     try {

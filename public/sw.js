@@ -1,13 +1,12 @@
 // Service Worker for caching and offline support
-const CACHE_NAME = 'tribeup-v1';
-const STATIC_CACHE = 'tribeup-static-v1';
-const DYNAMIC_CACHE = 'tribeup-dynamic-v1';
+const CACHE_VERSION = Date.now(); // Use timestamp for cache busting
+const CACHE_NAME = `tribeup-v${CACHE_VERSION}`;
+const STATIC_CACHE = `tribeup-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `tribeup-dynamic-v${CACHE_VERSION}`;
 
-// Files to cache on install
+// Files to cache on install (minimal for development)
 const STATIC_FILES = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json'
 ];
 
@@ -37,7 +36,8 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+            // Delete ALL old caches that don't match current version
+            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== CACHE_NAME) {
               console.log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
@@ -45,7 +45,8 @@ self.addEventListener('activate', (event) => {
         );
       })
       .then(() => {
-        console.log('Service Worker activated');
+        console.log('Service Worker activated, clearing all old caches');
+        // Force immediate control of all clients
         return self.clients.claim();
       })
   );
@@ -68,13 +69,13 @@ self.addEventListener('fetch', (event) => {
   
   // Handle different types of requests
   if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase.co')) {
-    // API requests - network first with cache fallback
+    // API requests - always network first, no caching in development
     event.respondWith(handleApiRequest(request));
   } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2)$/)) {
-    // Static assets - cache first
+    // Static assets - network first in development for hot reloading
     event.respondWith(handleStaticRequest(request));
   } else {
-    // HTML pages - network first with cache fallback
+    // HTML pages - always network first
     event.respondWith(handlePageRequest(request));
   }
 });
@@ -113,25 +114,28 @@ async function handleApiRequest(request) {
   }
 }
 
-// Handle static assets (cache first)
+// Handle static assets (network first in development)
 async function handleStaticRequest(request) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-  
   try {
+    // Always try network first in development for hot reloading
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
+      // Only cache successful responses
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
     
     return networkResponse;
   } catch (error) {
-    console.log('Failed to fetch static asset:', request.url);
+    console.log('Network failed for static asset, trying cache:', request.url);
+    
+    // Fallback to cache only if network fails
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
     return new Response('Asset not available offline', { status: 404 });
   }
 }

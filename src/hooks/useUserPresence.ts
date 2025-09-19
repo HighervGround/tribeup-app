@@ -46,20 +46,28 @@ export function useUserPresence() {
         // Track presence state
         presenceChannel
           .on('presence', { event: 'sync' }, () => {
-            const presenceState = presenceChannel.presenceState();
-            const users = Object.keys(presenceState).map(userId => {
-              const presence = presenceState[userId][0];
-              return {
-                id: userId,
-                name: presence.name || 'Anonymous',
-                avatar: presence.avatar,
-                lastSeen: new Date().toISOString()
-              };
-            });
-            
-            setOnlineUsers(users);
-            setOnlineCount(users.length);
-            setIsLoading(false);
+            try {
+              const presenceState = presenceChannel.presenceState();
+              console.log('Presence sync:', presenceState);
+              
+              const users = Object.keys(presenceState).map(userId => {
+                const presence = presenceState[userId][0];
+                return {
+                  id: userId,
+                  name: presence.name || 'Anonymous',
+                  avatar: presence.avatar,
+                  lastSeen: new Date().toISOString()
+                };
+              });
+              
+              console.log('Online users:', users);
+              setOnlineUsers(users);
+              setOnlineCount(users.length);
+              setIsLoading(false);
+            } catch (error) {
+              console.error('Presence sync error:', error);
+              setIsLoading(false);
+            }
           })
           .on('presence', { event: 'join' }, ({ key, newPresences }) => {
             console.log('User joined:', key, newPresences);
@@ -81,13 +89,17 @@ export function useUserPresence() {
 
             // Set up heartbeat to maintain presence
             heartbeatInterval = setInterval(async () => {
-              await presenceChannel.track({
-                user_id: user.id,
-                name: profile?.full_name || profile?.username || 'Anonymous',
-                avatar: profile?.avatar_url,
-                online_at: new Date().toISOString(),
-              });
-            }, envConfig.get('presenceHeartbeatInterval'));
+              try {
+                await presenceChannel.track({
+                  user_id: user.id,
+                  name: profile?.full_name || profile?.username || 'Anonymous',
+                  avatar: profile?.avatar_url,
+                  online_at: new Date().toISOString(),
+                });
+              } catch (error) {
+                console.error('Presence heartbeat error:', error);
+              }
+            }, envConfig.get('presenceHeartbeatInterval') || 30000);
           }
         });
 

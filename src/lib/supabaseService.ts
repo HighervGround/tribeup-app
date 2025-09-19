@@ -1607,7 +1607,7 @@ export class SupabaseService {
             date,
             time,
             location,
-            created_by
+            creator_id
           )
         `)
         .eq('user_id', userId)
@@ -1792,12 +1792,12 @@ export class SupabaseService {
     // First, verify the user is the game creator
     const { data: game, error: gameError } = await supabase
       .from('games')
-      .select('created_by')
+      .select('creator_id')
       .eq('id', gameId)
       .single();
 
     if (gameError) throw gameError;
-    if (game.created_by !== currentUser.id) {
+    if (game.creator_id !== currentUser.id) {
       throw new Error('Only the game creator can mark a game as completed');
     }
 

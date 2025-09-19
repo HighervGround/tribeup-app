@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 
 export function OnlinePlayersWidget() {
-  const { onlineUsers, onlineCount, isLoading } = useUserPresence();
+  const { onlineUsers, onlineCount, isLoading, error } = useUserPresence();
 
   if (isLoading) {
     return (
@@ -14,6 +14,18 @@ export function OnlinePlayersWidget() {
           <Wifi className="w-4 h-4 text-muted-foreground animate-pulse" />
           <span className="text-sm font-medium text-muted-foreground">Connecting...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-card rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Players Online</span>
+        </div>
+        <p className="text-xs text-muted-foreground">Unable to load online players</p>
       </div>
     );
   }

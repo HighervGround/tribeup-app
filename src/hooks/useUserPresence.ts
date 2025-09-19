@@ -13,16 +13,26 @@ export function useUserPresence() {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [onlineCount, setOnlineCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let presenceChannel: any;
     let heartbeatInterval: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
 
     const initializePresence = async () => {
       try {
+        // Set timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          console.warn('Presence initialization timeout');
+          setIsLoading(false);
+          setError('Failed to connect to presence system');
+        }, 10000); // 10 second timeout
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
+          clearTimeout(timeoutId);
           setIsLoading(false);
           return;
         }
@@ -78,7 +88,11 @@ export function useUserPresence() {
 
         // Subscribe and track presence
         await presenceChannel.subscribe(async (status: string) => {
+          console.log('Presence subscription status:', status);
+          
           if (status === 'SUBSCRIBED') {
+            clearTimeout(timeoutId); // Clear timeout on successful connection
+            
             // Send initial presence
             await presenceChannel.track({
               user_id: user.id,
@@ -87,7 +101,7 @@ export function useUserPresence() {
               online_at: new Date().toISOString(),
             });
 
-            // Set up heartbeat to maintain presence
+            // Set up heartbeat to maintain presence (reduced frequency)
             heartbeatInterval = setInterval(async () => {
               try {
                 await presenceChannel.track({
@@ -98,13 +112,20 @@ export function useUserPresence() {
                 });
               } catch (error) {
                 console.error('Presence heartbeat error:', error);
+                // Don't spam errors, just log them
               }
-            }, envConfig.get('presenceHeartbeatInterval') || 30000);
+            }, 60000); // Increased to 60 seconds to reduce load
+          } else if (status === 'CHANNEL_ERROR') {
+            clearTimeout(timeoutId);
+            setError('Presence channel error');
+            setIsLoading(false);
           }
         });
 
       } catch (error) {
         console.error('Failed to initialize presence:', error);
+        clearTimeout(timeoutId);
+        setError('Failed to initialize presence system');
         setIsLoading(false);
       }
     };
@@ -113,6 +134,9 @@ export function useUserPresence() {
 
     // Cleanup
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
       }
@@ -125,6 +149,7 @@ export function useUserPresence() {
   return {
     onlineUsers,
     onlineCount,
-    isLoading
+    isLoading,
+    error
   };
 }

@@ -728,8 +728,8 @@ export class SupabaseService {
     title: string;
     sport: string;
     location: string;
-    latitude?: number;
-    longitude?: number;
+    latitude?: number | null;
+    longitude?: number | null;
     date: string;
     time: string;
     duration: number;
@@ -737,7 +737,7 @@ export class SupabaseService {
     maxPlayers: number;
     description: string;
     imageUrl?: string;
-  }): Promise<Game> {
+  }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
 
@@ -782,7 +782,6 @@ export class SupabaseService {
         sport: gameData.sport,
         date: gameData.date,
         time: gameData.time,
-        duration: gameData.duration,
         location: gameData.location,
         latitude: gameData.latitude,
         longitude: gameData.longitude,
@@ -790,7 +789,9 @@ export class SupabaseService {
         max_players: gameData.maxPlayers,
         current_players: 1, // Creator is automatically a participant
         description: gameData.description,
+        image_url: gameData.imageUrl,
         creator_id: currentUser.id
+        // Note: duration field doesn't exist in current database schema
       }])
       .select()
       .single();

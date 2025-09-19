@@ -213,14 +213,24 @@ export function useLocationSearch() {
           console.log('✅ Google Places API response:', data);
           
           if (data.places && data.places.length > 0) {
-            const suggestions: LocationSuggestion[] = data.places.map((place: any, index: number) => ({
-              place_id: place.id || `google-${index}`,
-              description: place.formattedAddress || place.displayName?.text || 'Unknown location',
-              structured_formatting: {
-                main_text: place.displayName?.text || place.formattedAddress?.split(',')[0] || 'Unknown',
-                secondary_text: place.formattedAddress || ''
-              }
-            }));
+            const suggestions: LocationSuggestion[] = data.places.map((place: any, index: number) => {
+              const displayName = place.displayName?.text || '';
+              const formattedAddress = place.formattedAddress || '';
+              
+              // Prioritize display name for description, but include address context if needed
+              const description = displayName ? 
+                (formattedAddress ? `${displayName}, ${formattedAddress}` : displayName) :
+                formattedAddress || 'Unknown location';
+              
+              return {
+                place_id: place.id || `google-${index}`,
+                description: description,
+                structured_formatting: {
+                  main_text: displayName || formattedAddress?.split(',')[0] || 'Unknown',
+                  secondary_text: formattedAddress || ''
+                }
+              };
+            });
             
             console.log('🎯 Google Places API suggestions:', suggestions);
             setSuggestions(suggestions);

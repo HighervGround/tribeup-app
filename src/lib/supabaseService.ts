@@ -2209,4 +2209,20 @@ export class SupabaseService {
       }
     }));
   }
+
+  // User Testing Feedback
+  static async submitUserTestingFeedback(feedbackData: any): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('user_testing_feedback')
+        .insert([feedbackData]);
+
+      if (error) throw error;
+      
+      console.log('✅ User testing feedback submitted successfully');
+    } catch (error) {
+      console.error('❌ Failed to submit user testing feedback:', error);
+      throw error;
+    }
+  }
 }

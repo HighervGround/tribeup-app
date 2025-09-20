@@ -505,7 +505,7 @@ function GameDetails() {
                   </Button>
                 </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-[9999]">
+              <DropdownMenuContent align="end" className="z-[99999] relative">
                 <DropdownMenuItem onClick={(e) => {
                   console.log('Edit game clicked');
                   e.stopPropagation();

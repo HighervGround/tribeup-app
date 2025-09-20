@@ -33,10 +33,12 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       console.log('ProfileCheck: Current app user from store:', appUser);
       console.log('ProfileCheck: Current pathname:', window.location.pathname);
       
+      // IMMEDIATE EXIT CONDITIONS - Set checking to false immediately
+      hasChecked.current = true;
+      
       // Don't check if we're already on the onboarding page
       if (window.location.pathname === '/onboarding') {
         console.log('ProfileCheck: Already on onboarding page, skipping check');
-        hasChecked.current = true;
         setChecking(false);
         return;
       }
@@ -49,7 +51,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       // If we just completed onboarding, don't check again
       if (locationState.fromOnboarding) {
         console.log('ProfileCheck: Just completed onboarding, skipping check');
-        hasChecked.current = true;
         setChecking(false);
         return;
       }
@@ -57,7 +58,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       if (!user) {
         console.log('ProfileCheck: No authenticated user found - user needs to sign in');
         console.log('ProfileCheck: Redirecting to auth page');
-        hasChecked.current = true;
         setChecking(false);
         // Don't redirect to onboarding if not authenticated - let ProtectedRoute handle this
         return;
@@ -84,7 +84,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           // If user has basic profile (id + email), consider them valid even without full name
           if (hasBasicProfile) {
             console.log('ProfileCheck: User has basic profile, allowing access');
-            hasChecked.current = true;
             setChecking(false);
             return;
           }
@@ -94,7 +93,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
             // Only redirect if we're not already on the onboarding page
             if (window.location.pathname !== '/onboarding') {
               console.log('ProfileCheck: Redirecting to onboarding');
-              hasChecked.current = true;
               setChecking(false);
               navigate('/onboarding', { 
                 replace: true,
@@ -104,7 +102,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
             } else {
               console.log('ProfileCheck: Already on onboarding page, not redirecting');
             }
-            hasChecked.current = true;
             setChecking(false);
             return;
           }
@@ -130,7 +127,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           if (!userProfile) {
             // Profile doesn't exist, redirect to onboarding
             console.log('ProfileCheck: Profile missing, redirecting to onboarding');
-            hasChecked.current = true;
             setChecking(false);
             navigate('/onboarding', { replace: true });
             return;
@@ -140,7 +136,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           const hasBasicData = (userProfile as any)?.id && (userProfile as any)?.email;
           if (hasBasicData) {
             console.log('ProfileCheck: User has basic data, allowing access');
-            hasChecked.current = true;
             setChecking(false);
             return;
           }
@@ -148,7 +143,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           // Only redirect if truly incomplete
           if (!(userProfile as any).name && !(userProfile as any).username) {
             console.log('ProfileCheck: Profile incomplete (no name or username), redirecting to onboarding');
-            hasChecked.current = true;
             setChecking(false);
             navigate('/onboarding', { replace: true });
             return;
@@ -156,22 +150,28 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         }
       } catch (error) {
         console.error('ProfileCheck: Error checking profile:', error);
-        hasChecked.current = true;
         setChecking(false);
         // Don't redirect on error, just continue to prevent infinite loops
         return;
       }
 
       console.log('ProfileCheck: Profile check complete, rendering children');
-      hasChecked.current = true;
       setChecking(false);
     };
 
-    // Add a small delay to prevent race conditions
+    // Add a small delay to prevent race conditions, but also add a safety timeout
     const timeoutId = setTimeout(checkProfile, 100);
+    
+    // Safety timeout - if checkProfile doesn't complete in 3 seconds, force completion
+    const safetyTimeout = setTimeout(() => {
+      console.warn('ProfileCheck: Safety timeout - forcing completion');
+      hasChecked.current = true;
+      setChecking(false);
+    }, 3000);
     
     return () => {
       clearTimeout(timeoutId);
+      clearTimeout(safetyTimeout);
       if (checkTimeoutRef.current) {
         clearTimeout(checkTimeoutRef.current);
       }

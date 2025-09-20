@@ -1,13 +1,16 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 
 function TermsOfService() {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
         <div className="flex items-center gap-4 px-4 py-4">
-          <Button variant="ghost" size="icon" onClick={() => history.back()} aria-label="Go back">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Go back">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-semibold">Terms of Service</h1>

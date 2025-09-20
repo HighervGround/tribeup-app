@@ -7,8 +7,6 @@ import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';
-import { UserTestingSurvey } from './UserTestingSurvey';
-import { useUserTestingSurvey } from '../hooks/useUserTestingSurvey';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 
@@ -25,8 +23,6 @@ function HomeScreen() {
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
   // Real-time presence tracking (no polling)
   const { onlineCount, isLoading: presenceLoading } = useUserPresence();
-  // User testing survey
-  const { isSurveyOpen, triggerContext, openSurvey, closeSurvey } = useUserTestingSurvey();
   
   // Game selection handler
   const handleGameSelect = (gameId: string) => {
@@ -192,24 +188,6 @@ function HomeScreen() {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Game
                 </Button>
-                <Button 
-                  onClick={() => openSurvey('general')}
-                  variant="outline"
-                  size="sm"
-                >
-                  📋 Survey
-                </Button>
-              </div>
-            </div>
-              <div className="bg-card rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {presenceLoading ? '...' : stats.onlinePlayers}
-                </div>
-                <div className="text-sm text-muted-foreground">Players Online</div>
-              </div>
-              <div className="bg-card rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{stats.thisWeekGames}</div>
-                <div className="text-sm text-muted-foreground">This Week</div>
               </div>
             </div>
 
@@ -280,15 +258,25 @@ function HomeScreen() {
               </div>
             </div>
           </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+              <div className="bg-card rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-primary">
+                  {presenceLoading ? '...' : stats.onlinePlayers}
+                </div>
+                <div className="text-sm text-muted-foreground">Players Online</div>
+              </div>
+              <div className="bg-card rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-primary">{stats.thisWeekGames}</div>
+                <div className="text-sm text-muted-foreground">This Week</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* User Testing Survey */}
-      <UserTestingSurvey 
-        isOpen={isSurveyOpen} 
-        onClose={closeSurvey} 
-        triggerContext={triggerContext} 
-      />
     </div>
   );
 }

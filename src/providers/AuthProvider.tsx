@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 name: session.user.user_metadata?.full_name || session.user.email || '',
                 username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
                 avatar: session.user.user_metadata?.avatar_url || '',
+                role: 'user' as const,
                 preferences: { 
                   sports: [], 
                   notifications: { push: true, email: true, gameReminders: true },
@@ -84,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         setLoading(false);
         DEBUG && console.log('[Auth] bootstrap:loading=false');
+        console.log('[Auth] Initial auth check complete - user:', session?.user?.id || 'none');
       }
     }; 
 

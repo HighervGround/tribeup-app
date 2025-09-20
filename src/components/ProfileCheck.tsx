@@ -41,9 +41,10 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         return;
       }
       
-      // Get current location state
-      const locationState = window.history.state?.usr || {};
+      // Get current location state - check both React Router state and history state
+      const locationState = window.history.state?.usr || window.history.state || {};
       console.log('ProfileCheck: Current location state:', locationState);
+      console.log('ProfileCheck: Full history state:', window.history.state);
       
       // If we just completed onboarding, don't check again
       if (locationState.fromOnboarding) {
@@ -177,26 +178,42 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
     };
   }, [user?.id, navigate]); // Only depend on user ID, not appUser to prevent store update loops
 
-  // Force timeout to prevent infinite loading
+  // Force timeout to prevent infinite loading - more aggressive
   useEffect(() => {
     const forceTimeout = setTimeout(() => {
       if (checking) {
-        console.warn(`ProfileCheck: Force timeout after ${envConfig.get('profileForceTimeout')}ms`);
+        console.warn(`ProfileCheck: Force timeout after ${envConfig.get('profileForceTimeout')}ms - allowing access`);
         hasChecked.current = true;
         setChecking(false);
       }
     }, envConfig.get('profileForceTimeout'));
 
-    return () => clearTimeout(forceTimeout);
+    // Additional emergency timeout
+    const emergencyTimeout = setTimeout(() => {
+      console.error('ProfileCheck: Emergency timeout - forcing app to load');
+      hasChecked.current = true;
+      setChecking(false);
+    }, 20000); // 20 seconds emergency timeout
+
+    return () => {
+      clearTimeout(forceTimeout);
+      clearTimeout(emergencyTimeout);
+    };
   }, [checking]);
 
   if (checking) {
+    console.log('ProfileCheck: Still checking - rendering loading spinner');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" text="Getting ready..." />
+        <div className="absolute bottom-4 left-4 text-xs text-muted-foreground">
+          Debug: ProfileCheck loading... (Check console for details)
+        </div>
       </div>
     );
   }
+
+  console.log('ProfileCheck: Check complete - rendering children');
 
   return <>{children || null}</>;
 }

@@ -21,6 +21,8 @@ const NotificationSettings = lazy(() => import('./NotificationSettings'));
 const DesignSystem = lazy(() => import('./DesignSystem'));
 const AdminDashboard = lazy(() => import('./AdminDashboard'));
 const AuthCallback = lazy(() => import('./AuthCallback'));
+const TermsOfService = lazy(() => import('./TermsOfService'));
+const PrivacyPolicy = lazy(() => import('./PrivacyPolicy'));
 
 const Onboarding = lazy(() => import('./Onboarding'));
 const NavigationTest = lazy(() => import('./NavigationTest'));
@@ -116,6 +118,24 @@ export function AppRouter() {
                       console.log('Onboarding completed with data:', data);
                       // The onboarding component handles navigation internally
                     }} />
+                  </Suspense>
+                }
+              />
+
+              {/* Legal Pages */}
+              <Route
+                path="legal/terms"
+                element={
+                  <Suspense fallback={<RouteLoader text="Loading terms..." />}>
+                    <TermsOfService />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="legal/privacy"
+                element={
+                  <Suspense fallback={<RouteLoader text="Loading privacy policy..." />}>
+                    <PrivacyPolicy />
                   </Suspense>
                 }
               />

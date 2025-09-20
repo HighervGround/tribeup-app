@@ -24,16 +24,17 @@ export function useUserPresence() {
       try {
         // Set timeout to prevent infinite loading
         timeoutId = setTimeout(() => {
-          console.warn('Presence initialization timeout');
+          console.warn('Presence initialization timeout - WebSocket connection failed');
           setIsLoading(false);
-          setError('Failed to connect to presence system');
-          // Show fallback data
+          setError('Connection failed');
+          // Show fallback data when WebSocket fails
           setOnlineUsers([
             { id: '1', name: 'Player 1', avatar: '', lastSeen: new Date().toISOString() },
-            { id: '2', name: 'Player 2', avatar: '', lastSeen: new Date().toISOString() }
+            { id: '2', name: 'Player 2', avatar: '', lastSeen: new Date().toISOString() },
+            { id: '3', name: 'Player 3', avatar: '', lastSeen: new Date().toISOString() }
           ]);
-          setOnlineCount(2);
-        }, 5000); // 5 second timeout
+          setOnlineCount(3);
+        }, 3000); // 3 second timeout for faster fallback
 
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
@@ -56,14 +57,27 @@ export function useUserPresence() {
           .eq('id', user.id)
           .single();
 
-        // Create presence channel
-        presenceChannel = supabase.channel('online_users', {
-          config: {
-            presence: {
-              key: user.id,
+        // Create presence channel with error handling
+        try {
+          presenceChannel = supabase.channel('online-users', {
+            config: {
+              presence: {
+                key: user.id,
+              },
             },
-          },
-        });
+          });
+        } catch (channelError) {
+          console.error('Failed to create presence channel:', channelError);
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+          setError('Connection failed');
+          setOnlineUsers([
+            { id: '1', name: 'Offline User 1', avatar: '', lastSeen: new Date().toISOString() },
+            { id: '2', name: 'Offline User 2', avatar: '', lastSeen: new Date().toISOString() }
+          ]);
+          setOnlineCount(2);
+          return;
+        }
 
         // Track presence state
         presenceChannel

@@ -6677,3 +6677,13 @@ html {
     opacity: 0;
   }
 }
+
+/* Ensure dropdown menus are always in foreground */
+[data-radix-popper-content-wrapper] {
+  z-index: 99999 !important;
+}
+
+[data-slot="dropdown-menu-content"] {
+  z-index: 99999 !important;
+  position: relative !important;
+}

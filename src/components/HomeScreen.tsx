@@ -7,6 +7,8 @@ import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';
+import { UserTestingSurvey } from './UserTestingSurvey';
+import { useUserTestingSurvey } from '../hooks/useUserTestingSurvey';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 
@@ -23,6 +25,8 @@ function HomeScreen() {
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
   // Real-time presence tracking (no polling)
   const { onlineCount, isLoading: presenceLoading } = useUserPresence();
+  // User testing survey
+  const { isSurveyOpen, triggerContext, openSurvey, closeSurvey } = useUserTestingSurvey();
   
   // Game selection handler
   const handleGameSelect = (gameId: string) => {
@@ -180,23 +184,23 @@ function HomeScreen() {
                 <h1 className="text-2xl md:text-3xl font-bold">TribeUp</h1>
                 <p className="text-muted-foreground">Find your next game</p>
               </div>
-              {/* Create Game button only for mobile - desktop uses sidebar button */}
-              <Button 
-                onClick={handleCreateGame}
-                size="icon"
-                className="md:hidden"
-                aria-label="Create new game"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Quick Stats - Mobile */}
-            <div className="grid grid-cols-3 gap-4 mb-6 lg:hidden">
-              <div className="bg-card rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{stats.totalGames}</div>
-                <div className="text-sm text-muted-foreground">Active Games</div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => navigate('/create-game')}
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Game
+                </Button>
+                <Button 
+                  onClick={() => openSurvey('general')}
+                  variant="outline"
+                  size="sm"
+                >
+                  📋 Survey
+                </Button>
               </div>
+            </div>
               <div className="bg-card rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-primary">
                   {presenceLoading ? '...' : stats.onlinePlayers}
@@ -278,6 +282,13 @@ function HomeScreen() {
           </div>
         </div>
       </div>
+
+      {/* User Testing Survey */}
+      <UserTestingSurvey 
+        isOpen={isSurveyOpen} 
+        onClose={closeSurvey} 
+        triggerContext={triggerContext} 
+      />
     </div>
   );
 }

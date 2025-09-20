@@ -42,6 +42,7 @@ export interface Game {
     name: string;
     avatar?: string;
     username?: string;
+    rating?: string | number;
   };
 }
 

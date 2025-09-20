@@ -1,13 +1,14 @@
 // Service Worker for caching and offline support
-const CACHE_VERSION = Date.now(); // Use timestamp for cache busting
+const CACHE_VERSION = '2.0'; // Stable version for production
 const CACHE_NAME = `tribeup-v${CACHE_VERSION}`;
 const STATIC_CACHE = `tribeup-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `tribeup-dynamic-v${CACHE_VERSION}`;
 
-// Files to cache on install (minimal for development)
+// Files to cache on install
 const STATIC_FILES = [
   '/',
-  '/manifest.json'
+  '/manifest.json',
+  '/offline.html' // Fallback page
 ];
 
 // Install event - cache static files
@@ -69,13 +70,13 @@ self.addEventListener('fetch', (event) => {
   
   // Handle different types of requests
   if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase.co')) {
-    // API requests - always network first, no caching in development
+    // API requests - network first with short cache for performance
     event.respondWith(handleApiRequest(request));
   } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2)$/)) {
-    // Static assets - network first in development for hot reloading
+    // Static assets - cache first for performance, network fallback
     event.respondWith(handleStaticRequest(request));
   } else {
-    // HTML pages - always network first
+    // HTML pages - network first with cache fallback
     event.respondWith(handlePageRequest(request));
   }
 });
@@ -114,28 +115,29 @@ async function handleApiRequest(request) {
   }
 }
 
-// Handle static assets (network first in development)
+// Handle static assets (cache first for performance)
 async function handleStaticRequest(request) {
+  // Check cache first for static assets
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    // Return cached version immediately
+    return cachedResponse;
+  }
+  
   try {
-    // Always try network first in development for hot reloading
+    // If not in cache, fetch from network
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      // Only cache successful responses
+      // Cache successful responses
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
     
     return networkResponse;
   } catch (error) {
-    console.log('Network failed for static asset, trying cache:', request.url);
-    
-    // Fallback to cache only if network fails
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
+    console.log('Failed to fetch static asset:', request.url);
     return new Response('Asset not available offline', { status: 404 });
   }
 }

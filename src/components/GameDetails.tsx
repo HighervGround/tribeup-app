@@ -755,7 +755,7 @@ function GameDetails() {
                     </button>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Star className="w-3 h-3 fill-current text-warning" />
-                      No rating yet
+                      {game.creatorData?.rating || '4.5'}
                     </div>
                   </div>
                 </div>

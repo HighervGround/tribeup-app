@@ -1,14 +1,21 @@
 // Service Worker for caching and offline support
-const CACHE_VERSION = '2.0'; // Stable version for production
+const CACHE_VERSION = '2.1'; // Updated version for production fixes
 const CACHE_NAME = `tribeup-v${CACHE_VERSION}`;
 const STATIC_CACHE = `tribeup-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `tribeup-dynamic-v${CACHE_VERSION}`;
 
-// Files to cache on install
+// Files to cache on install - essential files only to prevent loading delays
 const STATIC_FILES = [
   '/',
   '/manifest.json',
-  '/offline.html' // Fallback page
+  '/offline.html'
+];
+
+// Critical resources to preload for faster startup
+const CRITICAL_RESOURCES = [
+  '/src/main.tsx',
+  '/src/App.tsx',
+  '/src/index.css'
 ];
 
 // Install event - cache static files
@@ -68,24 +75,71 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Handle different types of requests
+  // Handle different types of requests with optimized strategies
   if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase.co')) {
-    // API requests - network first with short cache for performance
+    // API requests - network first with timeout to prevent hanging
     event.respondWith(handleApiRequest(request));
-  } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2)$/)) {
+  } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ico)$/)) {
     // Static assets - cache first for performance, network fallback
     event.respondWith(handleStaticRequest(request));
+  } else if (url.pathname === '/' || url.pathname.startsWith('/src/')) {
+    // Critical app files - network first with fast timeout
+    event.respondWith(handleCriticalRequest(request));
   } else {
     // HTML pages - network first with cache fallback
     event.respondWith(handlePageRequest(request));
   }
 });
 
-// Handle API requests (network first)
+// Handle critical app files (network first with fast timeout)
+async function handleCriticalRequest(request) {
+  try {
+    // Fast network request with 2-second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    
+    const networkResponse = await fetch(request, { 
+      signal: controller.signal 
+    });
+    clearTimeout(timeoutId);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('Network failed for critical request, trying cache:', request.url);
+    
+    // Fallback to cache immediately
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // If no cache and it's the root, try to serve index.html
+    if (request.url.endsWith('/')) {
+      return new Response('<!DOCTYPE html><html><head><title>Loading...</title></head><body><div>Loading TribeUp...</div></body></html>', {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+    
+    return new Response('Resource not available', { status: 404 });
+  }
+}
+
+// Handle API requests (network first with timeout)
 async function handleApiRequest(request) {
   try {
-    // Try network first
-    const networkResponse = await fetch(request);
+    // Network request with 5-second timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const networkResponse = await fetch(request, { 
+      signal: controller.signal 
+    });
+    clearTimeout(timeoutId);
     
     // If successful, cache the response
     if (networkResponse.ok) {

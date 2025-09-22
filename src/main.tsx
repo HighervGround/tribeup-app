@@ -3,15 +3,8 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Performance optimization: Preload critical resources
-if ((import.meta as any).env.PROD) {
-  // Preload critical fonts and assets
-  const preloadLink = document.createElement('link');
-  preloadLink.rel = 'preload';
-  preloadLink.as = 'style';
-  preloadLink.href = '/src/index.css';
-  document.head.appendChild(preloadLink);
-}
+// Performance optimization: In production, CSS is bundled into main assets automatically
+// No manual preloading needed as Vite handles this optimization
 
 // Register service worker properly - only in production
 if ('serviceWorker' in navigator && (import.meta as any).env.PROD) {

@@ -276,15 +276,17 @@ function GameDetails() {
   // Check if current user is the game creator
   const isGameCreator = user && game && (game.creatorId === user.id || game.createdBy === user.id);
   
-  // Debug logging for dropdown visibility
-  console.log('🔍 Dropdown Debug:', {
-    user: user?.id,
-    game: game?.id,
-    creatorId: game?.creatorId,
-    createdBy: game?.createdBy,
-    isGameCreator,
-    shouldShowDropdown: isGameCreator
-  });
+  // Debug logging for dropdown visibility (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 Dropdown Debug:', {
+      user: user?.id,
+      game: game?.id,
+      creatorId: game?.creatorId,
+      createdBy: game?.createdBy,
+      isGameCreator,
+      shouldShowDropdown: isGameCreator
+    });
+  }
 
   // Check if game is completed and user participated
   const isGameCompleted = useMemo(() => {

@@ -23,9 +23,6 @@ export function ProtectedRoute({
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" text="Loading..." />
-        <div className="absolute bottom-4 right-4 text-xs text-muted-foreground">
-          Debug: Auth loading...
-        </div>
       </div>
     );
   }

@@ -36,6 +36,13 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       // IMMEDIATE EXIT CONDITIONS - Set checking to false immediately
       hasChecked.current = true;
       
+      // For production, be more aggressive about allowing access
+      if ((import.meta as any).env.PROD) {
+        console.log('ProfileCheck: Production mode - allowing access immediately');
+        setChecking(false);
+        return;
+      }
+      
       // Don't check if we're already on the onboarding page
       if (window.location.pathname === '/onboarding') {
         console.log('ProfileCheck: Already on onboarding page, skipping check');
@@ -206,9 +213,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" text="Getting ready..." />
-        <div className="absolute bottom-4 left-4 text-xs text-muted-foreground">
-          Debug: ProfileCheck loading... (Check console for details)
-        </div>
       </div>
     );
   }

@@ -58,14 +58,39 @@ export default defineConfig({
     target: 'esnext',
     outDir: 'build',
     sourcemap: true,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select']
-        }
+          // Core React bundle
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          // UI components bundle
+          ui: [
+            '@radix-ui/react-dialog', 
+            '@radix-ui/react-dropdown-menu', 
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-switch'
+          ],
+          // Supabase and data bundle
+          data: ['@supabase/supabase-js', '@tanstack/react-query'],
+          // Utility libraries
+          utils: ['zustand', 'sonner', 'lucide-react', 'clsx']
+        },
+        // Optimize chunk loading
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
-    }
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000
   },
   define: {
     // Enable service worker registration

@@ -58,20 +58,35 @@ function Auth() {
   const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
     setLoading(true);
     setError('');
+    
+    // Set a timeout to reset loading state if OAuth doesn't complete
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('OAuth sign-in timed out. Please try again or use email sign-in.');
+    }, 30000); // 30 second timeout
+    
     try {
       await signInWithOAuth(provider);
+      // OAuth should redirect to callback, but if it doesn't work, the timeout will handle it
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error(`OAuth sign-in error for ${provider}:`, error);
+      
       // Provide more user-friendly error messages
       if (error.message?.includes('popup')) {
         setError('Authentication popup was blocked. Please allow popups and try again.');
       } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
         setError('Network error during authentication. Please check your connection and try again.');
+      } else if (error.message?.includes('redirect')) {
+        setError('OAuth redirect failed. Please try again or use email sign-in.');
       } else {
-        setError(`Authentication failed. Please try again or use email sign-in.`);
+        setError(`Authentication failed: ${error.message || 'Unknown error'}. Please try again or use email sign-in.`);
       }
       setLoading(false);
     }
+    
+    // Clear timeout on component unmount
+    return () => clearTimeout(timeoutId);
   };
 
   const handleBackToSignIn = () => {

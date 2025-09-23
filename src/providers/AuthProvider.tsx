@@ -218,7 +218,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOAuth = async (provider: 'google' | 'apple', options?: { pendingGameId?: string }) => {
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
+      // Use the correct redirect URL for production
+      const baseUrl = window.location.origin;
+      const redirectTo = `${baseUrl}/auth/callback`;
+      
+      console.log(`Initiating OAuth with ${provider}, redirect to:`, redirectTo);
       
       // Store pending game ID if provided
       if (options?.pendingGameId) {
@@ -236,7 +240,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('OAuth initiation error:', error);
+        throw error;
+      }
+      
+      console.log(`OAuth redirect initiated for ${provider}`);
     } catch (error: any) {
       console.error('OAuth sign in error:', error);
       throw new Error(error.message || `Failed to sign in with ${provider}`);
@@ -247,6 +256,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear app state
+      setUser(null);
+      setAppUser(null);
+      
+      // Clear any stored data
+      localStorage.removeItem('pendingGameJoin');
+      
+      console.log('Sign out successful');
     } catch (error: any) {
       console.error('Sign out error:', error);
       throw new Error(error.message || 'Failed to sign out');

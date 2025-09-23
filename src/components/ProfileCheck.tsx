@@ -36,13 +36,6 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
       // IMMEDIATE EXIT CONDITIONS - Set checking to false immediately
       hasChecked.current = true;
       
-      // For production, be more aggressive about allowing access
-      if ((import.meta as any).env.PROD) {
-        console.log('ProfileCheck: Production mode - allowing access immediately');
-        setChecking(false);
-        return;
-      }
-      
       // Don't check if we're already on the onboarding page
       if (window.location.pathname === '/onboarding') {
         console.log('ProfileCheck: Already on onboarding page, skipping check');
@@ -62,20 +55,23 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         return;
       }
 
+      // Check if user is authenticated
       if (!user) {
-        console.log('ProfileCheck: No authenticated user found - user needs to sign in');
-        console.log('ProfileCheck: Redirecting to auth page');
+        console.log('ProfileCheck: No authenticated user found');
         setChecking(false);
         // Don't redirect to onboarding if not authenticated - let ProtectedRoute handle this
         return;
       }
+      
+      console.log('ProfileCheck: User is authenticated, checking profile...');
 
       try {
         // Get fresh user data from store to avoid dependency issues
         const currentAppUser = useAppStore.getState().user;
         
-        // If we already have user data in the store, check if it's complete
+        // If we already have user data in the store (like from OAuth), use it directly
         if (currentAppUser) {
+          console.log('ProfileCheck: Found user in store, skipping database check');
           // Check if we have the required user data - be more lenient with existing users
           const hasRequiredData = currentAppUser.name && currentAppUser.email;
           const hasBasicProfile = currentAppUser.id && currentAppUser.email;
@@ -91,6 +87,7 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
           // If user has basic profile (id + email), consider them valid even without full name
           if (hasBasicProfile) {
             console.log('ProfileCheck: User has basic profile, allowing access');
+            console.log('ProfileCheck: User data:', currentAppUser);
             setChecking(false);
             return;
           }

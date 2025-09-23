@@ -20,7 +20,7 @@ const AccessibilitySettings = lazy(() => import('./AccessibilitySettings'));
 const NotificationSettings = lazy(() => import('./NotificationSettings'));
 const DesignSystem = lazy(() => import('./DesignSystem'));
 const AdminDashboard = lazy(() => import('./AdminDashboard'));
-const AuthCallback = lazy(() => import('./AuthCallback'));
+import AuthCallback from './AuthCallback';
 const TermsOfService = lazy(() => import('./TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./PrivacyPolicy'));
 
@@ -104,11 +104,7 @@ export function AppRouter() {
               />
               <Route
                 path="/auth/callback"
-                element={
-                  <Suspense fallback={<RouteLoader text="Processing authentication..." />}>
-                    <AuthCallback />
-                  </Suspense>
-                }
+                element={<AuthCallback />}
               />
               <Route
                 path="onboarding"

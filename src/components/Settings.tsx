@@ -44,13 +44,23 @@ function Settings() {
   const [locationSharing, setLocationSharing] = useState(true);
   const [profileVisibility, setProfileVisibility] = useState('public');
 
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
   const handleSignOut = async () => {
+    if (isSigningOut) return; // Prevent double-clicks
+    
+    setIsSigningOut(true);
     try {
+      console.log('Initiating sign out...');
       await signOut();
-      navigate('/auth');
+      console.log('Sign out completed, navigating to auth...');
+      toast.success('Signed out successfully');
+      navigate('/auth', { replace: true });
     } catch (error) {
       console.error('Sign out error:', error);
-      toast.error('Failed to sign out');
+      toast.error('Failed to sign out. Please try again.');
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -416,9 +426,19 @@ function Settings() {
               variant="destructive" 
               className="w-full"
               onClick={handleSignOut}
+              disabled={isSigningOut}
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              {isSigningOut ? (
+                <>
+                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Signing Out...
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>

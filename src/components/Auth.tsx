@@ -212,11 +212,17 @@ function Auth() {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90" 
               disabled={loading}
+              style={{ minHeight: '40px', display: 'block' }}
             >
               {getButtonText()}
             </Button>
+            
+            {/* Debug info - remove after fixing */}
+            <div className="text-xs text-gray-500 mt-2">
+              Debug: isSignUp={isSignUp.toString()}, loading={loading.toString()}, buttonText="{getButtonText()}"
+            </div>
           </form>
 
 

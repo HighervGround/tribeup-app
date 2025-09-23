@@ -1,181 +1,210 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { envConfig } from '../lib/envConfig';
-
-interface OnlineUser {
-  id: string;
-  name: string;
-  avatar?: string;
-  lastSeen: string;
-}
+import { useAppStore } from '../store/appStore';
+import { usePresenceStore, type PresenceUser } from '../stores/presenceStore';
 
 export function useUserPresence() {
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
-  const [onlineCount, setOnlineCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAppStore();
+  const { 
+    onlineUsers, 
+    channelStatus, 
+    usePolling, 
+    isLoading, 
+    error,
+    setOnlineUsers,
+    setChannelStatus,
+    setUsePolling,
+    setLoading,
+    setError
+  } = usePresenceStore();
+  
+  const pollTimer = useRef<number | null>(null);
+  const channelRef = useRef<any>(null);
+
+  // Polling fallback function
+  const startPolling = async () => {
+    if (pollTimer.current) return;
+    
+    console.log('🔄 Starting presence polling fallback');
+    setUsePolling(true);
+    
+    const pollPresence = async () => {
+      try {
+        if (!user?.id) return;
+        
+        // Update our presence (now with name/avatar columns)
+        await supabase
+          .from('user_presence')
+          .upsert({
+            user_id: user.id,
+            name: user.name,
+            avatar: user.avatar,
+            last_seen: new Date().toISOString(),
+            is_online: true,
+          });
+
+        // Get active users (last 5 minutes)
+        const { data: presenceData } = await supabase
+          .from('user_presence')
+          .select('*')
+          .gte('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString());
+
+        if (presenceData) {
+          const usersMap: Record<string, PresenceUser> = {};
+          presenceData.forEach((p) => {
+            usersMap[p.user_id] = {
+              user_id: p.user_id,
+              name: p.name || 'Anonymous',
+              avatar: p.avatar || '',
+              last_seen: p.last_seen,
+              status: 'online'
+            };
+          });
+          
+          setOnlineUsers(usersMap);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+        setError('Polling failed');
+      }
+    };
+
+    // Poll immediately, then every 30 seconds
+    await pollPresence();
+    pollTimer.current = window.setInterval(pollPresence, 30000);
+  };
+
+  const stopPolling = () => {
+    if (pollTimer.current) {
+      console.log('⏹️ Stopping presence polling');
+      window.clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+    setUsePolling(false);
+  };
+
+  // Realtime presence function
+  const startRealtime = () => {
+    if (!user?.id) return;
+    
+    console.log('🔗 Starting realtime presence');
+    
+    const channel = supabase.channel('global-presence', {
+      config: {
+        presence: {
+          key: user.id,
+        },
+      },
+    });
+
+    channelRef.current = channel;
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        console.log('�� Presence sync');
+        const state = channel.presenceState();
+        const usersMap = Object.keys(state).reduce<Record<string, PresenceUser>>((acc, userId) => {
+          const presence = state[userId][0];
+          acc[userId] = {
+            user_id: userId,
+            name: presence.name || 'Anonymous',
+            avatar: presence.avatar || '',
+            last_seen: new Date().toISOString(),
+            status: 'online'
+          };
+          return acc;
+        }, {});
+        
+        setOnlineUsers(usersMap);
+        setLoading(false);
+        setError(null);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('👋 User joined:', key);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('👋 User left:', key);
+      })
+      .subscribe(async (status) => {
+        console.log('📡 Channel status:', status);
+        
+        if (status === 'SUBSCRIBED') {
+          setChannelStatus('joined');
+          stopPolling(); // Stop polling when realtime works
+          
+          // Track our presence
+          await channel.track({
+            name: user.name,
+            avatar: user.avatar,
+            online_at: new Date().toISOString(),
+          });
+          
+          // Also update database for persistence
+          await supabase
+            .from('user_presence')
+            .upsert({
+              user_id: user.id,
+              name: user.name,
+              avatar: user.avatar,
+              last_seen: new Date().toISOString(),
+              is_online: true,
+            });
+          
+        } else if (status === 'CHANNEL_ERROR') {
+          setChannelStatus('error');
+          setError('Realtime connection failed');
+          startPolling(); // Fallback to polling
+          
+        } else if (status === 'CLOSED') {
+          setChannelStatus('closed');
+          startPolling(); // Fallback to polling
+          
+        } else {
+          setChannelStatus('joining');
+        }
+      });
+  };
 
   useEffect(() => {
-    let presenceChannel: any;
-    let heartbeatInterval: NodeJS.Timeout;
-    let timeoutId: NodeJS.Timeout;
+    console.log('🔄 PRESENCE SYSTEM v2.0 - useUserPresence hook called');
+    console.log('🔄 User state:', user ? `ID: ${user.id}, Name: ${user.name}` : 'NO USER');
+    
+    if (!user?.id) {
+      console.log('👤 No authenticated user - presence disabled');
+      setLoading(false);
+      setOnlineUsers({});
+      return;
+    }
 
-    const initializePresence = async () => {
-      try {
-        // Set timeout to prevent infinite loading
-        timeoutId = setTimeout(() => {
-          console.warn('Presence initialization timeout - WebSocket connection failed');
-          setIsLoading(false);
-          setError('Connection failed');
-          // Show fallback data when WebSocket fails
-          setOnlineUsers([
-            { id: '1', name: 'Player 1', avatar: '', lastSeen: new Date().toISOString() },
-            { id: '2', name: 'Player 2', avatar: '', lastSeen: new Date().toISOString() },
-            { id: '3', name: 'Player 3', avatar: '', lastSeen: new Date().toISOString() }
-          ]);
-          setOnlineCount(3);
-        }, 3000); // 3 second timeout for faster fallback
+    console.log('👤 Authenticated user found:', user.id, 'Starting presence system');
+    setLoading(true);
+    
+    // Try realtime first
+    try {
+      startRealtime();
+    } catch (error) {
+      console.error('Failed to start realtime, falling back to polling:', error);
+      startPolling();
+    }
 
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          clearTimeout(timeoutId);
-          setIsLoading(false);
-          // Show mock data when not authenticated for demo purposes
-          setOnlineUsers([
-            { id: '1', name: 'Demo User 1', avatar: '', lastSeen: new Date().toISOString() },
-            { id: '2', name: 'Demo User 2', avatar: '', lastSeen: new Date().toISOString() }
-          ]);
-          setOnlineCount(2);
-          return;
-        }
-
-        // Get user profile for display info
-        const { data: profile } = await supabase
-          .from('users')
-          .select('full_name, username, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-        // Create presence channel with error handling
-        try {
-          presenceChannel = supabase.channel('online-users', {
-            config: {
-              presence: {
-                key: user.id,
-              },
-            },
-          });
-        } catch (channelError) {
-          console.error('Failed to create presence channel:', channelError);
-          clearTimeout(timeoutId);
-          setIsLoading(false);
-          setError('Connection failed');
-          setOnlineUsers([
-            { id: '1', name: 'Offline User 1', avatar: '', lastSeen: new Date().toISOString() },
-            { id: '2', name: 'Offline User 2', avatar: '', lastSeen: new Date().toISOString() }
-          ]);
-          setOnlineCount(2);
-          return;
-        }
-
-        // Track presence state
-        presenceChannel
-          .on('presence', { event: 'sync' }, () => {
-            try {
-              const presenceState = presenceChannel.presenceState();
-              console.log('Presence sync:', presenceState);
-              
-              const users = Object.keys(presenceState).map(userId => {
-                const presence = presenceState[userId][0];
-                return {
-                  id: userId,
-                  name: presence.name || 'Anonymous',
-                  avatar: presence.avatar,
-                  lastSeen: new Date().toISOString()
-                };
-              });
-              
-              console.log('Online users:', users);
-              setOnlineUsers(users);
-              setOnlineCount(users.length);
-              setIsLoading(false);
-            } catch (error) {
-              console.error('Presence sync error:', error);
-              setIsLoading(false);
-            }
-          })
-          .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-            console.log('User joined:', key, newPresences);
-          })
-          .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-            console.log('User left:', key, leftPresences);
-          });
-
-        // Subscribe and track presence
-        await presenceChannel.subscribe(async (status: string) => {
-          console.log('Presence subscription status:', status);
-          
-          if (status === 'SUBSCRIBED') {
-            clearTimeout(timeoutId); // Clear timeout on successful connection
-            
-            // Send initial presence
-            await presenceChannel.track({
-              user_id: user.id,
-              name: profile?.full_name || profile?.username || 'Anonymous',
-              avatar: profile?.avatar_url,
-              online_at: new Date().toISOString(),
-            });
-
-            // Set up heartbeat to maintain presence (reduced frequency)
-            heartbeatInterval = setInterval(async () => {
-              try {
-                await presenceChannel.track({
-                  user_id: user.id,
-                  name: profile?.full_name || profile?.username || 'Anonymous',
-                  avatar: profile?.avatar_url,
-                  online_at: new Date().toISOString(),
-                });
-              } catch (error) {
-                console.error('Presence heartbeat error:', error);
-                // Don't spam errors, just log them
-              }
-            }, 60000); // Increased to 60 seconds to reduce load
-          } else if (status === 'CHANNEL_ERROR') {
-            clearTimeout(timeoutId);
-            setError('Presence channel error');
-            setIsLoading(false);
-          }
-        });
-
-      } catch (error) {
-        console.error('Failed to initialize presence:', error);
-        clearTimeout(timeoutId);
-        setError('Failed to initialize presence system');
-        setIsLoading(false);
-      }
-    };
-
-    initializePresence();
-
-    // Cleanup
+    // Cleanup function
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
       }
-      if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-      }
-      if (presenceChannel) {
-        presenceChannel.unsubscribe();
-      }
+      stopPolling();
+      setChannelStatus('closed');
     };
-  }, []);
+  }, [user?.id]);
 
   return {
-    onlineUsers,
-    onlineCount,
+    onlineUsers: Object.values(onlineUsers),
+    onlineCount: Object.keys(onlineUsers).length,
     isLoading,
-    error
+    error,
+    isRealtime: channelStatus === 'joined',
+    isPolling: usePolling,
+    connectionStatus: channelStatus,
   };
 }

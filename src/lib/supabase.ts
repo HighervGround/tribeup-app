@@ -31,7 +31,7 @@ const createSupabaseClient = () =>
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storageKey: 'tribeup-auth',
-      flowType: 'pkce', // Use PKCE flow for better security
+      flowType: 'implicit', // Use implicit flow for OAuth compatibility
     },
     db: {
       schema: 'public',
@@ -43,8 +43,10 @@ const createSupabaseClient = () =>
     },
     realtime: {
       params: {
-        eventsPerSecond: 2, // Reduced from 10 to prevent excessive connections
+        eventsPerSecond: 2,
       },
+      heartbeatIntervalMs: 30000,
+      reconnectAfterMs: () => Math.random() * 5000,
     },
   });
 

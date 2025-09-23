@@ -40,12 +40,12 @@ if ('serviceWorker' in navigator && (import.meta as any).env.PROD) {
 
 // Performance monitoring in production
 if ((import.meta as any).env.PROD && 'performance' in window) {
+  const startTime = performance.now();
   window.addEventListener('load', () => {
-    // Log performance metrics
-    const perfData = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    console.log('🚀 App loaded in:', perfData.loadEventEnd - perfData.fetchStart, 'ms');
+    const loadTime = performance.now() - startTime;
+    console.log(`🚀 App loaded in: ${loadTime.toFixed(2)} ms`);
+    console.log(`🔄 DEPLOYMENT VERSION: v2.1 - ${new Date().toISOString()}`);
   });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
-  

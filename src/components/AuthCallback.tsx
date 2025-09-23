@@ -18,7 +18,7 @@ function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle the OAuth callback
+        // Handle OAuth callback properly
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -37,62 +37,37 @@ function AuthCallback() {
         const user = data.session.user;
         console.log('OAuth user authenticated:', user.id);
 
-        // Check if user profile exists
-        let userProfile = await SupabaseService.getUserProfile(user.id);
-        
-        if (!userProfile) {
-          // Create profile for OAuth user
-          console.log('Creating profile for OAuth user...');
-          
-          const profileData = {
-            email: user.email || '',
-            name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-            username: user.user_metadata?.preferred_username || 
-                     user.user_metadata?.user_name || 
-                     user.email?.split('@')[0] || 
-                     `user_${Math.random().toString(36).substring(2, 10)}`,
-            avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
-            bio: '',
-            location: '',
-            role: 'user' as const,
-            selectedSports: []
-          };
-
-          try {
-            await SupabaseService.createUserProfile(user.id, profileData);
-            userProfile = await SupabaseService.getUserProfile(user.id);
-          } catch (profileError) {
-            console.error('Error creating OAuth user profile:', profileError);
-            // Continue with basic user data
-            userProfile = {
-              id: user.id,
-              email: user.email || '',
-              name: profileData.name,
-              username: profileData.username,
-              avatar: profileData.avatar,
-              bio: '',
-              location: '',
-              role: 'user' as const,
-              preferences: {
-                theme: 'auto' as const,
-                highContrast: false,
-                largeText: false,
-                reducedMotion: false,
-                colorBlindFriendly: false,
-                notifications: {
-                  push: true,
-                  email: false,
-                  gameReminders: true,
-                },
-                privacy: {
-                  locationSharing: true,
-                  profileVisibility: 'public' as const,
-                },
-                sports: []
-              }
-            };
+        // Create user profile from OAuth data
+        const userProfile = {
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          username: user.user_metadata?.preferred_username || 
+                   user.user_metadata?.user_name || 
+                   user.email?.split('@')[0] || 
+                   `user_${Math.random().toString(36).substring(2, 10)}`,
+          avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+          bio: '',
+          location: '',
+          role: 'user' as const,
+          preferences: {
+            theme: 'auto' as const,
+            highContrast: false,
+            largeText: false,
+            reducedMotion: false,
+            colorBlindFriendly: false,
+            notifications: {
+              push: true,
+              email: false,
+              gameReminders: true,
+            },
+            privacy: {
+              locationSharing: true,
+              profileVisibility: 'public' as const,
+            },
+            sports: []
           }
-        }
+        };
 
         // Set user in app store
         setUser(userProfile);

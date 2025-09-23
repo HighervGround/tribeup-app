@@ -131,18 +131,23 @@ export class SupabaseService {
       }
       
       // Check if current user is authenticated - if not, return null quickly
+      console.log('🔍 Checking if user is authenticated...');
       const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('🔍 Current user from auth:', currentUser?.id);
+      
       if (!currentUser) {
         console.log('ℹ️ Anonymous user cannot access user profiles due to RLS - returning null');
         return null;
       }
       
       // Only proceed with query if user is authenticated
-      console.log('🔍 Executing query for user ID:', userId.trim());
+      console.log('🔍 User is authenticated, executing query for user ID:', userId.trim());
       
       // Use shorter timeout for user profile queries to prevent hanging
+      console.log('🔍 Starting database query...');
       const data = await networkService.executeWithRetry(
         async () => {
+          console.log('🔍 Executing Supabase query...');
           // Use explicit field selection to avoid PGRST116 coercion errors
           const { data, error } = await supabase
             .from('users')
@@ -161,6 +166,8 @@ export class SupabaseService {
             `)
             .eq('id', userId.trim())
             .maybeSingle();
+          
+          console.log('🔍 Query completed. Data:', data, 'Error:', error);
           
           if (error) {
             // Handle PGRST116 specifically - this means data coercion failed

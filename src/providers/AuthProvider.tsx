@@ -222,14 +222,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const baseUrl = window.location.origin;
       const redirectTo = `${baseUrl}/auth/callback`;
       
-      console.log(`Initiating OAuth with ${provider}, redirect to:`, redirectTo);
+      console.log(`🔐 OAuth Debug - Starting ${provider} OAuth flow`);
+      console.log(`🔐 Base URL: ${baseUrl}`);
+      console.log(`🔐 Redirect URL: ${redirectTo}`);
+      console.log(`🔐 Supabase URL: ${supabase.supabaseUrl}`);
       
       // Store pending game ID if provided
       if (options?.pendingGameId) {
         localStorage.setItem('pendingGameJoin', options.pendingGameId);
       }
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      console.log(`🔐 Calling supabase.auth.signInWithOAuth...`);
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo,
@@ -240,14 +244,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
+      console.log(`🔐 OAuth response:`, { data, error });
+
       if (error) {
-        console.error('OAuth initiation error:', error);
+        console.error('❌ OAuth initiation error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText
+        });
         throw error;
       }
       
-      console.log(`OAuth redirect initiated for ${provider}`);
+      console.log(`✅ OAuth redirect initiated for ${provider}`);
+      console.log(`🔐 OAuth URL:`, data?.url);
     } catch (error: any) {
-      console.error('OAuth sign in error:', error);
+      console.error('❌ OAuth sign in error:', error);
       throw new Error(error.message || `Failed to sign in with ${provider}`);
     }
   };

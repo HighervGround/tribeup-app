@@ -56,21 +56,25 @@ function Auth() {
   };
 
   const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
+    console.log(`🔐 Auth Component - ${provider} button clicked`);
     setLoading(true);
     setError('');
     
     // Set a timeout to reset loading state if OAuth doesn't complete
     const timeoutId = setTimeout(() => {
+      console.log(`⏰ OAuth timeout reached for ${provider}`);
       setLoading(false);
       setError('OAuth sign-in timed out. Please try again or use email sign-in.');
     }, 30000); // 30 second timeout
     
     try {
+      console.log(`🔐 Calling signInWithOAuth for ${provider}...`);
       await signInWithOAuth(provider);
+      console.log(`✅ signInWithOAuth completed for ${provider}`);
       // OAuth should redirect to callback, but if it doesn't work, the timeout will handle it
     } catch (error: any) {
       clearTimeout(timeoutId);
-      console.error(`OAuth sign-in error for ${provider}:`, error);
+      console.error(`❌ OAuth sign-in error for ${provider}:`, error);
       
       // Provide more user-friendly error messages
       if (error.message?.includes('popup')) {
@@ -79,6 +83,8 @@ function Auth() {
         setError('Network error during authentication. Please check your connection and try again.');
       } else if (error.message?.includes('redirect')) {
         setError('OAuth redirect failed. Please try again or use email sign-in.');
+      } else if (error.message?.includes('Invalid login credentials')) {
+        setError('OAuth provider not configured properly. Please contact support.');
       } else {
         setError(`Authentication failed: ${error.message || 'Unknown error'}. Please try again or use email sign-in.`);
       }

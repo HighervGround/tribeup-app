@@ -1167,28 +1167,43 @@ export class SupabaseService {
       // Then fetch user details for each participant
       const userIds = participants.map(p => p.user_id);
       
-      // Try profiles table first, fallback to users table
-      let { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url')
+      // Debug: Show what user IDs we're trying to fetch
+      console.log('🔍 Fetching user details for IDs:', userIds);
+      
+      // Test RLS permissions first with a simple query
+      console.log('🧪 Testing RLS permissions...');
+      const { data: testUsers, error: testError } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .limit(1);
+      
+      console.log('🧪 RLS test result:', { testUsers, testError });
+      
+      if (testError) {
+        console.error('🚨 RLS is blocking basic user queries!');
+        console.error('🚨 Error details:', testError);
+        console.error('🚨 You MUST run the RLS fix SQL in Supabase dashboard');
+      }
+      
+      // Fetch user details from users table (no profiles table exists)
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, full_name, username, avatar_url, email')
         .in('id', userIds);
       
-      // If profiles table doesn't exist or fails, try users table
-      if (usersError || !users) {
-        console.log('📋 Profiles table not available, trying users table');
-        const { data: usersData, error: usersTableError } = await supabase
-          .from('users')
-          .select('id, full_name, username, avatar_url, email')
-          .in('id', userIds);
-        
-        users = usersData;
-        usersError = usersTableError;
-      }
+      console.log('👤 Users query result:', { users, error: usersError });
 
       if (usersError) {
         console.error('❌ Error fetching user details:', usersError);
         console.error('❌ This is likely due to RLS policies blocking access to user profiles');
-        console.error('❌ Run the SQL fix in Supabase to allow public profile access');
+        console.error('❌ EXACT ERROR:', JSON.stringify(usersError, null, 2));
+        console.error('❌ Run this SQL in Supabase dashboard:');
+        console.error(`
+CREATE POLICY "Users can view basic profile info" ON public.users
+    FOR SELECT TO authenticated
+    USING (true);
+        `);
+        
         // Fallback: return participants with basic info
         return participants.map(participant => ({
           id: participant.user_id,

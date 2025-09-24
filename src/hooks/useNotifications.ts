@@ -162,25 +162,45 @@ export function useNotifications() {
 
   const deleteNotification = useCallback(async (notificationId: string) => {
     try {
+      // Update state immediately for better UX
+      setNotifications(prev => {
+        const updated = prev.filter(notification => notification.id !== notificationId);
+        console.log('🗑️ Notification deleted, new count:', updated.filter(n => !n.read).length);
+        return updated;
+      });
+      
+      // Delete from database in background
       await SupabaseService.deleteNotification(notificationId);
-      setNotifications(prev => 
-        prev.filter(notification => notification.id !== notificationId)
-      );
     } catch (error) {
       console.error('Error deleting notification:', error);
+      // Reload notifications on error to sync state
+      const notificationsData = await SupabaseService.getNotifications();
+      setNotifications(notificationsData);
     }
   }, []);
 
   const clearAll = useCallback(async () => {
     try {
       console.log('🗑️ Clearing all notifications...');
-      await SupabaseService.clearAllNotifications();
+      
+      // Update state immediately for better UX
       setNotifications([]);
-      console.log('✅ All notifications cleared successfully');
+      console.log('✅ Notifications cleared from state, unread count now: 0');
+      
+      // Clear from database in background
+      await SupabaseService.clearAllNotifications();
+      console.log('✅ All notifications cleared from database');
       toast.success('All notifications cleared');
     } catch (error) {
       console.error('❌ Error clearing all notifications:', error);
       toast.error('Failed to clear notifications');
+      // Reload notifications on error to sync state
+      try {
+        const notificationsData = await SupabaseService.getNotifications();
+        setNotifications(notificationsData);
+      } catch (reloadError) {
+        console.error('Failed to reload notifications after error:', reloadError);
+      }
     }
   }, []);
 
@@ -222,6 +242,15 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const recentNotifications = notifications.slice(0, 10); // Show last 10
+  
+  // Debug logging for unread count changes
+  useEffect(() => {
+    console.log('📊 Notifications updated:', {
+      total: notifications.length,
+      unread: unreadCount,
+      notifications: notifications.map(n => ({ id: n.id, read: n.read, title: n.title }))
+    });
+  }, [notifications, unreadCount]);
 
   return {
     notifications: recentNotifications,

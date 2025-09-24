@@ -39,18 +39,54 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Load existing messages
+  // Load existing messages from database
   useEffect(() => {
     const loadMessages = async () => {
       try {
         setIsLoading(true);
         
-        // For now, use localStorage to simulate chat messages
-        // In a real app, this would be a Supabase query
-        const storedMessages = localStorage.getItem(`chat-${gameId}`);
-        if (storedMessages) {
-          const parsed = JSON.parse(storedMessages);
-          setMessages(parsed);
+        // Load messages from Supabase
+        const { data: messagesData, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            id,
+            game_id,
+            user_id,
+            message,
+            created_at,
+            users:user_id (
+              full_name,
+              username,
+              avatar_url
+            )
+          `)
+          .eq('game_id', gameId)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('❌ Error loading messages:', error);
+          // Fallback to localStorage if database fails
+          const storedMessages = localStorage.getItem(`chat-${gameId}`);
+          if (storedMessages) {
+            const parsed = JSON.parse(storedMessages);
+            setMessages(parsed);
+          }
+        } else {
+          // Transform database messages to component format
+          const transformedMessages: ChatMessage[] = messagesData.map(msg => ({
+            id: msg.id,
+            game_id: msg.game_id,
+            user_id: msg.user_id,
+            message: msg.message,
+            created_at: msg.created_at,
+            user: {
+              name: msg.users?.full_name || msg.users?.username || `User ${msg.user_id.slice(0, 8)}`,
+              avatar: msg.users?.avatar_url || ''
+            }
+          }));
+          
+          setMessages(transformedMessages);
+          console.log('✅ Loaded messages from database:', transformedMessages.length);
         }
       } catch (error) {
         console.error('Error loading messages:', error);
@@ -68,31 +104,54 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
 
     console.log('🔗 Setting up chat realtime for game:', gameId);
 
-    // Create channel for game chat
+    // Create channel for game chat - listen to database changes
     const channel = supabase
       .channel(`game-chat-${gameId}`)
-      .on('broadcast', { event: 'new_message' }, (payload) => {
-        console.log('💬 New chat message:', payload);
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `game_id=eq.${gameId}`
+      }, async (payload) => {
+        console.log('💬 New chat message from database:', payload);
         
-        const newMsg: ChatMessage = {
-          id: Date.now().toString(),
-          game_id: gameId,
-          user_id: payload.payload.user_id,
-          message: payload.payload.message,
-          created_at: new Date().toISOString(),
-          user: {
-            name: payload.payload.user_name,
-            avatar: payload.payload.user_avatar
+        // Fetch the complete message with user data
+        const { data: messageData, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            id,
+            game_id,
+            user_id,
+            message,
+            created_at,
+            users:user_id (
+              full_name,
+              username,
+              avatar_url
+            )
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (!error && messageData) {
+          const newMsg: ChatMessage = {
+            id: messageData.id,
+            game_id: messageData.game_id,
+            user_id: messageData.user_id,
+            message: messageData.message,
+            created_at: messageData.created_at,
+            user: {
+              name: messageData.users?.full_name || messageData.users?.username || `User ${messageData.user_id.slice(0, 8)}`,
+              avatar: messageData.users?.avatar_url || ''
+            }
+          };
+          
+          // Only add if it's not from the current user (avoid duplicates)
+          if (messageData.user_id !== user?.id) {
+            setMessages(prev => [...prev, newMsg]);
+            setTimeout(scrollToBottom, 100);
           }
-        };
-        
-        setMessages(prev => [...prev, newMsg]);
-        
-        // Update localStorage
-        const updated = [...messages, newMsg];
-        localStorage.setItem(`chat-${gameId}`, JSON.stringify(updated));
-        
-        setTimeout(scrollToBottom, 100);
+        }
       })
       .subscribe((status) => {
         console.log('📡 Chat subscription status:', status);
@@ -106,7 +165,7 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
         channelRef.current.unsubscribe();
       }
     };
-  }, [gameId, messages]);
+  }, [gameId, user?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -119,47 +178,70 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
     setIsSending(true);
     
     try {
-      const messageData = {
-        user_id: user.id,
-        user_name: user.name,
-        user_avatar: user.avatar,
-        message: newMessage.trim(),
-        timestamp: new Date().toISOString()
+      // Save message to database first
+      const { data: savedMessage, error: saveError } = await supabase
+        .from('chat_messages')
+        .insert({
+          game_id: gameId,
+          user_id: user.id,
+          message: newMessage.trim()
+        })
+        .select(`
+          id,
+          game_id,
+          user_id,
+          message,
+          created_at,
+          users:user_id (
+            full_name,
+            username,
+            avatar_url
+          )
+        `)
+        .single();
+
+      if (saveError) {
+        console.error('❌ Error saving message to database:', saveError);
+        throw saveError;
+      }
+
+      console.log('✅ Message saved to database:', savedMessage);
+
+      // Transform and add to local state
+      const newMsg: ChatMessage = {
+        id: savedMessage.id,
+        game_id: savedMessage.game_id,
+        user_id: savedMessage.user_id,
+        message: savedMessage.message,
+        created_at: savedMessage.created_at,
+        user: {
+          name: savedMessage.users?.full_name || savedMessage.users?.username || user.name,
+          avatar: savedMessage.users?.avatar_url || user.avatar || ''
+        }
       };
 
-      // Broadcast message to other users
+      setMessages(prev => [...prev, newMsg]);
+      
+      // Broadcast message to other users for real-time updates
       if (channelRef.current) {
         await channelRef.current.send({
           type: 'broadcast',
           event: 'new_message',
-          payload: messageData
+          payload: {
+            ...newMsg,
+            user_name: newMsg.user?.name,
+            user_avatar: newMsg.user?.avatar
+          }
         });
       }
-
-      // Add to local state immediately
-      const newMsg: ChatMessage = {
-        id: Date.now().toString(),
-        game_id: gameId,
-        user_id: user.id,
-        message: newMessage.trim(),
-        created_at: new Date().toISOString(),
-        user: {
-          name: user.name,
-          avatar: user.avatar
-        }
-      };
-
-      const updatedMessages = [...messages, newMsg];
-      setMessages(updatedMessages);
-      
-      // Save to localStorage
-      localStorage.setItem(`chat-${gameId}`, JSON.stringify(updatedMessages));
       
       setNewMessage('');
       setTimeout(scrollToBottom, 100);
       
     } catch (error) {
       console.error('Error sending message:', error);
+      // Show user-friendly error
+      alert('Failed to send message. Please try again.');
     } finally {
       setIsSending(false);
     }

@@ -1,5 +1,5 @@
 // Service Worker for caching and offline support
-const CACHE_VERSION = '2.1'; // Updated version for production fixes
+const CACHE_VERSION = 'v2.1'; // Updated version for production fixes
 const CACHE_NAME = `tribeup-v${CACHE_VERSION}`;
 const STATIC_CACHE = `tribeup-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `tribeup-dynamic-v${CACHE_VERSION}`;

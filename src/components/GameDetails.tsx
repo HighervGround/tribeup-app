@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ClickableAvatar } from './ui/clickable-avatar';
 import { Separator } from './ui/separator';
+import { GameChat } from './GameChat';
 import { Alert, AlertDescription } from './ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -823,6 +824,11 @@ function GameDetails() {
             </AlertDescription>
           </Alert>
         )}
+      </div>
+
+      {/* Game Chat */}
+      <div className="lg:col-span-4">
+        <GameChat gameId={gameId!} />
       </div>
 
       {/* Quick Join Modal */}

@@ -1078,13 +1078,21 @@ export class SupabaseService {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
 
+    console.log('📬 Fetching notifications for user:', currentUser.id);
+
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', currentUser.id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Error fetching notifications:', error);
+      console.log('🔄 Returning empty array due to error (table might not exist)');
+      return [];
+    }
+
+    console.log('📬 Fetched notifications from database:', data?.length || 0);
 
     return data.map(notification => ({
       id: notification.id,
@@ -1122,12 +1130,22 @@ export class SupabaseService {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
 
-    const { error } = await supabase
+    console.log('🗑️ Attempting to delete notifications for user:', currentUser.id);
+
+    const { data, error, count } = await supabase
       .from('notifications')
       .delete()
-      .eq('user_id', currentUser.id);
+      .eq('user_id', currentUser.id)
+      .select();
 
-    if (error) throw error;
+    console.log('🗑️ Delete result:', { data, error, count });
+
+    if (error) {
+      console.error('❌ Database error during delete:', error);
+      throw error;
+    }
+
+    console.log('✅ Successfully deleted notifications:', data?.length || 0);
   }
 
   static async getGameParticipants(gameId: string): Promise<any[]> {

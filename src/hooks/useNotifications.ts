@@ -173,10 +173,14 @@ export function useNotifications() {
 
   const clearAll = useCallback(async () => {
     try {
+      console.log('🗑️ Clearing all notifications...');
       await SupabaseService.clearAllNotifications();
       setNotifications([]);
+      console.log('✅ All notifications cleared successfully');
+      toast.success('All notifications cleared');
     } catch (error) {
-      console.error('Error clearing all notifications:', error);
+      console.error('❌ Error clearing all notifications:', error);
+      toast.error('Failed to clear notifications');
     }
   }, []);
 

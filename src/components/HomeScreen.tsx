@@ -47,11 +47,11 @@ function HomeScreen() {
       return gameDate.toDateString() === today.toDateString();
     }).length;
     
-    // Games nearby (within 10km)
+    // Games nearby (within 5 miles)
     const gamesNearby = currentLocation ? games.filter(game => {
       if (!game.latitude || !game.longitude) return false;
-      const distance = getFormattedDistanceTo({ latitude: game.latitude, longitude: game.longitude });
-      return distance && parseFloat(distance) <= 10; // Within 10km
+      const distance = getFormattedDistanceTo({ latitude: game.latitude, longitude: game.longitude }, 'mi');
+      return distance && parseFloat(distance) <= 5; // Within 5 miles
     }).length : 0;
     
     // Games user has joined

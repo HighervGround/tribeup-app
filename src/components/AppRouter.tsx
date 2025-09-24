@@ -2,8 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSpinner } from './ui/loading-spinner';
-import { ProtectedRoute } from './ProtectedRoute';
-import { ProfileCheck } from './ProfileCheck';
+import { SimpleAuthWrapper } from './SimpleAuthWrapper';
 import AppContent from './AppContent';
 
 // Lazy load components for better performance
@@ -52,11 +51,9 @@ export function AppRouter() {
             <Routes>
               {/* Protected Routes - require authentication */}
               <Route path="/" element={
-                <ProtectedRoute>
-                  <ProfileCheck>
-                    <AppContent />
-                  </ProfileCheck>
-                </ProtectedRoute>
+                <SimpleAuthWrapper>
+                  <AppContent />
+                </SimpleAuthWrapper>
               }>
                 {/* Main App Routes */}
                 <Route index element={<HomeScreen />} />
@@ -95,11 +92,11 @@ export function AppRouter() {
               <Route
                 path="/auth"
                 element={
-                  <ProtectedRoute requireAuth={false}>
+                  <SimpleAuthWrapper requireAuth={false}>
                     <Suspense fallback={<RouteLoader text="Loading authentication..." />}>
                       <Auth />
                     </Suspense>
-                  </ProtectedRoute>
+                  </SimpleAuthWrapper>
                 }
               />
               <Route

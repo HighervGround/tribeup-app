@@ -533,9 +533,31 @@ export class SupabaseService {
     console.log('🚀 Starting getGames...');
     
     try {
-      // Get current user to check join status
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
+      // Get current user to check join status with timeout
+      console.log('🔍 Getting user session...');
+      let userId: string | undefined;
+      
+      try {
+        // Add timeout to prevent hanging on corrupted sessions
+        const userPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth timeout')), 5000)
+        );
+        
+        const { data: { user } } = await Promise.race([userPromise, timeoutPromise]) as any;
+        userId = user?.id;
+        console.log('✅ User session retrieved:', userId ? 'authenticated' : 'anonymous');
+      } catch (authError) {
+        console.warn('⚠️ Auth session error, continuing as anonymous:', authError);
+        // Clear potentially corrupted session
+        try {
+          await supabase.auth.signOut();
+          console.log('🧹 Cleared corrupted session');
+        } catch (signOutError) {
+          console.warn('Failed to clear session:', signOutError);
+        }
+        userId = undefined;
+      }
       
         const queryStart = performance.now();
         
@@ -543,17 +565,29 @@ export class SupabaseService {
         
         // If user is authenticated, get games with join status
         if (userId) {
-        const { data: gamesWithParticipants, error } = await supabase
-          .from('games')
-          .select(`
-            *,
-            game_participants(user_id),
-            creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
-          `)
-          // Filter out games that are fully in the past (date + time has passed)
-          .gte('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: true })
-          .limit(50);
+          console.log('🔍 Fetching games with participant data...');
+          
+          // Add timeout to games query
+          const gamesPromise = supabase
+            .from('games')
+            .select(`
+              *,
+              game_participants(user_id),
+              creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
+            `)
+            // Filter out games that are fully in the past (date + time has passed)
+            .gte('date', new Date().toISOString().split('T')[0])
+            .order('date', { ascending: true })
+            .limit(50);
+          
+          const gamesTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Games query timeout')), 10000)
+          );
+          
+          const { data: gamesWithParticipants, error } = await Promise.race([
+            gamesPromise, 
+            gamesTimeoutPromise
+          ]) as any;
         
         const queryTime = performance.now() - queryStart;
         console.log(`📊 Supabase query with participants took: ${queryTime.toFixed(2)}ms`);
@@ -601,7 +635,10 @@ export class SupabaseService {
         return games;
       } else {
         // If no user, get games without join status
-        const { data: gamesData, error } = await supabase
+        console.log('🔍 Fetching games for anonymous user...');
+        
+        // Add timeout to anonymous games query too
+        const anonymousGamesPromise = supabase
           .from('games')
           .select(`
             *,
@@ -611,6 +648,15 @@ export class SupabaseService {
           .gte('date', new Date().toISOString().split('T')[0])
           .order('created_at', { ascending: false })
           .limit(50);
+        
+        const anonymousTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Anonymous games query timeout')), 10000)
+        );
+        
+        const { data: gamesData, error } = await Promise.race([
+          anonymousGamesPromise,
+          anonymousTimeoutPromise
+        ]) as any;
         
         const queryTime = performance.now() - queryStart;
         console.log(`📊 Supabase query took: ${queryTime.toFixed(2)}ms`);
@@ -658,6 +704,23 @@ export class SupabaseService {
       
     } catch (error) {
       console.error('❌ getGames error:', error);
+      
+      // Check if it's a timeout or session error
+      if (error.message?.includes('timeout')) {
+        console.error('🚨 Query timed out - likely session corruption or RLS issues');
+        console.error('🚨 Try refreshing the page or clearing localStorage');
+      } else if (error.message?.includes('JWT') || error.message?.includes('auth')) {
+        console.error('🚨 Authentication error - clearing session');
+        try {
+          await supabase.auth.signOut();
+          localStorage.clear();
+        } catch (clearError) {
+          console.error('Failed to clear session:', clearError);
+        }
+      }
+      
+      // Return mock games as fallback
+      console.log('📦 Returning mock games as fallback');
       return this.getMockGames();
     }
   }

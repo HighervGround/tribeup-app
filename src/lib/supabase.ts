@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
 // Environment variables - these will need to be set in your .env file
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL?.trim();
+const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY?.trim();
 
 // Environment variables loaded successfully - FORCE DEPLOYMENT v3 - ALL FIXES INCLUDED
 console.log('🚀 App starting with environment variables:', {

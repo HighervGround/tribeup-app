@@ -9,25 +9,49 @@ export function useGameRealtime(gameId?: string) {
   useEffect(() => {
     if (!gameId) return;
 
-    console.log('🔗 WebSocket realtime disabled due to RLS restrictions, using polling fallback');
-    
-    // Skip WebSocket entirely and use polling
-    // This avoids the WebSocket connection errors
-    const pollInterval = setInterval(() => {
-      console.log('🔄 Polling for game updates:', gameId);
-      queryClient.invalidateQueries({ queryKey: ['game', gameId] });
-      queryClient.invalidateQueries({ queryKey: ['games'] });
-    }, 15000); // Poll every 15 seconds
-    
-    channelRef.current = { 
-      _pollInterval: pollInterval,
-      state: 'joined' // Fake state for compatibility
-    };
+    console.log('🔗 Setting up realtime for game:', gameId);
+
+    try {
+      // Create channel for this specific game using proper Supabase client
+      const channel = supabase
+        .channel(`game-${gameId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'game_participants',
+          filter: `game_id=eq.${gameId}`
+        }, (payload) => {
+          console.log('👥 Participant update:', payload);
+          
+          // Invalidate queries to refetch data
+          queryClient.invalidateQueries({ queryKey: ['game', gameId] });
+          queryClient.invalidateQueries({ queryKey: ['games'] });
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public', 
+          table: 'games',
+          filter: `id=eq.${gameId}`
+        }, (payload) => {
+          console.log('🎮 Game update:', payload);
+          
+          // Invalidate game queries
+          queryClient.invalidateQueries({ queryKey: ['game', gameId] });
+          queryClient.invalidateQueries({ queryKey: ['games'] });
+        })
+        .subscribe((status) => {
+          console.log('📡 Game realtime status:', status);
+        });
+
+      channelRef.current = channel;
+    } catch (error) {
+      console.error('❌ Failed to setup realtime:', error);
+    }
 
     return () => {
-      console.log('🔌 Unsubscribing from game polling:', gameId);
+      console.log('🔌 Unsubscribing from game realtime:', gameId);
       if (channelRef.current) {
-        clearInterval(channelRef.current._pollInterval);
+        channelRef.current.unsubscribe();
       }
     };
   }, [gameId, queryClient]);
@@ -45,33 +69,37 @@ export function useAllGamesRealtime() {
   useEffect(() => {
     console.log('🔗 Setting up realtime for all games');
 
-    const channel = supabase
-      .channel('all-games')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'games'
-      }, (payload) => {
-        console.log('🎮 Games table update:', payload);
-        
-        // Invalidate all game queries
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'game_participants'
-      }, (payload) => {
-        console.log('👥 Participants table update:', payload);
-        
-        // Invalidate all game queries (affects participant counts)
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-      })
-      .subscribe((status) => {
-        console.log('📡 All games realtime status:', status);
-      });
+    try {
+      const channel = supabase
+        .channel('all-games')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'games'
+        }, (payload) => {
+          console.log('🎮 Games table update:', payload);
+          
+          // Invalidate all game queries
+          queryClient.invalidateQueries({ queryKey: ['games'] });
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'game_participants'
+        }, (payload) => {
+          console.log('👥 Participants table update:', payload);
+          
+          // Invalidate all game queries (affects participant counts)
+          queryClient.invalidateQueries({ queryKey: ['games'] });
+        })
+        .subscribe((status) => {
+          console.log('📡 All games realtime status:', status);
+        });
 
-    channelRef.current = channel;
+      channelRef.current = channel;
+    } catch (error) {
+      console.error('❌ Failed to setup all games realtime:', error);
+    }
 
     return () => {
       console.log('🔌 Unsubscribing from all games realtime');

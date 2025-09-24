@@ -55,7 +55,7 @@ export function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-export function formatDistance(distance: number, unit: 'km' | 'mi' = 'mi'): string {
+export function formatDistance(distance: number, unit: 'km' | 'mi' = 'km'): string {
   if (unit === 'mi') {
     distance = distance * 0.621371; // Convert km to miles
   }
@@ -281,7 +281,7 @@ export function useLocation(options: UseLocationOptions = {}) {
   // Get distance to a location
   const getDistanceTo = useCallback((
     target: LocationCoordinates,
-    unit: 'km' | 'mi' = 'mi'
+    unit: 'km' | 'mi' = 'km'
   ): number | null => {
     if (!state.currentLocation) return null;
     
@@ -298,7 +298,7 @@ export function useLocation(options: UseLocationOptions = {}) {
   // Get formatted distance to a location
   const getFormattedDistanceTo = useCallback((
     target: LocationCoordinates,
-    unit: 'km' | 'mi' = 'mi'
+    unit: 'km' | 'mi' = 'km'
   ): string | null => {
     const distance = getDistanceTo(target, unit);
     return distance ? formatDistance(distance, unit) : null;
@@ -307,10 +307,10 @@ export function useLocation(options: UseLocationOptions = {}) {
   // Check if a location is nearby
   const isNearby = useCallback((
     target: LocationCoordinates,
-    radiusMiles: number = 5
+    radiusKm: number = 5
   ): boolean => {
-    const distance = getDistanceTo(target, 'mi');
-    return distance !== null && distance <= radiusMiles;
+    const distance = getDistanceTo(target, 'km');
+    return distance !== null && distance <= radiusKm;
   }, [getDistanceTo]);
 
   // Initialize
@@ -348,8 +348,8 @@ export function useLocation(options: UseLocationOptions = {}) {
     calculateDistance: (lat1: number, lon1: number, lat2: number, lon2: number) => 
       calculateDistance(lat1, lon1, lat2, lon2),
     formatDistance,
-    getBoundsFromCenter: (radiusMiles: number) => 
-      state.currentLocation ? getBoundsFromCenter(state.currentLocation, radiusMiles * 1.60934) : null
+    getBoundsFromCenter: (radiusKm: number) => 
+      state.currentLocation ? getBoundsFromCenter(state.currentLocation, radiusKm) : null
   };
 }
 

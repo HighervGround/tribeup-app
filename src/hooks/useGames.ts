@@ -37,9 +37,19 @@ export function useGame(gameId: string) {
   return useQuery({
     queryKey: gameKeys.detail(gameId),
     queryFn: async () => {
-      return await SupabaseService.getGameById(gameId);
+      console.log('🔍 Fetching game:', gameId);
+      const game = await SupabaseService.getGameById(gameId);
+      console.log('✅ Game fetched:', game?.id || 'not found');
+      return game;
     },
     enabled: !!gameId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    meta: {
+      errorMessage: 'Failed to load game details'
+    }
   });
 }
 
@@ -47,9 +57,20 @@ export function useGame(gameId: string) {
 export function useGameParticipants(gameId: string) {
   return useQuery({
     queryKey: gameKeys.participants(gameId),
-    queryFn: () => SupabaseService.getGameParticipants(gameId),
+    queryFn: async () => {
+      console.log('🔍 Fetching participants for game:', gameId);
+      const participants = await SupabaseService.getGameParticipants(gameId);
+      console.log('✅ Participants fetched:', participants.length);
+      return participants;
+    },
     enabled: !!gameId,
     staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    meta: {
+      errorMessage: 'Failed to load game participants'
+    }
   });
 }
 

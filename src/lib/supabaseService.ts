@@ -1166,13 +1166,29 @@ export class SupabaseService {
 
       // Then fetch user details for each participant
       const userIds = participants.map(p => p.user_id);
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, full_name, username, avatar_url, email')
+      
+      // Try profiles table first, fallback to users table
+      let { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
         .in('id', userIds);
+      
+      // If profiles table doesn't exist or fails, try users table
+      if (usersError || !users) {
+        console.log('📋 Profiles table not available, trying users table');
+        const { data: usersData, error: usersTableError } = await supabase
+          .from('users')
+          .select('id, full_name, username, avatar_url, email')
+          .in('id', userIds);
+        
+        users = usersData;
+        usersError = usersTableError;
+      }
 
       if (usersError) {
         console.error('❌ Error fetching user details:', usersError);
+        console.error('❌ This is likely due to RLS policies blocking access to user profiles');
+        console.error('❌ Run the SQL fix in Supabase to allow public profile access');
         // Fallback: return participants with basic info
         return participants.map(participant => ({
           id: participant.user_id,

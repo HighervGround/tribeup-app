@@ -28,6 +28,7 @@ import {
   Edit3,
   Trash2,
   MoreVertical,
+  RefreshCw,
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppStore } from '../store/appStore';
@@ -230,9 +231,25 @@ function GameDetails() {
   const { user } = useAppStore();
   
   // Use React Query for game data and mutations
-  const { data: game, isLoading } = useGame(gameId || '');
-  const { data: participants = [], isLoading: loadingPlayers } = useGameParticipants(gameId || '');
+  const { data: game, isLoading, error: gameError } = useGame(gameId || '');
+  const { data: participants = [], isLoading: loadingPlayers, error: participantsError } = useGameParticipants(gameId || '');
   const { toggleJoin, isLoading: actionLoading, getButtonText } = useGameJoinToggle();
+  
+  // Add timeout for loading states to prevent infinite loading
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  useEffect(() => {
+    if (isLoading || loadingPlayers) {
+      const timeout = setTimeout(() => {
+        setLoadingTimeout(true);
+        console.warn('⏰ Loading timeout reached for GameDetails');
+      }, 15000); // 15 second timeout
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isLoading, loadingPlayers]);
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
@@ -326,12 +343,50 @@ function GameDetails() {
   // }, [isGameCompleted, userParticipated, user, gameId, showRatingModal]);
   
   // Handle loading and error states - AFTER all hooks
-  if (isLoading) {
+  if ((isLoading || loadingPlayers) && !loadingTimeout) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading game details...</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            If this takes too long, try refreshing the page
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle timeout or errors
+  if (loadingTimeout || gameError || participantsError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="mb-4">
+            <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+            <h2 className="text-xl font-semibold mb-2">Loading Issues</h2>
+            <p className="text-muted-foreground mb-4">
+              {loadingTimeout 
+                ? "The game is taking too long to load. This might be due to database connection issues."
+                : "There was an error loading the game details."
+              }
+            </p>
+            {(gameError || participantsError) && (
+              <p className="text-xs text-red-500 mb-4">
+                Error: {gameError?.message || participantsError?.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Button onClick={() => window.location.reload()} className="w-full">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh Page
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/')} className="w-full">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </div>
         </div>
       </div>
     );

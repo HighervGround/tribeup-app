@@ -10,13 +10,18 @@ interface ProfileCheckProps {
 
 export function ProfileCheck({ children = null }: ProfileCheckProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { user: appUser } = useAppStore();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     const checkProfile = () => {
-      console.log('ProfileCheck: Simple check starting');
+      console.log('ProfileCheck: Starting check', { 
+        user: user?.id, 
+        appUser: appUser?.id, 
+        authLoading,
+        pathname: window.location.pathname 
+      });
       
       // Skip check if on onboarding page
       if (window.location.pathname === '/onboarding') {
@@ -25,9 +30,15 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         return;
       }
 
+      // Wait for auth to finish loading
+      if (authLoading) {
+        console.log('ProfileCheck: Auth still loading, waiting...');
+        return; // Don't set checking to false, let it keep checking
+      }
+
       // No authenticated user - let ProtectedRoute handle this
       if (!user) {
-        console.log('ProfileCheck: No user, skipping');
+        console.log('ProfileCheck: No user after auth loaded, skipping');
         setChecking(false);
         return;
       }
@@ -39,17 +50,35 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         return;
       }
 
-      // No profile in store - redirect to onboarding
-      console.log('ProfileCheck: No profile found, redirecting to onboarding');
+      // Give AuthProvider more time to load the profile (up to 3 seconds)
+      if (user && !appUser) {
+        console.log('ProfileCheck: User authenticated but no app profile yet, waiting...');
+        // Don't redirect immediately, give it more time
+        return;
+      }
+
+      // After waiting, if still no profile, redirect to onboarding
+      console.log('ProfileCheck: No profile found after waiting, redirecting to onboarding');
       setChecking(false);
       navigate('/onboarding', { replace: true });
     };
 
-    // Add a small delay to prevent flash
-    const timer = setTimeout(checkProfile, 100);
+    // Check immediately, then every 500ms until resolved
+    checkProfile();
+    const interval = setInterval(checkProfile, 500);
     
-    return () => clearTimeout(timer);
-  }, [user, appUser, navigate]);
+    // Force timeout after 5 seconds
+    const timeout = setTimeout(() => {
+      console.log('ProfileCheck: Force timeout, allowing access');
+      clearInterval(interval);
+      setChecking(false);
+    }, 5000);
+    
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [user, appUser, authLoading, navigate]);
 
   if (checking) {
     return (

@@ -9,45 +9,25 @@ export function useGameRealtime(gameId?: string) {
   useEffect(() => {
     if (!gameId) return;
 
-    console.log('🔗 Setting up realtime for game:', gameId);
-
-    // Create channel for this specific game
-    const channel = supabase
-      .channel(`game-${gameId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'game_participants',
-        filter: `game_id=eq.${gameId}`
-      }, (payload) => {
-        console.log('👥 Participant update:', payload);
-        
-        // Invalidate queries to refetch data
-        queryClient.invalidateQueries({ queryKey: ['game', gameId] });
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public', 
-        table: 'games',
-        filter: `id=eq.${gameId}`
-      }, (payload) => {
-        console.log('🎮 Game update:', payload);
-        
-        // Invalidate game queries
-        queryClient.invalidateQueries({ queryKey: ['game', gameId] });
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-      })
-      .subscribe((status) => {
-        console.log('📡 Game realtime status:', status);
-      });
-
-    channelRef.current = channel;
+    console.log('🔗 WebSocket realtime disabled due to RLS restrictions, using polling fallback');
+    
+    // Skip WebSocket entirely and use polling
+    // This avoids the WebSocket connection errors
+    const pollInterval = setInterval(() => {
+      console.log('🔄 Polling for game updates:', gameId);
+      queryClient.invalidateQueries({ queryKey: ['game', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+    }, 15000); // Poll every 15 seconds
+    
+    channelRef.current = { 
+      _pollInterval: pollInterval,
+      state: 'joined' // Fake state for compatibility
+    };
 
     return () => {
-      console.log('🔌 Unsubscribing from game realtime:', gameId);
+      console.log('🔌 Unsubscribing from game polling:', gameId);
       if (channelRef.current) {
-        channelRef.current.unsubscribe();
+        clearInterval(channelRef.current._pollInterval);
       }
     };
   }, [gameId, queryClient]);

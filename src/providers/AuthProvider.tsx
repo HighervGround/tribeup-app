@@ -30,8 +30,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       DEBUG && console.log('[Auth] bootstrap:loading=true');
       
+      // Force timeout after 10 seconds to prevent infinite loading
+      const forceTimeout = setTimeout(() => {
+        console.warn('[Auth] Force timeout - setting loading to false');
+        setLoading(false);
+      }, 10000);
+      
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        clearTimeout(forceTimeout);
         
         if (error) {
           console.error('Error getting session:', error);

@@ -313,16 +313,11 @@ function EditProfile() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <Input
-                  placeholder="Avatar URL (optional)"
-                  value={formData.avatarUrl}
-                  onChange={(e) => handleInputChange('avatarUrl', e.target.value)}
-                />
-                <div className="mt-3 flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <Input type="file" accept="image/*" onChange={handleFileChange} />
                   <Upload className="w-4 h-4 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">Enter a URL or upload an image</p>
+                <p className="text-sm text-muted-foreground mt-1">Upload an image for your avatar</p>
                 {avatarError && (
                   <p className="text-xs text-red-500 mt-1" role="alert" aria-live="polite">{avatarError}</p>
                 )}

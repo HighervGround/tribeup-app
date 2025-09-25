@@ -43,9 +43,9 @@ queryDebugger.setQueryClient(queryClient);
 
 // Add global error handler
 queryClient.getQueryCache().subscribe((event) => {
-  if (event.type === 'queryAdded') {
+  if (event.type === 'added') {
     console.log('📝 [QueryClient] Query added:', event.query.queryKey);
-  } else if (event.type === 'queryRemoved') {
+  } else if (event.type === 'removed') {
     console.log('🗑️ [QueryClient] Query removed:', event.query.queryKey);
   }
 });
@@ -57,7 +57,7 @@ interface QueryProviderProps {
 export function QueryProvider({ children }: QueryProviderProps) {
   useEffect(() => {
     // Start debugging in development
-    if (import.meta.env.DEV) {
+    if (import.meta.env?.DEV || process.env.NODE_ENV === 'development') {
       console.log('🔍 [QueryProvider] Starting query debugging...');
       queryDebugger.startDebugging();
       
@@ -77,11 +77,9 @@ export function QueryProvider({ children }: QueryProviderProps) {
     <QueryClientProvider client={queryClient}>
       {children}
       {/* React Query DevTools - only in development */}
-      {import.meta.env.DEV && (
+      {(import.meta.env?.DEV || process.env.NODE_ENV === 'development') && (
         <ReactQueryDevtools 
           initialIsOpen={false}
-          position="bottom-right"
-          buttonPosition="bottom-right"
         />
       )}
     </QueryClientProvider>

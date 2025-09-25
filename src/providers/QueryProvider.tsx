@@ -1,21 +1,36 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryDebugger } from '../utils/queryDebugger';
 
-// Create a client
+// Create a client with enhanced error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime in v4)
+      staleTime: 2 * 60 * 1000, // 2 minutes (reduced for better refresh)
+      gcTime: 5 * 60 * 1000, // 5 minutes (reduced to prevent stale cache issues)
       retry: (failureCount, error: any) => {
+        console.log(`🔄 [QueryClient] Retry attempt ${failureCount} for error:`, error?.message);
+        
         // Don't retry on 4xx errors
         if (error?.status >= 400 && error?.status < 500) {
+          console.warn('🚫 [QueryClient] 4xx error, no retry');
           return false;
         }
-        return failureCount < 3;
+        
+        // Don't retry timeout errors more than once
+        if (error?.message?.includes('timeout') && failureCount >= 1) {
+          console.warn('🚫 [QueryClient] Timeout retry limit reached');
+          return false;
+        }
+        
+        return failureCount < 2; // Reduced from 3 to 2
       },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retryDelay: (attemptIndex) => {
+        const delay = Math.min(1000 * 2 ** attemptIndex, 15000); // Reduced max delay
+        console.log(`⏱️ [QueryClient] Retry delay: ${delay}ms`);
+        return delay;
+      },
     },
     mutations: {
       retry: 1,
@@ -23,11 +38,41 @@ const queryClient = new QueryClient({
   },
 });
 
+// Set up query debugger
+queryDebugger.setQueryClient(queryClient);
+
+// Add global error handler
+queryClient.getQueryCache().subscribe((event) => {
+  if (event.type === 'queryAdded') {
+    console.log('📝 [QueryClient] Query added:', event.query.queryKey);
+  } else if (event.type === 'queryRemoved') {
+    console.log('🗑️ [QueryClient] Query removed:', event.query.queryKey);
+  }
+});
+
 interface QueryProviderProps {
   children: React.ReactNode;
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
+  useEffect(() => {
+    // Start debugging in development
+    if (import.meta.env.DEV) {
+      console.log('🔍 [QueryProvider] Starting query debugging...');
+      queryDebugger.startDebugging();
+      
+      // Set up periodic stuck query detection
+      const stuckQueryInterval = setInterval(() => {
+        queryDebugger.forceRefreshStuckQueries();
+      }, 30000); // Check every 30 seconds
+      
+      return () => {
+        queryDebugger.stopDebugging();
+        clearInterval(stuckQueryInterval);
+      };
+    }
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       {children}

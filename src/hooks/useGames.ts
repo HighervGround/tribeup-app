@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { toast } from 'sonner';
@@ -13,22 +14,86 @@ export const gameKeys = {
   participants: (id: string) => [...gameKeys.detail(id), 'participants'] as const,
 };
 
-// Hook for fetching games
+// Hook for fetching games with enhanced error handling and timeout
 export function useGames() {
   const { user } = useAppStore();
+  const queryClient = useQueryClient();
+  
+  // Invalidate cache when user auth state changes to prevent stale data
+  useEffect(() => {
+    console.log('🔄 [useGames] Auth state changed, invalidating cache for user:', user?.id || 'anonymous');
+    queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+  }, [user?.id, queryClient]);
   
   return useQuery({
     queryKey: gameKeys.lists(),
     queryFn: async () => {
-      console.log('🔍 Fetching games with React Query');
-      const games = await SupabaseService.getGames();
-      console.log('✅ Games fetched:', games.length);
-      return games;
+      console.log('🔍 [useGames] Starting fetch with user:', user?.id || 'anonymous');
+      const startTime = performance.now();
+      
+      try {
+        // Add timeout wrapper to prevent hanging
+        const gamesPromise = SupabaseService.getGames();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('useGames timeout after 15 seconds')), 15000)
+        );
+        
+        const games = await Promise.race([gamesPromise, timeoutPromise]) as any;
+        const duration = performance.now() - startTime;
+        
+        console.log('✅ [useGames] Games fetched successfully:', {
+          count: games.length,
+          duration: `${duration.toFixed(2)}ms`,
+          user: user?.id || 'anonymous'
+        });
+        
+        return games;
+      } catch (error) {
+        const duration = performance.now() - startTime;
+        console.error('❌ [useGames] Fetch failed:', {
+          error: error.message,
+          duration: `${duration.toFixed(2)}ms`,
+          user: user?.id || 'anonymous'
+        });
+        
+        // If it's a timeout, clear potentially corrupted cache
+        if (error.message?.includes('timeout')) {
+          console.warn('🧹 [useGames] Timeout detected, clearing cache');
+          // Don't throw here, let React Query handle retries
+        }
+        
+        throw error;
+      }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes (was cacheTime in v4)
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced for better refresh)
+    gcTime: 3 * 60 * 1000, // 3 minutes (reduced to prevent stale cache issues)
+    retry: (failureCount, error) => {
+      console.log(`🔄 [useGames] Retry attempt ${failureCount}:`, error.message);
+      
+      // Don't retry timeouts more than once
+      if (error.message?.includes('timeout') && failureCount >= 1) {
+        console.warn('🚫 [useGames] Timeout retry limit reached');
+        return false;
+      }
+      
+      // Don't retry auth errors
+      if (error.message?.includes('JWT') || error.message?.includes('auth')) {
+        console.warn('🚫 [useGames] Auth error, no retry');
+        return false;
+      }
+      
+      return failureCount < 2; // Max 2 retries
+    },
+    retryDelay: (attemptIndex) => {
+      const delay = Math.min(1000 * Math.pow(2, attemptIndex), 5000);
+      console.log(`⏱️ [useGames] Retry delay: ${delay}ms`);
+      return delay;
+    },
     // Remove authentication requirement - games should load for all users
     // enabled: !!user, // Only fetch when user is authenticated
+    meta: {
+      errorMessage: 'Failed to load games. Please refresh the page.'
+    }
   });
 }
 

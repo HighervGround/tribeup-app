@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './ErrorBoundary';
+import { QueryErrorBoundary } from './QueryErrorBoundary';
 import { LoadingSpinner } from './ui/loading-spinner';
 import { ProtectedRoute } from './ProtectedRoute';
 import AppContent from './AppContent';
@@ -46,9 +47,10 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-        <AppWrapper>
-          <Suspense fallback={<RouteLoader text="Loading application..." />}>
-            <Routes>
+        <QueryErrorBoundary>
+          <AppWrapper>
+            <Suspense fallback={<RouteLoader text="Loading application..." />}>
+              <Routes>
               {/* Protected Routes - require authentication */}
               <Route path="/" element={
                 <ProtectedRoute>
@@ -138,6 +140,7 @@ export function AppRouter() {
             </Routes>
           </Suspense>
         </AppWrapper>
+        </QueryErrorBoundary>
       </ErrorBoundary>
     </BrowserRouter>
   );

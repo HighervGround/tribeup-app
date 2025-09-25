@@ -19,9 +19,10 @@ import { GameCardSkeleton } from './GameCardSkeleton';
 function HomeScreen() {
   const navigate = useNavigate();
   const { user } = useAppStore();
-  const { data: games = [], isLoading, error, refetch } = useGames();
+  const { data: games = [], isLoading, error, refetch, isError, isPending, isRefetching } = useGames();
   const [refreshing, setRefreshing] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
+  const [forceTimeout, setForceTimeout] = useState(false);
   const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
   // Real-time presence tracking (no polling)
   const { onlineCount, isLoading: presenceLoading } = useUserPresence();
@@ -29,6 +30,22 @@ function HomeScreen() {
   const { currentLocation, isLoading: locationLoading, permission, requestLocation, getFormattedDistanceTo } = useLocation();
   // Real-time updates for all games
   const { isConnected: realtimeConnected } = useAllGamesRealtime();
+  
+  // Force timeout if loading takes too long
+  useEffect(() => {
+    if (isLoading || isPending) {
+      console.log('🕰️ [HomeScreen] Starting loading timeout timer');
+      const timeout = setTimeout(() => {
+        console.warn('⚠️ [HomeScreen] Force timeout after 20 seconds');
+        setForceTimeout(true);
+      }, 20000);
+      
+      return () => {
+        clearTimeout(timeout);
+        setForceTimeout(false);
+      };
+    }
+  }, [isLoading, isPending]);
   
   // Game selection handler
   const handleGameSelect = (gameId: string) => {
@@ -192,31 +209,84 @@ function HomeScreen() {
       return a.gameDate.getTime() - b.gameDate.getTime();
     });
 
-  // Show loading state
-  if (isLoading && games.length === 0) {
+  // Show loading state with timeout handling
+  if ((isLoading || isPending) && games.length === 0 && !forceTimeout) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading games...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Timed-out empty state with retry - only show if no games at all
-  if (timedOut && games.length === 0) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <p className="text-muted-foreground">Connection issues detected. Showing sample games.</p>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" /> Try Again
+          <p className="text-xs text-muted-foreground/70">
+            {isRefetching ? 'Refreshing...' : 'This should only take a moment'}
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              console.log('🔄 [HomeScreen] Manual refresh triggered');
+              setForceTimeout(false);
+              refetch();
+            }}
+          >
+            Refresh Now
           </Button>
         </div>
       </div>
     );
   }
+  
+  // Show error state
+  if ((isError || error || forceTimeout) && games.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-destructive text-lg font-semibold">
+            {forceTimeout ? 'Loading Timeout' : 'Connection Error'}
+          </div>
+          <p className="text-muted-foreground max-w-md">
+            {forceTimeout 
+              ? 'Games are taking too long to load. This might be a network or server issue.'
+              : error?.message || 'Unable to load games. Please check your connection.'}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button 
+              onClick={() => {
+                console.log('🔄 [HomeScreen] Error state refresh');
+                setForceTimeout(false);
+                setTimedOut(false);
+                refetch();
+              }}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                console.log('🧹 [HomeScreen] Clearing cache and refreshing');
+                localStorage.removeItem('supabase.auth.token');
+                window.location.reload();
+              }}
+            >
+              Clear Cache & Reload
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Log current state for debugging
+  console.log('📊 [HomeScreen] Current state:', {
+    isLoading,
+    isPending,
+    isError,
+    isRefetching,
+    forceTimeout,
+    gamesCount: games.length,
+    error: error?.message,
+    user: user?.id || 'anonymous'
+  });
 
   return (
     <div className="min-h-screen bg-background">

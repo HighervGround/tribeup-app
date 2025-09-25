@@ -57,7 +57,10 @@ interface QueryProviderProps {
 export function QueryProvider({ children }: QueryProviderProps) {
   useEffect(() => {
     // Start debugging in development
-    if (import.meta.env?.DEV || process.env.NODE_ENV === 'development') {
+    const isDev = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development');
+    
+    if (isDev) {
       console.log('🔍 [QueryProvider] Starting query debugging...');
       queryDebugger.startDebugging();
       
@@ -77,7 +80,8 @@ export function QueryProvider({ children }: QueryProviderProps) {
     <QueryClientProvider client={queryClient}>
       {children}
       {/* React Query DevTools - only in development */}
-      {(import.meta.env?.DEV || process.env.NODE_ENV === 'development') && (
+      {typeof window !== 'undefined' && 
+       (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development') && (
         <ReactQueryDevtools 
           initialIsOpen={false}
         />

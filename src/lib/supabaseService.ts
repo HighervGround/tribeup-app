@@ -679,7 +679,12 @@ export class SupabaseService {
       if (error) throw error;
 
       return (gamesWithParticipants || []).map((game: any) => {
-        const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        console.log(`🎯 Game ${game.id} isJoined check:`, {
+          userId,
+          participants: game.game_participants?.map(p => p.user_id),
+          isJoined
+        });
         return transformGameFromDB(game, isJoined);
       });
     } catch (error) {
@@ -895,9 +900,17 @@ export class SupabaseService {
 
   static async joinGame(gameId: string): Promise<void> {
     const currentUser = await this.getCurrentUser();
-    if (!currentUser) throw new Error('User not authenticated');
+    if (!currentUser) {
+      console.error('❌ joinGame: User not authenticated');
+      throw new Error('User not authenticated');
+    }
 
     console.log(`🔧 User ${currentUser.id} joining game ${gameId}`);
+    console.log(`🔧 Current user details:`, {
+      id: currentUser.id,
+      email: currentUser.email,
+      name: currentUser.name
+    });
 
     // Use the database function
     const { error } = await supabase.rpc('join_game', {

@@ -56,23 +56,29 @@ interface QueryProviderProps {
 
 export function QueryProvider({ children }: QueryProviderProps) {
   useEffect(() => {
+    // Expose queryClient to window for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).queryClient = queryClient;
+      console.log('🔍 [QueryProvider] QueryClient exposed to window.queryClient');
+    }
+    
     // Start debugging in development
     const isDev = typeof window !== 'undefined' && 
       (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development');
     
     if (isDev) {
-      console.log('🔍 [QueryProvider] Starting query debugging...');
-      queryDebugger.startDebugging();
+      console.log('🔍 [QueryProvider] Query debugging disabled temporarily to prevent interference');
+      // queryDebugger.startDebugging();
       
-      // Set up periodic stuck query detection
-      const stuckQueryInterval = setInterval(() => {
-        queryDebugger.forceRefreshStuckQueries();
-      }, 30000); // Check every 30 seconds
+      // Disable stuck query detection that was cancelling queries
+      // const stuckQueryInterval = setInterval(() => {
+      //   queryDebugger.forceRefreshStuckQueries();
+      // }, 30000); // Check every 30 seconds
       
-      return () => {
-        queryDebugger.stopDebugging();
-        clearInterval(stuckQueryInterval);
-      };
+      // return () => {
+      //   queryDebugger.stopDebugging();
+      //   clearInterval(stuckQueryInterval);
+      // };
     }
   }, []);
   

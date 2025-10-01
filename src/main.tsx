@@ -1,7 +1,8 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import { CacheCorruptionDetector } from './utils/cacheCorruptionDetector'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization
@@ -48,4 +49,30 @@ if ((import.meta as any).env.PROD && 'performance' in window) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Initialize app directly - disable cache corruption detector temporarily
+async function initializeApp() {
+  console.log('🚀 [App] Starting TribeUp initialization...');
+  
+  try {
+    console.log('✅ [App] Skipping cache corruption check, starting React app directly...');
+    
+    // Start React app immediately
+    ReactDOM.createRoot(document.getElementById('root')!).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+    );
+    
+  } catch (error) {
+    console.error('❌ [App] Initialization failed:', error);
+    
+    // Simple fallback without cache cleaning
+    console.log('🚨 [App] Retrying app initialization...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  }
+}
+
+// Start the initialization
+initializeApp();

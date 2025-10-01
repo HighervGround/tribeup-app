@@ -80,7 +80,7 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
             message: msg.message,
             created_at: msg.created_at,
             user: {
-              name: msg.users?.full_name || msg.users?.username || `User ${msg.user_id.slice(0, 8)}`,
+              name: msg.users?.full_name || msg.users?.username || `Unknown User (${msg.user_id.slice(0, 8)})`,
               avatar: msg.users?.avatar_url || ''
             }
           }));
@@ -114,6 +114,8 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
         filter: `game_id=eq.${gameId}`
       }, async (payload) => {
         console.log('💬 New chat message from database:', payload);
+        console.log('👤 Current user ID:', user?.id);
+        console.log('📝 Message user ID:', payload.new.user_id);
         
         // Fetch the complete message with user data
         const { data: messageData, error } = await supabase
@@ -141,16 +143,24 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
             message: messageData.message,
             created_at: messageData.created_at,
             user: {
-              name: messageData.users?.full_name || messageData.users?.username || `User ${messageData.user_id.slice(0, 8)}`,
+              name: messageData.users?.full_name || messageData.users?.username || `Unknown User (${messageData.user_id.slice(0, 8)})`,
               avatar: messageData.users?.avatar_url || ''
             }
           };
           
-          // Only add if it's not from the current user (avoid duplicates)
-          if (messageData.user_id !== user?.id) {
-            setMessages(prev => [...prev, newMsg]);
-            setTimeout(scrollToBottom, 100);
-          }
+          // Add message if it's not already in the local state (avoid duplicates)
+          setMessages(prev => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.some(msg => msg.id === newMsg.id);
+            if (!exists) {
+              console.log('✅ Adding new message to chat:', newMsg.message, 'from:', newMsg.user?.name);
+              return [...prev, newMsg];
+            } else {
+              console.log('⚠️ Message already exists, skipping:', newMsg.id);
+            }
+            return prev;
+          });
+          setTimeout(scrollToBottom, 100);
         }
       })
       .subscribe((status) => {
@@ -220,20 +230,11 @@ export function GameChat({ gameId, className = '' }: GameChatProps) {
         }
       };
 
+      // Add to local state immediately for the sender
       setMessages(prev => [...prev, newMsg]);
       
-      // Broadcast message to other users for real-time updates
-      if (channelRef.current) {
-        await channelRef.current.send({
-          type: 'broadcast',
-          event: 'new_message',
-          payload: {
-            ...newMsg,
-            user_name: newMsg.user?.name,
-            user_avatar: newMsg.user?.avatar
-          }
-        });
-      }
+      // Note: Real-time updates for other users will come through the postgres_changes subscription
+      // No need for manual broadcasting as the database trigger handles it
       
       setNewMessage('');
       setTimeout(scrollToBottom, 100);

@@ -143,66 +143,61 @@ export class SupabaseService {
       // Only proceed with query if user is authenticated
       console.log('🔍 User is authenticated, executing query for user ID:', userId.trim());
       
-      // Use shorter timeout for user profile queries to prevent hanging
+      // Let query complete naturally - no artificial timeouts
       console.log('🔍 Starting database query...');
-      const data = await networkService.executeWithRetry(
-        async () => {
-          console.log('🔍 Executing Supabase query...');
-          // Use explicit field selection to avoid PGRST116 coercion errors
-          const { data, error } = await supabase
+      console.log('🔍 Executing Supabase query...');
+      
+      // Use explicit field selection to avoid PGRST116 coercion errors
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          email,
+          username,
+          full_name,
+          avatar_url,
+          bio,
+          location,
+          preferred_sports,
+          role,
+          stats,
+          created_at
+        `)
+        .eq('id', userId.trim())
+        .maybeSingle();
+      
+      console.log('🔍 Query completed. Data:', data, 'Error:', error);
+      
+      if (error) {
+        // Handle PGRST116 specifically - this means data coercion failed
+        if (error.code === 'PGRST116') {
+          console.error('❌ PGRST116 Error: Cannot coerce result to single JSON object');
+          console.error('❌ This usually means multiple rows returned or data type mismatch');
+          
+          // Try a fallback query with just basic fields
+          const { data: fallbackData, error: fallbackError } = await supabase
             .from('users')
-            .select(`
-              id,
-              email,
-              username,
-              full_name,
-              avatar_url,
-              bio,
-              location,
-              preferred_sports,
-              role,
-              stats,
-              created_at
-            `)
+            .select('id, email, username, full_name, avatar_url, bio, location, role')
             .eq('id', userId.trim())
-            .maybeSingle();
-          
-          console.log('🔍 Query completed. Data:', data, 'Error:', error);
-          
-          if (error) {
-            // Handle PGRST116 specifically - this means data coercion failed
-            if (error.code === 'PGRST116') {
-              console.error('❌ PGRST116 Error: Cannot coerce result to single JSON object');
-              console.error('❌ This usually means multiple rows returned or data type mismatch');
-              
-              // Try a fallback query with just basic fields
-              const { data: fallbackData, error: fallbackError } = await supabase
-                .from('users')
-                .select('id, email, username, full_name, avatar_url, bio, location, role')
-                .eq('id', userId.trim())
-                .limit(1)
-                .single();
-                
-              if (fallbackError) {
-                throw fallbackError;
-              }
-              
-              console.log('✅ Fallback query succeeded, using basic user data');
-              // Create a minimal user object with fallback data
-              return {
-                ...fallbackData,
-                preferred_sports: [],
-                stats: {},
-                created_at: new Date().toISOString()
-              };
-            }
-            throw error;
+            .limit(1)
+            .single();
+            
+          if (fallbackError) {
+            throw fallbackError;
           }
-          return data;
-        },
-        `getUserProfile-${userId}`,
-        { maxRetries: 1, timeout: 3000 }
-      );
+          
+          console.log('✅ Fallback query succeeded, using basic user data');
+          // Create a minimal user object with fallback data
+          const data = {
+            ...fallbackData,
+            preferred_sports: [],
+            stats: {},
+            created_at: new Date().toISOString()
+          };
+        } else {
+          throw error;
+        }
+      }
 
       if (!data) {
         console.log('❌ No user found for ID:', userId);
@@ -531,176 +526,86 @@ export class SupabaseService {
   static async getGames(): Promise<Game[]> {
     const startTime = performance.now();
     console.log('🚀 Starting getGames...');
+    console.log('🔍 Network status:', navigator.onLine ? 'ONLINE' : 'OFFLINE');
+    console.log('🔍 Supabase URL:', supabase.supabaseUrl);
     
     try {
-      // Get current user to check join status with timeout
-      console.log('🔍 Getting user session...');
-      let userId: string | undefined;
-      
-      try {
-        // Add timeout to prevent hanging on corrupted sessions
-        const userPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 5000)
-        );
-        
-        const { data: { user } } = await Promise.race([userPromise, timeoutPromise]) as any;
-        userId = user?.id;
-        console.log('✅ User session retrieved:', userId ? 'authenticated' : 'anonymous');
-      } catch (authError) {
-        console.warn('⚠️ Auth session error, continuing as anonymous:', authError);
-        // Clear potentially corrupted session
-        try {
-          await supabase.auth.signOut();
-          console.log('🧹 Cleared corrupted session');
-        } catch (signOutError) {
-          console.warn('Failed to clear session:', signOutError);
-        }
-        userId = undefined;
-      }
+      // SCREW AUTH - Just load games without authentication
+      console.log('🚫 BYPASSING ALL AUTH - Loading games anonymously');
+      const userId = undefined; // Always anonymous
       
         const queryStart = performance.now();
         
         console.log(`🔍 Getting games for user: ${userId}`);
         
-        // If user is authenticated, get games with join status
-        if (userId) {
-          console.log('🔍 Fetching games with participant data...');
-          
-          // Add timeout to games query
-          const gamesPromise = supabase
-            .from('games')
-            .select(`
-              *,
-              game_participants(user_id),
-              creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
-            `)
-            // Filter out games that are fully in the past (date + time has passed)
-            .gte('date', new Date().toISOString().split('T')[0])
-            .order('date', { ascending: true })
-            .limit(50);
-          
-          const gamesTimeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Games query timeout')), 10000)
-          );
-          
-          const { data: gamesWithParticipants, error } = await Promise.race([
-            gamesPromise, 
-            gamesTimeoutPromise
-          ]) as any;
-        
-        const queryTime = performance.now() - queryStart;
-        console.log(`📊 Supabase query with participants took: ${queryTime.toFixed(2)}ms`);
-
-        if (error) throw error;
-        
-        const transformStart = performance.now();
-        const games = (gamesWithParticipants || []).map((game: any) => {
-          try {
-            const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
-            console.log(`🔍 Game ${game.id} (${game.title}): isJoined=${isJoined}, participants=`, game.game_participants);
-            return transformGameFromDB(game, isJoined);
-          } catch (transformError) {
-            console.error('❌ Transform error for game:', game.id, transformError);
-            // Fallback to basic game object
-            return {
-              id: game.id,
-              title: game.title,
-              sport: game.sport,
-              date: game.date,
-              time: game.time,
-              location: game.location,
-              latitude: game.latitude,
-              longitude: game.longitude,
-              cost: game.cost,
-              maxPlayers: game.max_players,
-              currentPlayers: game.current_players,
-              description: game.description,
-              imageUrl: game.image_url || '',
-              sportColor: '#6B7280',
-              isJoined: false,
-              createdBy: game.creator_id,
-              createdAt: game.created_at,
-            };
-          }
+        // SIMPLE ANONYMOUS QUERY - No auth, no joins, just games
+        console.log('🔍 Fetching games with SIMPLE query...');
+        console.log('🔍 About to call supabase.from("games")...');
+        console.log('🔍 Supabase client state:', {
+          url: supabase.supabaseUrl,
+          key: supabase.supabaseKey ? 'SET' : 'NOT SET',
+          authHeaders: supabase.auth.session ? 'HAS SESSION' : 'NO SESSION'
         });
         
-        const transformTime = performance.now() - transformStart;
-        const totalTime = performance.now() - startTime;
-        
-        console.log(`⚡ Transform took: ${transformTime.toFixed(2)}ms`);
-        console.log(`✅ Total getGames took: ${totalTime.toFixed(2)}ms`);
-        console.log(`📦 Returned ${games.length} games`);
-        
-        return games;
-      } else {
-        // If no user, get games without join status
-        console.log('🔍 Fetching games for anonymous user...');
-        
-        // Add timeout to anonymous games query too
-        const anonymousGamesPromise = supabase
+        // Add Promise.race timeout to prevent hanging (common Supabase SDK issue)
+        const queryPromise = supabase
           .from('games')
-          .select(`
-            *,
-            creator:users!games_creator_id_fkey(id, full_name, username, avatar_url)
-          `)
-          // Filter out games that are fully in the past (date + time has passed)
+          .select('*')
           .gte('date', new Date().toISOString().split('T')[0])
-          .order('created_at', { ascending: false })
+          .order('date', { ascending: true })
           .limit(50);
-        
-        const anonymousTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Anonymous games query timeout')), 10000)
+          
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout - Supabase SDK hang detected')), 15000)
         );
         
         const { data: gamesData, error } = await Promise.race([
-          anonymousGamesPromise,
-          anonymousTimeoutPromise
+          queryPromise,
+          timeoutPromise
         ]) as any;
+          
+        console.log('🔍 Supabase query completed!', { data: gamesData?.length, error });
         
         const queryTime = performance.now() - queryStart;
-        console.log(`📊 Supabase query took: ${queryTime.toFixed(2)}ms`);
+        console.log(`📊 SIMPLE query took: ${queryTime.toFixed(2)}ms`);
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Simple query failed:', error);
+          throw error;
+        }
         
-        const transformStart = performance.now();
-        const games = (gamesData || []).map((game: any) => {
-          try {
-            return transformGameFromDB(game, false);
-          } catch (transformError) {
-            console.error('❌ Transform error for game:', game.id, transformError);
-            // Fallback to basic game object
-            return {
-              id: game.id,
-              title: game.title,
-              sport: game.sport,
-              date: game.date,
-              time: game.time,
-              location: game.location,
-              latitude: game.latitude,
-              longitude: game.longitude,
-              cost: game.cost,
-              maxPlayers: game.max_players,
-              currentPlayers: game.current_players,
-              description: game.description,
-              imageUrl: game.image_url || '',
-              sportColor: '#6B7280',
-              isJoined: false,
-              createdBy: game.creator_id,
-              createdAt: game.created_at,
-            };
-          }
-        });
+        // Transform to basic game objects - no complex transforms
+        const games = (gamesData || []).map((game: any) => ({
+          id: game.id,
+          title: game.title,
+          sport: game.sport,
+          date: game.date,
+          time: game.time,
+          location: game.location,
+          latitude: game.latitude,
+          longitude: game.longitude,
+          cost: game.cost,
+          maxPlayers: game.max_players,
+          currentPlayers: game.current_players,
+          description: game.description,
+          imageUrl: game.image_url || '',
+          sportColor: '#6B7280',
+          isJoined: false, // Always false for anonymous
+          createdBy: `Unknown User (${game.creator_id?.slice(0, 8) || 'No ID'})`,
+          creatorId: game.creator_id,
+          creatorData: {
+            id: game.creator_id,
+            name: `Unknown User (${game.creator_id?.slice(0, 8) || 'No ID'})`,
+            avatar: ''
+          },
+          createdAt: game.created_at,
+        }));
         
-        const transformTime = performance.now() - transformStart;
         const totalTime = performance.now() - startTime;
-        
-        console.log(`⚡ Transform took: ${transformTime.toFixed(2)}ms`);
-        console.log(`✅ Total getGames took: ${totalTime.toFixed(2)}ms`);
+        console.log(`✅ SIMPLE getGames took: ${totalTime.toFixed(2)}ms`);
         console.log(`📦 Returned ${games.length} games`);
         
         return games;
-      }
       
     } catch (error) {
       console.error('❌ getGames error:', error);
@@ -1100,39 +1005,119 @@ export class SupabaseService {
   }
 
   static async getGameById(gameId: string): Promise<any> {
-    // Get current user to check join status
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    console.log('🔍 [getGameById] Starting optimized fetch for game:', gameId);
+    const startTime = performance.now();
     
-    if (userId) {
-      // For authenticated users, get game with join status and creator info
-      const { data, error } = await supabase
-        .from('games')
-        .select(`
-          *,
-          game_participants(user_id),
-          creator:users!creator_id(id, full_name, username, avatar_url)
-        `)
-        .eq('id', gameId)
-        .single();
-
-      if (error) throw error;
+    try {
+      // BYPASS HANGING AUTH - Use cached session instead
+      let userId: string | undefined;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        userId = session?.user?.id;
+        console.log('✅ [getGameById] Session from cache:', userId ? 'authenticated' : 'anonymous');
+      } catch (authError) {
+        console.warn('⚠️ [getGameById] Auth failed, continuing as anonymous:', authError);
+        userId = undefined;
+      }
       
-      const isJoined = data.game_participants?.some((p: any) => p.user_id === userId) || false;
-      return transformGameFromDB(data, isJoined);
-    } else {
-      // For unauthenticated users, get game without join status but with creator info
-      const { data, error } = await supabase
-        .from('games')
-        .select(`
-          *,
-          creator:users!creator_id(id, full_name, username, avatar_url)
-        `)
-        .eq('id', gameId)
-        .single();
+      // OPTIMIZED APPROACH: Use simpler, faster queries
+      if (userId) {
+        console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
+        
+        // Step 1: Get basic game data (fast)
+        const { data: gameData, error: gameError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', gameId)
+          .single();
 
-      if (error) throw error;
-      return transformGameFromDB(data, false);
+        if (gameError) {
+          console.error('❌ [getGameById] Game query error:', gameError);
+          throw gameError;
+        }
+        
+        // Step 2: Check if user joined (separate fast query)
+        const { data: participantData } = await supabase
+          .from('game_participants')
+          .select('user_id')
+          .eq('game_id', gameId)
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        const isJoined = !!participantData;
+        
+        // Step 3: Get creator info (separate fast query)
+        let creatorInfo = null;
+        if (gameData.creator_id) {
+          const { data: creator } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .eq('id', gameData.creator_id)
+            .maybeSingle();
+          creatorInfo = creator;
+        }
+        
+        // Combine results
+        const result = transformGameFromDB({
+          ...gameData,
+          creator: creatorInfo
+        }, isJoined);
+        
+        const duration = performance.now() - startTime;
+        console.log('✅ [getGameById] Success for authenticated user:', {
+          gameId,
+          duration: `${duration.toFixed(2)}ms`,
+          isJoined
+        });
+        
+        return result;
+      } else {
+        console.log('🔍 [getGameById] Fetching for anonymous user');
+        
+        // For anonymous users: simple query without joins
+        const { data: gameData, error: gameError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', gameId)
+          .single();
+
+        if (gameError) {
+          console.error('❌ [getGameById] Game query error:', gameError);
+          throw gameError;
+        }
+        
+        // Get creator info separately
+        let creatorInfo = null;
+        if (gameData.creator_id) {
+          const { data: creator } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .eq('id', gameData.creator_id)
+            .maybeSingle();
+          creatorInfo = creator;
+        }
+        
+        const result = transformGameFromDB({
+          ...gameData,
+          creator: creatorInfo
+        }, false);
+        
+        const duration = performance.now() - startTime;
+        console.log('✅ [getGameById] Success for anonymous user:', {
+          gameId,
+          duration: `${duration.toFixed(2)}ms`
+        });
+        
+        return result;
+      }
+    } catch (error) {
+      const duration = performance.now() - startTime;
+      console.error('❌ [getGameById] Failed:', {
+        gameId,
+        error: error.message,
+        duration: `${duration.toFixed(2)}ms`
+      });
+      throw error;
     }
   }
 
@@ -1212,8 +1197,11 @@ export class SupabaseService {
   }
 
   static async getGameParticipants(gameId: string): Promise<any[]> {
+    console.log('🔍 [getGameParticipants] Starting optimized fetch for game:', gameId);
+    const startTime = performance.now();
+    
     try {
-      // First, get the participant user IDs
+      // Get participant user IDs (no timeout - let it complete)
       const { data: participants, error: participantsError } = await supabase
         .from('game_participants')
         .select('user_id, joined_at')
@@ -1248,7 +1236,7 @@ export class SupabaseService {
         console.error('🚨 You MUST run the RLS fix SQL in Supabase dashboard');
       }
       
-      // Fetch user details from users table (no profiles table exists)
+      // Fetch user details from users table (no timeout - optimized query)
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, full_name, username, avatar_url, email')
@@ -1270,7 +1258,7 @@ CREATE POLICY "Users can view basic profile info" ON public.users
         // Fallback: return participants with basic info
         return participants.map(participant => ({
           id: participant.user_id,
-          name: `User ${participant.user_id.slice(0, 8)}`,
+          name: `Unknown User (${participant.user_id.slice(0, 8)})`,
           avatar: null,
           isHost: false,
           rating: 4.5
@@ -1286,7 +1274,7 @@ CREATE POLICY "Users can view basic profile info" ON public.users
         
         return {
           id: participant.user_id,
-          name: user?.full_name || user?.username || user?.email?.split('@')[0] || `User ${participant.user_id.slice(0, 8)}`,
+          name: user?.full_name || user?.username || user?.email?.split('@')[0] || `Unknown User (${participant.user_id.slice(0, 8)})`,
           avatar: user?.avatar_url || null,
           isHost: false, // We'll determine this separately by checking if user is game creator
           rating: 4.5 // Default rating - in real app this would come from a ratings table

@@ -547,22 +547,13 @@ export class SupabaseService {
           authHeaders: supabase.auth.session ? 'HAS SESSION' : 'NO SESSION'
         });
         
-        // Add Promise.race timeout to prevent hanging (common Supabase SDK issue)
-        const queryPromise = supabase
+        // This should complete in milliseconds, not seconds
+        const { data: gamesData, error } = await supabase
           .from('games')
           .select('*')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
-          
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Query timeout - Supabase SDK hang detected')), 15000)
-        );
-        
-        const { data: gamesData, error } = await Promise.race([
-          queryPromise,
-          timeoutPromise
-        ]) as any;
           
         console.log('🔍 Supabase query completed!', { data: gamesData?.length, error });
         

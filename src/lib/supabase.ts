@@ -28,8 +28,8 @@ const createSupabaseClient = () => {
   console.log('🔧 Creating new Supabase client...');
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: false, // Disable to prevent stale session hangs
-      autoRefreshToken: false, // Disable to prevent refresh token hangs
+      persistSession: true, // Keep sessions persistent for good UX
+      autoRefreshToken: true, // Re-enable auto refresh
       detectSessionInUrl: true,
       storageKey: 'tribeup-auth',
       flowType: 'implicit', // Use implicit flow for OAuth compatibility

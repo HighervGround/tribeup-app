@@ -547,7 +547,6 @@ export class SupabaseService {
           authHeaders: supabase.auth.session ? 'HAS SESSION' : 'NO SESSION'
         });
         
-        // This should complete in milliseconds, not seconds
         const { data: gamesData, error } = await supabase
           .from('games')
           .select('*')

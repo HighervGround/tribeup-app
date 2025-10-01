@@ -41,16 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        // Add timeout to prevent getSession hanging (common Supabase SDK issue)
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getSession timeout - clearing auth state')), 10000)
-        );
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
@@ -108,18 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Don't call initializeAuth here to prevent loops
       } catch (error) {
         console.error('Error getting initial session:', error);
-        if (error.message?.includes('timeout')) {
-          console.warn('[Auth] getSession timed out - clearing auth state and proceeding');
-          // Clear potentially corrupted auth state
-          try {
-            await supabase.auth.signOut();
-            localStorage.clear();
-          } catch (clearError) {
-            console.warn('[Auth] Failed to clear auth state:', clearError);
-          }
-          setSession(null);
-          setUser(null);
-        }
       } finally {
         setLoading(false);
         DEBUG && console.log('[Auth] bootstrap:loading=false');

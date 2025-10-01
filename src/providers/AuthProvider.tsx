@@ -123,69 +123,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes - NO ASYNC OPERATIONS INSIDE
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         DEBUG && console.log('[Auth] onAuthStateChange:', event, session?.user?.id);
         
+        // Only update auth state - no async operations
         setSession(session);
         setUser(session?.user ?? null);
 
         if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            DEBUG && console.log('[Auth] Load profile for:', session.user.id);
-            const userProfile = await SupabaseService.getUserProfile(session.user.id);
-            if (userProfile) {
-              DEBUG && console.log('[Auth] Profile loaded:', userProfile.name);
-              setAppUser(userProfile);
-              
-              // Don't call initializeAuth here to prevent loops
-              
-              // Check for pending game join after successful login
-              const pendingGameId = localStorage.getItem('pendingGameJoin');
-              if (pendingGameId) {
-                localStorage.removeItem('pendingGameJoin');
-                // Auto-join the game
-                try {
-                  const { joinGame } = useAppStore.getState();
-                  await joinGame(pendingGameId);
-                  toast.success('Welcome! You\'ve been automatically joined to the game.');
-                } catch (joinError) {
-                  console.error('Error auto-joining game:', joinError);
-                  toast.error('Welcome! Please manually join the game you were interested in.');
-                }
-              } else {
-                // Only redirect to home if we're not already on the onboarding page
-                if (window.location.pathname === '/onboarding') {
-                  DEBUG && console.log('[Auth] Onboarding page active');
-                } else {
-                  toast.success('Welcome back!');
-                }
+          // Create basic user immediately from auth data
+          const basicUser = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+            avatar: session.user.user_metadata?.avatar_url || '',
+            role: 'user' as const,
+            preferences: { 
+              sports: [], 
+              notifications: { push: true, email: true, gameReminders: true },
+              theme: 'light' as const,
+              highContrast: false,
+              largeText: false,
+              reducedMotion: false,
+              colorBlindFriendly: false,
+              privacy: {
+                locationSharing: true,
+                profileVisibility: 'public' as const
               }
-            } else {
-              DEBUG && console.log('[Auth] No profile found (ProfileCheck handles onboarding)');
-              // Let the ProfileCheck component handle the redirect to onboarding
-              // This prevents multiple redirects
             }
-          } catch (error) {
-            console.error('Error loading user profile on sign in:', error);
-            // Let the ProfileCheck component handle the redirect to onboarding
-          }
+          };
+          
+          setAppUser(basicUser);
+          
+          // Handle async operations OUTSIDE the auth listener to prevent race conditions
+          setTimeout(() => {
+            handleSignInBackground(session.user.id, DEBUG);
+          }, 0);
+          
         } else if (event === 'SIGNED_OUT') {
           setAppUser(null);
           toast.success('Signed out successfully');
         } else if (event === 'PASSWORD_RECOVERY') {
           toast.info('Check your email for password reset instructions');
         } else if (event === 'USER_UPDATED') {
-          // Handle user updates if needed
           DEBUG && console.log('[Auth] User updated:', session?.user?.id);
         }
 
-        // Ensure we don't hang in loading after any event
+        // Always ensure loading is false
         setLoading(false);
         DEBUG && console.log('[Auth] onAuthStateChange:loading=false');
       }
     );
+
+    // Handle sign-in background tasks separately to avoid race conditions
+    const handleSignInBackground = async (userId: string, debug: boolean) => {
+      try {
+        debug && console.log('[Auth] Loading full profile in background for:', userId);
+        const userProfile = await SupabaseService.getUserProfile(userId);
+        if (userProfile) {
+          debug && console.log('[Auth] Profile loaded:', userProfile.name);
+          setAppUser(userProfile);
+        }
+        
+        // Handle pending game join
+        const pendingGameId = localStorage.getItem('pendingGameJoin');
+        if (pendingGameId) {
+          localStorage.removeItem('pendingGameJoin');
+          try {
+            const { joinGame } = useAppStore.getState();
+            await joinGame(pendingGameId);
+            toast.success('Welcome! You\'ve been automatically joined to the game.');
+          } catch (joinError) {
+            console.error('Error auto-joining game:', joinError);
+            toast.error('Welcome! Please manually join the game you were interested in.');
+          }
+        } else {
+          if (window.location.pathname !== '/onboarding') {
+            toast.success('Welcome back!');
+          }
+        }
+      } catch (error) {
+        console.warn('Background sign-in tasks failed (non-critical):', error.message);
+      }
+    };
 
     return () => {
       subscription.unsubscribe();

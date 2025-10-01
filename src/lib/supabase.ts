@@ -24,11 +24,12 @@ declare global {
   var __supabase__: any | undefined;
 }
 
-const createSupabaseClient = () =>
-  createClient<Database>(supabaseUrl, supabaseAnonKey, {
+const createSupabaseClient = () => {
+  console.log('🔧 Creating new Supabase client...');
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: false, // Disable to prevent stale session hangs
+      autoRefreshToken: false, // Disable to prevent refresh token hangs
       detectSessionInUrl: true,
       storageKey: 'tribeup-auth',
       flowType: 'implicit', // Use implicit flow for OAuth compatibility
@@ -49,11 +50,25 @@ const createSupabaseClient = () =>
       reconnectAfterMs: () => Math.random() * 5000,
     },
   });
+};
 
-export const supabase = globalThis.__supabase__ || createSupabaseClient();
+// Force fresh client creation on refresh to avoid stale state
+const shouldCreateFresh = typeof window !== 'undefined' && 
+  performance.navigation?.type === 1; // 1 = reload
+
+export const supabase = (shouldCreateFresh || !globalThis.__supabase__) 
+  ? createSupabaseClient() 
+  : globalThis.__supabase__;
+
 // Cache the client on the globalThis to avoid duplicates across HMR boundaries
 if (typeof globalThis !== 'undefined') {
   globalThis.__supabase__ = supabase;
+}
+
+// Expose supabase client to window for debugging
+if (typeof window !== 'undefined') {
+  (window as any).supabase = supabase;
+  console.log('🔍 [Supabase] Client exposed to window.supabase');
 }
 
 // Re-export the generated database types
@@ -77,7 +92,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   imageUrl: dbGame.image_url || '',
   sportColor: getSportColor(dbGame.sport),
   isJoined,
-  createdBy: dbGame.creator?.full_name || dbGame.creator?.username || `User ${dbGame.creator_id?.slice(0, 8) || 'Unknown'}`,
+  createdBy: dbGame.creator?.full_name || dbGame.creator?.username || `Unknown User (${dbGame.creator_id?.slice(0, 8) || 'No ID'})`,
   creatorId: dbGame.creator_id,
   creatorData: dbGame.creator ? {
     id: dbGame.creator.id,
@@ -85,7 +100,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     avatar: dbGame.creator.avatar_url || ''
   } : {
     id: dbGame.creator_id,
-    name: `User ${dbGame.creator_id?.slice(0, 8) || 'Unknown'}`,
+    name: `Unknown User (${dbGame.creator_id?.slice(0, 8) || 'No ID'})`,
     avatar: ''
   },
   createdAt: dbGame.created_at,
@@ -93,7 +108,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
 
 export const transformUserFromDB = (dbUser: Database['public']['Tables']['users']['Row']): any => ({
   id: dbUser.id,
-  name: dbUser.full_name || dbUser.username || dbUser.email?.split('@')[0] || `User ${dbUser.id.slice(0, 8)}`,
+  name: dbUser.full_name || dbUser.username || dbUser.email?.split('@')[0] || `Unknown User (${dbUser.id.slice(0, 8)})`,
   username: dbUser.username || dbUser.email?.split('@')[0] || `user_${dbUser.id.slice(0, 8)}`,
   email: dbUser.email,
   avatar: dbUser.avatar_url || '',

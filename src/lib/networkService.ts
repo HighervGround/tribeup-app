@@ -8,10 +8,10 @@ interface NetworkConfig {
 }
 
 const defaultConfig: NetworkConfig = {
-  maxRetries: 3,
+  maxRetries: 2,
   baseDelay: 1000,
-  maxDelay: 10000,
-  timeout: 15000
+  maxDelay: 5000,
+  timeout: 60000 // Increased to 60 seconds - let queries complete naturally
 };
 
 class NetworkService {

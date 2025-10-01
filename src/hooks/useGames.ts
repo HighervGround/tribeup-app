@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { toast } from 'sonner';
+import { CacheCorruptionDetector } from '../utils/cacheCorruptionDetector';
 
 // Query keys
 export const gameKeys = {
@@ -22,6 +23,14 @@ export function useGames() {
   // Invalidate cache when user auth state changes to prevent stale data
   useEffect(() => {
     console.log('🔄 [useGames] Auth state changed, invalidating cache for user:', user?.id || 'anonymous');
+    
+    // Clear stale cache completely when auth state changes
+    queryClient.removeQueries({ 
+      queryKey: gameKeys.lists(),
+      predicate: (query) => query.isStale()
+    });
+    
+    // Force fresh fetch
     queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
   }, [user?.id, queryClient]);
   
@@ -32,13 +41,8 @@ export function useGames() {
       const startTime = performance.now();
       
       try {
-        // Add timeout wrapper to prevent hanging
-        const gamesPromise = SupabaseService.getGames();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('useGames timeout after 15 seconds')), 15000)
-        );
-        
-        const games = await Promise.race([gamesPromise, timeoutPromise]) as any;
+        // Let the query complete naturally - no artificial timeouts
+        const games = await SupabaseService.getGames();
         const duration = performance.now() - startTime;
         
         console.log('✅ [useGames] Games fetched successfully:', {
@@ -56,17 +60,33 @@ export function useGames() {
           user: user?.id || 'anonymous'
         });
         
-        // If it's a timeout, clear potentially corrupted cache
+        // If it's a timeout, this might be cache corruption
         if (error.message?.includes('timeout')) {
-          console.warn('🧹 [useGames] Timeout detected, clearing cache');
-          // Don't throw here, let React Query handle retries
+          console.warn('🧹 [useGames] Timeout detected - possible cache corruption');
+          
+          // After 2 timeouts, assume cache corruption and force clean
+          const timeoutCount = parseInt(sessionStorage.getItem('tribeup_timeout_count') || '0') + 1;
+          sessionStorage.setItem('tribeup_timeout_count', timeoutCount.toString());
+          
+          if (timeoutCount >= 2) {
+            console.error('🚨 [useGames] Multiple timeouts detected, forcing cache cleanup');
+            CacheCorruptionDetector.forceCleanOnNextLoad();
+            toast.error('Loading issues detected', {
+              description: 'Refreshing to clear corrupted cache...',
+              duration: 3000
+            });
+            
+            setTimeout(() => {
+              window.location.reload();
+            }, 3000);
+          }
         }
         
         throw error;
       }
     },
-    staleTime: 1 * 60 * 1000, // 1 minute (reduced for better refresh)
-    gcTime: 3 * 60 * 1000, // 3 minutes (reduced to prevent stale cache issues)
+    staleTime: 2 * 60 * 1000, // 2 minutes (reasonable refresh time)
+    gcTime: 5 * 60 * 1000, // 5 minutes (normal cleanup)
     retry: (failureCount, error) => {
       console.log(`🔄 [useGames] Retry attempt ${failureCount}:`, error.message);
       
@@ -91,6 +111,9 @@ export function useGames() {
     },
     // Remove authentication requirement - games should load for all users
     // enabled: !!user, // Only fetch when user is authenticated
+    refetchOnMount: false, // Don't refetch on every mount - use cache
+    refetchOnWindowFocus: false, // Don't refetch on window focus - reduces queries
+    refetchOnReconnect: true, // Only refetch when network reconnects
     meta: {
       errorMessage: 'Failed to load games. Please refresh the page.'
     }
@@ -333,7 +356,7 @@ export function useCreateGame() {
       return await SupabaseService.createGame(gameData);
     },
     onSuccess: (newGame) => {
-      console.log('✅ Game created successfully:', newGame.id);
+      console.log('✅ Game created successfully:', newGame?.id || 'unknown');
       
       // Invalidate games list to refetch
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });

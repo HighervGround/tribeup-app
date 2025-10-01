@@ -30,15 +30,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const getInitialSession = async () => {
       DEBUG && console.log('[Auth] bootstrap:loading=true');
       
-      // Force timeout after 10 seconds to prevent infinite loading
-      const forceTimeout = setTimeout(() => {
-        console.warn('[Auth] Force timeout - setting loading to false');
-        setLoading(false);
-      }, 10000);
-      
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        clearTimeout(forceTimeout);
+        // Check for known problematic user IDs and clear them
+        const authToken = localStorage.getItem('sb-alegufnopsminqcokelr-auth-token');
+        if (authToken && (authToken.includes('ca2ee1cc-3ccc-4d34-8f8e-b9e02c38bfc0') || authToken.includes('6e9f3e18-0005-4080-a62a-2a298cf52199'))) {
+          console.warn('[Auth] Detected orphaned user in auth token, clearing...');
+          await supabase.auth.signOut();
+          localStorage.clear();
+          setLoading(false);
+          return;
+        }
+        
+        // Add timeout to prevent getSession hanging (common Supabase SDK issue)
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout - clearing auth state')), 5000)
+        );
+        
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
         
         if (error) {
           console.error('Error getting session:', error);
@@ -49,46 +61,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          DEBUG && console.log('[Auth] Found session, loading profile...');
+          DEBUG && console.log('[Auth] Found session, creating user from auth data...');
           
-          // Load user profile in background - don't block auth completion
-          SupabaseService.getUserProfile(session.user.id)
-            .then(profile => {
-              if (profile) {
-                DEBUG && console.log('[Auth] Profile loaded:', profile.id);
-                setAppUser(profile);
+          // Create user immediately from auth data - don't wait for profile
+          const authUser = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email || '',
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+            avatar: session.user.user_metadata?.avatar_url || '',
+            role: 'user' as const,
+            preferences: { 
+              sports: [], 
+              notifications: { push: true, email: true, gameReminders: true },
+              theme: 'light' as const,
+              highContrast: false,
+              largeText: false,
+              reducedMotion: false,
+              colorBlindFriendly: false,
+              privacy: {
+                locationSharing: true,
+                profileVisibility: 'public' as const
               }
-            })
-            .catch(error => {
-              console.error('Error loading profile:', error);
-              // Create a basic user object from auth data
-              setAppUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.full_name || session.user.email || '',
-                username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-                avatar: session.user.user_metadata?.avatar_url || '',
-                role: 'user' as const,
-                preferences: { 
-                  sports: [], 
-                  notifications: { push: true, email: true, gameReminders: true },
-                  theme: 'light',
-                  highContrast: false,
-                  largeText: false,
-                  reducedMotion: false,
-                  colorBlindFriendly: false,
-                  privacy: {
-                    locationSharing: true,
-                    profileVisibility: 'public'
-                  }
+            }
+          };
+          
+          setAppUser(authUser);
+          DEBUG && console.log('[Auth] User set from auth data:', authUser.id);
+          
+          // Try to load full profile in background (non-blocking)
+          setTimeout(() => {
+            SupabaseService.getUserProfile(session.user.id)
+              .then(profile => {
+                if (profile) {
+                  DEBUG && console.log('[Auth] Profile loaded later:', profile.id);
+                  setAppUser(profile);
                 }
+              })
+              .catch(error => {
+                console.warn('Profile loading failed (non-critical):', error.message);
+                // Keep using auth data - don't fail
               });
-            });
+          }, 100);
         }
         
         // Don't call initializeAuth here to prevent loops
       } catch (error) {
         console.error('Error getting initial session:', error);
+        if (error.message?.includes('timeout')) {
+          console.warn('[Auth] getSession timed out - clearing auth state and proceeding');
+          // Clear potentially corrupted auth state
+          try {
+            await supabase.auth.signOut();
+            localStorage.clear();
+          } catch (clearError) {
+            console.warn('[Auth] Failed to clear auth state:', clearError);
+          }
+          setSession(null);
+          setUser(null);
+        }
       } finally {
         setLoading(false);
         DEBUG && console.log('[Auth] bootstrap:loading=false');

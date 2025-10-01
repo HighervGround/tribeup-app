@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -7,6 +7,10 @@ export function useGameRealtime(gameId?: string) {
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    // Realtime disabled to prevent WebSocket failures
+    console.log('🚫 [Realtime] Disabled for game:', gameId);
+    return;
+    
     if (!gameId) return;
 
     console.log('🔗 Setting up realtime for game:', gameId);
@@ -65,13 +69,19 @@ export function useGameRealtime(gameId?: string) {
 export function useAllGamesRealtime() {
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
+  const [connectionAttempts, setConnectionAttempts] = React.useState(0);
+  const [isDisabled, setIsDisabled] = React.useState(true); // DISABLED BY DEFAULT
 
   useEffect(() => {
-    console.log('🔗 Setting up realtime for all games');
+    // Realtime is disabled - just return early
+    console.log('🚫 [Realtime] Disabled to prevent WebSocket failures');
+    return;
+
+    console.log('🔗 Setting up realtime for all games (attempt', connectionAttempts + 1, ')');
 
     try {
       const channel = supabase
-        .channel('all-games')
+        .channel('all-games-v2') // Use versioned channel name
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -79,8 +89,10 @@ export function useAllGamesRealtime() {
         }, (payload) => {
           console.log('🎮 Games table update:', payload);
           
-          // Invalidate all game queries
-          queryClient.invalidateQueries({ queryKey: ['games'] });
+          // Throttle invalidations to prevent excessive refetches
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['games'] });
+          }, 1000);
         })
         .on('postgres_changes', {
           event: '*',
@@ -89,27 +101,63 @@ export function useAllGamesRealtime() {
         }, (payload) => {
           console.log('👥 Participants table update:', payload);
           
-          // Invalidate all game queries (affects participant counts)
-          queryClient.invalidateQueries({ queryKey: ['games'] });
+          // Throttle invalidations
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['games'] });
+          }, 1000);
         })
         .subscribe((status) => {
           console.log('📡 All games realtime status:', status);
+          
+          if (status === 'SUBSCRIBED') {
+            setConnectionAttempts(0); // Reset on success
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error('❌ Realtime connection failed:', status);
+            setConnectionAttempts(prev => prev + 1);
+            
+            // Disable after 3 failures
+            if (connectionAttempts >= 2) {
+              setIsDisabled(true);
+              console.warn('🚫 Realtime permanently disabled due to repeated failures');
+            }
+          }
         });
 
       channelRef.current = channel;
+      
+      // Set timeout to detect stuck connections
+      const connectionTimeout = setTimeout(() => {
+        if (channelRef.current?.state !== 'joined') {
+          console.warn('⏰ Realtime connection timeout, retrying...');
+          channelRef.current?.unsubscribe();
+          setConnectionAttempts(prev => prev + 1);
+        }
+      }, 10000);
+      
+      return () => {
+        clearTimeout(connectionTimeout);
+      };
+      
     } catch (error) {
       console.error('❌ Failed to setup all games realtime:', error);
+      setConnectionAttempts(prev => prev + 1);
     }
 
     return () => {
       console.log('🔌 Unsubscribing from all games realtime');
       if (channelRef.current) {
-        channelRef.current.unsubscribe();
+        try {
+          channelRef.current.unsubscribe();
+        } catch (error) {
+          console.warn('⚠️ Error unsubscribing from realtime:', error);
+        }
       }
     };
-  }, [queryClient]);
+  }, [queryClient, connectionAttempts, isDisabled]);
 
   return {
-    isConnected: channelRef.current?.state === 'joined'
+    isConnected: channelRef.current?.state === 'joined',
+    isDisabled,
+    connectionAttempts
   };
 }

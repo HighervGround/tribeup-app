@@ -45,6 +45,12 @@ export function ClickableAvatar({
 
   const getInitials = (name?: string) => {
     if (!name) return '?';
+    
+    // Handle "Unknown User" case specifically
+    if (name.startsWith('Unknown User')) {
+      return '??';
+    }
+    
     return name
       .split(' ')
       .map(word => word.charAt(0))

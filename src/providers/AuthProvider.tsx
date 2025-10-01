@@ -41,7 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Add timeout to prevent infinite loading when getSession hangs
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout')), 8000)
+        );
+        
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
         
         if (error) {
           console.error('Error getting session:', error);
@@ -99,6 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Don't call initializeAuth here to prevent loops
       } catch (error) {
         console.error('Error getting initial session:', error);
+        if (error.message === 'getSession timeout') {
+          console.warn('[Auth] getSession timed out - proceeding without session');
+          toast.info('Session expired, please log in again');
+          setSession(null);
+          setUser(null);
+        }
       } finally {
         setLoading(false);
         DEBUG && console.log('[Auth] bootstrap:loading=false');

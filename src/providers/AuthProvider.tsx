@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Add timeout to prevent getSession hanging (common Supabase SDK issue)
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getSession timeout - clearing auth state')), 5000)
+          setTimeout(() => reject(new Error('getSession timeout - clearing auth state')), 10000)
         );
         
         const { data: { session }, error } = await Promise.race([

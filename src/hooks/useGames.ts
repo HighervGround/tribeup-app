@@ -240,17 +240,13 @@ export function useJoinGame() {
     onSuccess: (_, gameId) => {
       console.log('✅ Successfully joined game:', gameId);
       
-      // Force refetch to ensure UI is updated with latest data
-      queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId) });
-      queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId) });
-      queryClient.refetchQueries({ queryKey: gameKeys.lists() });
-      
-      // Also invalidate to mark as stale
+      // Just invalidate - let React Query handle the refetch automatically
+      // This prevents race conditions between optimistic updates and refetches
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
-      // Toast removed - components handle their own success feedback
+      console.log('🔄 Invalidated queries for game:', gameId);
     },
   });
 }
@@ -331,17 +327,13 @@ export function useLeaveGame() {
     onSuccess: (_, gameId) => {
       console.log('✅ Successfully left game:', gameId);
       
-      // Force refetch to ensure UI is updated with latest data
-      queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId) });
-      queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId) });
-      queryClient.refetchQueries({ queryKey: gameKeys.lists() });
-      
-      // Also invalidate to mark as stale
+      // Just invalidate - let React Query handle the refetch automatically
+      // This prevents race conditions between optimistic updates and refetches
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
-      // Toast removed - components handle their own success feedback
+      console.log('🔄 Invalidated queries for game:', gameId);
     },
   });
 }

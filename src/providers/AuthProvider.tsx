@@ -133,30 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (event === 'SIGNED_IN' && session?.user) {
-          // Create basic user immediately from auth data
-          const basicUser = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-            avatar: session.user.user_metadata?.avatar_url || '',
-            role: 'user' as const,
-            preferences: { 
-              sports: [], 
-              notifications: { push: true, email: true, gameReminders: true },
-              theme: 'light' as const,
-              highContrast: false,
-              largeText: false,
-              reducedMotion: false,
-              colorBlindFriendly: false,
-              privacy: {
-                locationSharing: true,
-                profileVisibility: 'public' as const
-              }
-            }
-          };
-          
-          setAppUser(basicUser);
+          // DON'T create basic user immediately - let handleSignInBackground check if profile exists first
+          // This ensures OAuth users without profiles get sent to onboarding
           
           // Handle async operations OUTSIDE the auth listener to prevent race conditions
           setTimeout(() => {

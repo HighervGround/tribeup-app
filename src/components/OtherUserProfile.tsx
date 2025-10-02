@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from './ui/button';
@@ -21,17 +22,31 @@ import {
 import { useGames } from '../hooks/useGames';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
-import { useUserProfile, useUserStats } from '../hooks/useUserProfile';
+import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
 
 
 
 function OtherUserProfile() {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const queryClient = useQueryClient();
   
-  // Use React Query hook for data fetching
+  // Force refresh when userId changes to ensure fresh data
+  useEffect(() => {
+    if (userId) {
+      console.log('🔄 User profile changed, invalidating cache for userId:', userId);
+      queryClient.invalidateQueries({ queryKey: ['users', 'profile', userId] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'stats', userId] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'recentGames', userId] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'achievements', userId] });
+    }
+  }, [userId, queryClient]);
+  
+  // Use React Query hooks for data fetching
   const { data: user, isLoading: loading, error } = useUserProfile(userId || '');
   const { data: userStats, isLoading: statsLoading } = useUserStats(userId || '');
+  const { data: recentGames = [], isLoading: recentGamesLoading } = useUserRecentGames(userId || '', 5);
+  const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(userId || '');
 
   // Show loading state
   if (loading) {
@@ -198,29 +213,51 @@ function OtherUserProfile() {
         </Card>
 
         {/* Achievements */}
-        {(user as any).achievements && (user as any).achievements.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                {(user as any).achievements.map((achievement: any) => (
-                  <div key={achievement.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                    <div className="text-2xl">{achievement.icon}</div>
-                    <div>
-                      <div>{achievement.name}</div>
-                      <div className="text-sm text-muted-foreground">{achievement.description}</div>
-                    </div>
-                  </div>
-                ))}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5" />
+              Achievements ({achievements.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {achievementsLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading achievements...</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : achievements.length > 0 ? (
+              <div className="grid gap-3">
+                {achievements.map((userAchievement: any) => {
+                  const achievement = userAchievement.achievement || userAchievement;
+                  const getAchievementIcon = (iconName: string) => {
+                    switch (iconName) {
+                      case 'trophy': return '🏆';
+                      case 'star': return '⭐';
+                      case 'handshake': return '🤝';
+                      case 'runner': return '🏃';
+                      case 'crown': return '👑';
+                      default: return '🎯';
+                    }
+                  };
+                  
+                  return (
+                    <div key={achievement.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                      <div className="text-2xl">{getAchievementIcon(achievement.icon)}</div>
+                      <div className="flex-1">
+                        <div className="font-medium">{achievement.name}</div>
+                        <div className="text-sm text-muted-foreground">{achievement.description}</div>
+                      </div>
+                      <div className="text-sm font-medium text-primary">+{achievement.points}pts</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No achievements yet</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Favorite Sports */}
         <Card>
@@ -228,60 +265,93 @@ function OtherUserProfile() {
             <CardTitle>Favorite Sports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {(user as any).favoriteSports?.map((sport: string) => (
-                <Badge key={sport} variant="secondary">{sport}</Badge>
-              )) || <span className="text-muted-foreground">No favorite sports listed</span>}
-            </div>
+            {statsLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading sports...</p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {userStats?.favoritesSports && userStats.favoritesSports.length > 0 ? (
+                  userStats.favoritesSports.map((sport: string) => (
+                    <Badge key={sport} variant="secondary">{sport}</Badge>
+                  ))
+                ) : user?.preferences?.sports && user.preferences.sports.length > 0 ? (
+                  user.preferences.sports.map((sport: string) => (
+                    <Badge key={sport} variant="secondary">{sport}</Badge>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground">No favorite sports listed</span>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Favorite Spots */}
+        {/* User Stats */}
         <Card>
           <CardHeader>
-            <CardTitle>Favorite Spots</CardTitle>
+            <CardTitle>Activity Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {(user as any).favoriteSpots?.map((spot: string) => (
-                <div key={spot} className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{spot}</span>
+            {statsLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading stats...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{userStats?.totalPlayTime || 0}</div>
+                  <div className="text-sm text-muted-foreground">Minutes Played</div>
                 </div>
-              )) || <span className="text-muted-foreground">No favorite spots listed</span>}
-            </div>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{userStats?.completionRate || 0}%</div>
+                  <div className="text-sm text-muted-foreground">Completion Rate</div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Recent Games */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Games</CardTitle>
+            <CardTitle>Recent Games ({recentGames.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {(user as any).recentGames?.map((game: any, index: number) => (
-                <div key={game.id}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <div>{game.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {game.sport} • {game.date}
+            {recentGamesLoading ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading recent games...</p>
+              </div>
+            ) : recentGames.length > 0 ? (
+              <div className="space-y-3">
+                {recentGames.map((game: any, index: number) => (
+                  <div key={game.id || index}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{game.title || game.games?.title}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {game.sport || game.games?.sport} • {new Date(game.date || game.games?.date).toLocaleDateString()}
+                          </div>
                         </div>
                       </div>
+                      <Badge variant={game.isHost ? 'default' : 'secondary'}>
+                        {game.isHost ? 'Host' : 'Player'}
+                      </Badge>
                     </div>
-                    <Badge variant={game.role === 'host' ? 'default' : 'secondary'}>
-                      {game.role === 'host' ? 'Host' : 'Player'}
-                    </Badge>
+                    {index < recentGames.length - 1 && <Separator className="mt-3" />}
                   </div>
-                  {index < ((user as any).recentGames?.length || 0) - 1 && <Separator className="mt-3" />}
-                </div>
-              )) || <span className="text-muted-foreground">No recent games</span>}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No recent games</p>
+            )}
           </CardContent>
         </Card>
 

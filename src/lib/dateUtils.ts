@@ -122,16 +122,34 @@ export function formatTimeString(timeStr: string): string {
   try {
     // Parse time string like "14:30" or "14:30:00"
     const [hours, minutes] = timeStr.split(':').map(Number);
-    if (isNaN(hours) || isNaN(minutes)) return timeStr;
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return timeStr;
+    }
     
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
+    // Manual conversion to avoid timezone issues
+    let displayHour = hours;
+    let period = 'AM';
     
-    return new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }).format(date);
+    if (hours === 0) {
+      // Midnight: 00:xx -> 12:xx AM
+      displayHour = 12;
+      period = 'AM';
+    } else if (hours === 12) {
+      // Noon: 12:xx -> 12:xx PM
+      displayHour = 12;
+      period = 'PM';
+    } else if (hours > 12) {
+      // Afternoon/Evening: 13:xx -> 1:xx PM
+      displayHour = hours - 12;
+      period = 'PM';
+    } else {
+      // Morning: 1:xx-11:xx -> 1:xx-11:xx AM
+      displayHour = hours;
+      period = 'AM';
+    }
+    
+    const minuteStr = minutes.toString().padStart(2, '0');
+    return `${displayHour}:${minuteStr} ${period}`;
   } catch {
     return timeStr; // Return original if parsing fails
   }

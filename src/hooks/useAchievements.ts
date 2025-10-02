@@ -141,7 +141,9 @@ export function useAchievements() {
   // Calculate total achievement score
   const getTotalScore = () => {
     return achievements.reduce((total, userAchievement) => {
-      return total + userAchievement.achievement.points;
+      // Handle both nested and flat achievement structures
+      const achievement = userAchievement.achievement || userAchievement;
+      return total + (achievement?.points || 0);
     }, 0);
   };
 

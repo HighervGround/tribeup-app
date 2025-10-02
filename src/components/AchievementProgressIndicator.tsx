@@ -47,40 +47,43 @@ export function AchievementProgressIndicator({
         </div>
         
         <div className="space-y-4">
-          {displayAchievements.map((item) => (
-            <div key={item.achievement.id} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-lg">{item.achievement.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {item.achievement.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {item.achievement.description}
+          {displayAchievements.map((item) => {
+            const achievement = item.achievement || item;
+            return (
+              <div key={achievement?.id || Math.random()} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-lg">{achievement?.icon || '🎯'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">
+                        {achievement?.name || 'Unknown Achievement'}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {achievement?.description || 'No description'}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 ml-2">
+                    <Badge variant="outline" className="text-xs">
+                      +{achievement?.points || 0}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 ml-2">
-                  <Badge variant="outline" className="text-xs">
-                    +{item.achievement.points}
-                  </Badge>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      {item.progress} / {item.total}
+                    </span>
+                    <span className="font-medium text-primary">
+                      {item.percentage}%
+                    </span>
+                  </div>
+                  <Progress value={item.percentage} className="h-2" />
                 </div>
               </div>
-              
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    {item.progress} / {item.total}
-                  </span>
-                  <span className="font-medium text-primary">
-                    {item.percentage}%
-                  </span>
-                </div>
-                <Progress value={item.percentage} className="h-2" />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         
         {!showAll && achievements.length > 3 && (
@@ -147,12 +150,14 @@ export function GameProgressWidget({
   nextAchievements 
 }: GameProgressWidgetProps) {
   // Find next participation and hosting milestones
-  const nextParticipation = nextAchievements.find(a => 
-    a.achievement.category === 'participation'
-  );
-  const nextHosting = nextAchievements.find(a => 
-    a.achievement.category === 'hosting'
-  );
+  const nextParticipation = nextAchievements.find(a => {
+    const achievement = a.achievement || a;
+    return achievement?.category === 'engagement' || achievement?.category === 'participation';
+  });
+  const nextHosting = nextAchievements.find(a => {
+    const achievement = a.achievement || a;
+    return achievement?.category === 'hosting' || achievement?.category === 'engagement';
+  });
 
   return (
     <div className="space-y-3">

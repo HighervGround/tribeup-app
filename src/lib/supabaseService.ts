@@ -527,75 +527,59 @@ export class SupabaseService {
     const startTime = performance.now();
     console.log('🚀 Starting getGames...');
     console.log('🔍 Network status:', navigator.onLine ? 'ONLINE' : 'OFFLINE');
-    console.log('🔍 Supabase URL:', supabase.supabaseUrl);
     
     try {
-      // SCREW AUTH - Just load games without authentication
-      console.log('🚫 BYPASSING ALL AUTH - Loading games anonymously');
-      const userId = undefined; // Always anonymous
+      // Get current user for isJoined calculation
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      console.log(`🔍 Getting games for user: ${userId || 'anonymous'}`);
       
-        const queryStart = performance.now();
+      const queryStart = performance.now();
+      
+      // Query games with participants to calculate isJoined status
+      const { data: gamesWithParticipants, error } = await supabase
+        .from('games')
+        .select(`
+          *,
+          game_participants(user_id),
+          creator:users!games_creator_id_fkey(
+            id,
+            full_name,
+            username,
+            email,
+            avatar_url
+          )
+        `)
+        .gte('date', new Date().toISOString().split('T')[0])
+        .order('date', { ascending: true })
+        .limit(50);
         
-        console.log(`🔍 Getting games for user: ${userId}`);
-        
-        // SIMPLE ANONYMOUS QUERY - No auth, no joins, just games
-        console.log('🔍 Fetching games with SIMPLE query...');
-        console.log('🔍 About to call supabase.from("games")...');
-        console.log('🔍 Supabase client state:', {
-          url: supabase.supabaseUrl,
-          key: supabase.supabaseKey ? 'SET' : 'NOT SET',
-          authHeaders: supabase.auth.session ? 'HAS SESSION' : 'NO SESSION'
-        });
-        
-        const { data: gamesData, error } = await supabase
-          .from('games')
-          .select('*')
-          .gte('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: true })
-          .limit(50);
-          
-        console.log('🔍 Supabase query completed!', { data: gamesData?.length, error });
-        
-        const queryTime = performance.now() - queryStart;
-        console.log(`📊 SIMPLE query took: ${queryTime.toFixed(2)}ms`);
+      console.log('🔍 Query completed!', { data: gamesWithParticipants?.length, error });
+      
+      const queryTime = performance.now() - queryStart;
+      console.log(`📊 Query took: ${queryTime.toFixed(2)}ms`);
 
-        if (error) {
-          console.error('❌ Simple query failed:', error);
-          throw error;
-        }
-        
-        // Transform to basic game objects - no complex transforms
-        const games = (gamesData || []).map((game: any) => ({
-          id: game.id,
-          title: game.title,
-          sport: game.sport,
-          date: game.date,
-          time: game.time,
-          location: game.location,
-          latitude: game.latitude,
-          longitude: game.longitude,
-          cost: game.cost,
-          maxPlayers: game.max_players,
-          currentPlayers: game.current_players,
-          description: game.description,
-          imageUrl: game.image_url || '',
-          sportColor: '#6B7280',
-          isJoined: false, // Always false for anonymous
-          createdBy: `Unknown User (${game.creator_id?.slice(0, 8) || 'No ID'})`,
-          creatorId: game.creator_id,
-          creatorData: {
-            id: game.creator_id,
-            name: `Unknown User (${game.creator_id?.slice(0, 8) || 'No ID'})`,
-            avatar: ''
-          },
-          createdAt: game.created_at,
-        }));
-        
-        const totalTime = performance.now() - startTime;
-        console.log(`✅ SIMPLE getGames took: ${totalTime.toFixed(2)}ms`);
-        console.log(`📦 Returned ${games.length} games`);
-        
-        return games;
+      if (error) {
+        console.error('❌ Query failed:', error);
+        throw error;
+      }
+      
+      // Transform games with proper isJoined calculation
+      const games = (gamesWithParticipants || []).map((game: any) => {
+        const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        console.log(`🎯 Game ${game.id} isJoined check:`, {
+          userId,
+          participants: game.game_participants?.map(p => p.user_id),
+          isJoined
+        });
+        return transformGameFromDB(game, isJoined);
+      });
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ getGames completed: ${totalTime.toFixed(2)}ms`);
+      console.log(`📦 Returned ${games.length} games`);
+      
+      return games;
       
     } catch (error) {
       console.error('❌ getGames error:', error);
@@ -614,9 +598,55 @@ export class SupabaseService {
         }
       }
       
-      // Return mock games as fallback
-      console.log('📦 Returning mock games as fallback');
-      return this.getMockGames();
+      // Fallback to simple anonymous query if complex query fails
+      console.log('🔄 Falling back to simple anonymous query...');
+      try {
+        const { data: gamesData, error: fallbackError } = await supabase
+          .from('games')
+          .select('*')
+          .gte('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: true })
+          .limit(50);
+          
+        if (fallbackError) throw fallbackError;
+        
+        // Transform to basic game objects without isJoined calculation
+        const games = (gamesData || []).map((game: any) => ({
+          id: game.id,
+          title: game.title,
+          sport: game.sport,
+          date: game.date,
+          time: game.time,
+          location: game.location,
+          latitude: game.latitude,
+          longitude: game.longitude,
+          cost: game.cost,
+          maxPlayers: game.max_players,
+          currentPlayers: game.current_players,
+          description: game.description,
+          imageUrl: game.image_url || '',
+          sportColor: '#6B7280',
+          isJoined: false, // Always false for anonymous fallback
+          createdBy: `Unknown User (${game.creator_id?.slice(0, 8) || 'No ID'})`,
+          creatorId: game.creator_id,
+          creatorData: {
+            id: game.creator_id,
+            name: `Unknown User (${game.creator_id?.slice(0, 8) || 'No ID'})`,
+            avatar: ''
+          },
+          createdAt: game.created_at,
+        }));
+        
+        console.log(`📦 Fallback returned ${games.length} games`);
+        return games;
+        
+      } catch (fallbackError) {
+        console.error('❌ Fallback query also failed:', fallbackError);
+        
+        // Return mock games as final fallback
+        console.log('📦 Returning mock games as final fallback');
+        return this.getMockGames();
+      }
     }
   }
 

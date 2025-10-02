@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useJoinGame, useLeaveGame } from './useGames';
+import { useAppStore } from '../store/appStore';
 
 interface Game {
   id: string;
@@ -15,6 +16,20 @@ interface Game {
 export function useGameJoinToggle() {
   const joinGameMutation = useJoinGame();
   const leaveGameMutation = useLeaveGame();
+  const { user } = useAppStore();
+  
+  /**
+   * Check if the current user is the creator of the game
+   */
+  const isGameCreator = useCallback((game: Game) => {
+    if (!user?.id) return false;
+    
+    // Check multiple possible creator ID fields
+    return game.creatorId === user.id || 
+           game.creator_id === user.id || 
+           game.createdBy === user.id ||
+           game.creatorData?.id === user.id;
+  }, [user?.id]);
   
   /**
    * Toggle join/leave status for a game
@@ -28,6 +43,14 @@ export function useGameJoinToggle() {
     console.log('🎯 toggleJoin called with game:', game.id, 'isJoined:', game.isJoined);
     
     if (game.isJoined) {
+      // Prevent creators from leaving their own games
+      if (isGameCreator(game)) {
+        toast.error('Cannot leave your own game', {
+          description: 'Use the menu options to delete the game instead.'
+        });
+        return;
+      }
+      
       console.log('🔄 Attempting to leave game:', game.id);
       leaveGameMutation.mutate(game.id, {
         onSuccess: () => {
@@ -50,7 +73,7 @@ export function useGameJoinToggle() {
         }
       });
     }
-  }, [joinGameMutation, leaveGameMutation]);
+  }, [joinGameMutation, leaveGameMutation, isGameCreator]);
   
   /**
    * Check if join/leave operations are currently loading
@@ -64,8 +87,14 @@ export function useGameJoinToggle() {
    */
   const getButtonText = useCallback((game: Game) => {
     if (isLoading) return '...';
-    return game.isJoined ? 'Leave' : 'Join';
-  }, [isLoading]);
+    
+    if (game.isJoined) {
+      // Creators shouldn't see a leave button since they can't leave
+      return isGameCreator(game) ? 'Joined' : 'Leave';
+    }
+    
+    return 'Join';
+  }, [isLoading, isGameCreator]);
   
   /**
    * Get appropriate button variant based on game state
@@ -73,14 +102,19 @@ export function useGameJoinToggle() {
    * @returns Button variant string
    */
   const getButtonVariant = useCallback((game: Game) => {
-    return game.isJoined ? 'outline' : 'default';
-  }, []);
+    if (game.isJoined) {
+      // Creators get secondary variant (disabled-like), participants get outline
+      return isGameCreator(game) ? 'secondary' : 'outline';
+    }
+    return 'default';
+  }, [isGameCreator]);
   
   return {
     toggleJoin,
     isLoading,
     getButtonText,
     getButtonVariant,
+    isGameCreator,
     // Individual mutation states for advanced use cases
     isJoining: joinGameMutation.isPending,
     isLeaving: leaveGameMutation.isPending,

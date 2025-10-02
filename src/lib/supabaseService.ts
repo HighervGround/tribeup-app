@@ -1869,10 +1869,11 @@ CREATE POLICY "Users can view basic profile info" ON public.users
 
   // Method to record game participation
   static async recordGameParticipation(userId: string, gameId: string, status: 'joined' | 'left' | 'completed' = 'joined') {
-    // First check if the status column exists
+    // First check if the status column exists using the public view
     const { data: columns, error: columnError } = await supabase
-      .from('information_schema.columns')
+      .from('v_columns')
       .select('column_name')
+      .eq('table_schema', 'public')
       .eq('table_name', 'game_participants')
       .eq('column_name', 'status');
 

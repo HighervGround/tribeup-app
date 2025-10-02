@@ -113,6 +113,13 @@ FOR SELECT USING (
     (SELECT auth.uid()) IS NOT NULL
 );
 
+-- CRITICAL: Add missing DELETE policy for leaving games
+DROP POLICY IF EXISTS "Users can leave games" ON public.game_participants;
+CREATE POLICY "game_participants_delete_consolidated" ON public.game_participants
+FOR DELETE USING (
+    user_id = (SELECT auth.uid())
+);
+
 -- Fix game_participation policies (different table)
 DROP POLICY IF EXISTS "Participation select (jwt admin)" ON public.game_participation;
 DROP POLICY IF EXISTS "Users can view all participation" ON public.game_participation;

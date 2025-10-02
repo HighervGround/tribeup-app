@@ -103,21 +103,56 @@ export function useAchievements() {
     );
   };
 
-  // Calculate achievement progress
+  // Calculate achievement progress based on criteria
   const getAchievementProgress = (achievement: Achievement, stats: UserStats) => {
-    const criteria = achievement.criteria;
+    const criteria = typeof achievement.criteria === 'string' 
+      ? JSON.parse(achievement.criteria) 
+      : achievement.criteria;
+    
     let progress = 0;
     let total = 1;
 
-    if (criteria.games_played) {
-      total = criteria.games_played;
-      progress = Math.min(stats.games_played, total);
-    } else if (criteria.games_hosted) {
-      total = criteria.games_hosted;
-      progress = Math.min(stats.games_hosted, total);
+    switch (criteria.type) {
+      case 'game_count':
+        total = criteria.count;
+        progress = Math.min(stats.games_played, total);
+        break;
+      case 'host_count':
+        total = criteria.count;
+        progress = Math.min(stats.games_hosted, total);
+        break;
+      case 'play_time_minutes':
+        total = criteria.count;
+        progress = Math.min(stats.total_play_time_minutes, total);
+        break;
+      case 'first_login':
+        // First login is binary - either achieved or not
+        total = 1;
+        progress = stats.last_activity ? 1 : 0;
+        break;
+      default:
+        total = 1;
+        progress = 0;
     }
 
     return { progress, total, percentage: Math.round((progress / total) * 100) };
+  };
+
+  // Calculate total achievement score
+  const getTotalScore = () => {
+    return achievements.reduce((total, userAchievement) => {
+      return total + userAchievement.achievement.points;
+    }, 0);
+  };
+
+  // Get achievement rank based on total score
+  const getAchievementRank = (score: number) => {
+    if (score >= 200) return { title: 'Legend', icon: '👑', color: 'text-yellow-600', level: 6 };
+    if (score >= 150) return { title: 'Champion', icon: '🏆', color: 'text-purple-600', level: 5 };
+    if (score >= 100) return { title: 'Expert', icon: '⭐', color: 'text-blue-600', level: 4 };
+    if (score >= 50) return { title: 'Rising Star', icon: '🌟', color: 'text-green-600', level: 3 };
+    if (score >= 25) return { title: 'Rookie', icon: '🎯', color: 'text-orange-600', level: 2 };
+    return { title: 'Beginner', icon: '🔰', color: 'text-gray-600', level: 1 };
   };
 
   // Get next achievements to unlock
@@ -142,13 +177,19 @@ export function useAchievements() {
     }
   };
 
+  const totalScore = getTotalScore();
+  const currentRank = getAchievementRank(totalScore);
+
   return {
     achievements,
     userStats,
     isLoading,
+    totalScore,
+    currentRank,
     checkForNewAchievements,
     showAchievementToast,
     getAchievementProgress,
+    getAchievementRank,
     getNextAchievements
   };
 }

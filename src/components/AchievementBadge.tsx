@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Trophy, Star, Crown, Target } from 'lucide-react';
+import { Trophy, Star, Crown, Target, Handshake, User } from 'lucide-react';
 
 interface Achievement {
   id: string;
@@ -20,10 +20,29 @@ interface AchievementBadgeProps {
   variant?: 'default' | 'outline' | 'secondary';
 }
 
+const getAchievementIcon = (iconName: string) => {
+  switch (iconName) {
+    case 'trophy':
+      return '🏆';
+    case 'star':
+      return '⭐';
+    case 'handshake':
+      return '🤝';
+    case 'runner':
+      return '🏃';
+    case 'crown':
+      return '👑';
+    default:
+      return '🎯';
+  }
+};
+
 const getCategoryIcon = (category: string) => {
   switch (category) {
-    case 'participation':
+    case 'engagement':
       return <Target className="w-3 h-3" />;
+    case 'milestone':
+      return <Trophy className="w-3 h-3" />;
     case 'hosting':
       return <Crown className="w-3 h-3" />;
     case 'social':
@@ -35,14 +54,16 @@ const getCategoryIcon = (category: string) => {
 
 const getCategoryColor = (category: string) => {
   switch (category) {
-    case 'participation':
+    case 'engagement':
       return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-300';
+    case 'milestone':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300';
     case 'hosting':
       return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900 dark:text-purple-300';
     case 'social':
       return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300';
     default:
-      return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300';
+      return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900 dark:text-gray-300';
   }
 };
 
@@ -67,7 +88,7 @@ export function AchievementBadge({
         inline-flex items-center font-medium
       `}
     >
-      <span className="text-lg">{achievement.icon}</span>
+      <span className="text-lg">{getAchievementIcon(achievement.icon)}</span>
       <span className="truncate max-w-[100px]">{achievement.name}</span>
       {size === 'lg' && (
         <span className="text-xs opacity-75">+{achievement.points}</span>
@@ -88,7 +109,7 @@ export function AchievementBadge({
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-lg">{achievement.icon}</span>
+              <span className="text-lg">{getAchievementIcon(achievement.icon)}</span>
               <span className="font-semibold">{achievement.name}</span>
             </div>
             <p className="text-sm text-muted-foreground">

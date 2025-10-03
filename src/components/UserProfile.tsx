@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Settings, Trophy, Calendar, MapPin, Star, Target } from 'lucide-react';
+import { Settings, Trophy, Calendar, MapPin } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { SupabaseService } from '../lib/supabaseService';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
-import { useAchievements } from '../hooks/useAchievements';
 import { AchievementGrid } from './AchievementBadge';
-import { AchievementProgressIndicator, GameProgressWidget } from './AchievementProgressIndicator';
 import { formatTimeString } from '../lib/dateUtils';
 
 function UserProfile() {
@@ -24,22 +21,7 @@ function UserProfile() {
   const { data: recentGamesData = [], isLoading: recentGamesLoading } = useUserRecentGames(user?.id || '', 5);
   const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(user?.id || '');
   
-  // Use achievements hook for progress tracking
-  const { userStats: achievementStats, getNextAchievements } = useAchievements();
-  const [nextAchievements, setNextAchievements] = useState<any[]>([]);
-  
   const loading = statsLoading || recentGamesLoading || achievementsLoading;
-
-  // Load next achievements
-  useEffect(() => {
-    const loadNextAchievements = async () => {
-      if (stats) {
-        const next = await getNextAchievements();
-        setNextAchievements(next);
-      }
-    };
-    loadNextAchievements();
-  }, [stats, getNextAchievements]);
   
   // Transform stats data for display
   const userStats = useMemo(() => [
@@ -150,10 +132,9 @@ function UserProfile() {
 
         {/* Tabs for different sections */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="achievements">Achievements</TabsTrigger>
-            <TabsTrigger value="progress">Progress</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -170,7 +151,7 @@ function UserProfile() {
                       <p>Loading recent games...</p>
                     </div>
                   ) : recentGames.length > 0 ? (
-                    recentGames.map((game, index) => (
+                    recentGames.map((game: any, index: number) => (
                       <div key={game.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex-1">
                           <div className="font-medium">{game.title}</div>
@@ -215,12 +196,14 @@ function UserProfile() {
               <CardContent>
                 {achievements.length > 0 ? (
                   <AchievementGrid 
-                    achievements={achievements.map(ua => ({
+                    achievements={achievements.map((ua: any) => ({
                       ...ua.achievements,
                       earned_at: ua.earned_at
                     }))} 
                     maxDisplay={12}
                     size="md"
+                    layout="card"
+                    showScore={true}
                   />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
@@ -233,25 +216,6 @@ function UserProfile() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="progress" className="space-y-6">
-            {/* Progress Indicators */}
-            {stats && (
-              <GameProgressWidget
-                gamesPlayed={stats.totalGamesPlayed}
-                gamesHosted={stats.totalGamesHosted}
-                nextAchievements={nextAchievements}
-              />
-            )}
-            
-            {/* Next Achievements */}
-            {nextAchievements.length > 0 && (
-              <AchievementProgressIndicator
-                achievements={nextAchievements}
-                title="Next Achievements"
-                showAll={true}
-              />
-            )}
-          </TabsContent>
         </Tabs>
       </div>
     </div>

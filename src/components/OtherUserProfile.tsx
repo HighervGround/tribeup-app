@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -19,10 +19,9 @@ import {
   Flag,
   Share
 } from 'lucide-react';
-import { useGames } from '../hooks/useGames';
 import { toast } from 'sonner';
-import { SupabaseService } from '../lib/supabaseService';
 import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
+import { AchievementGrid } from './AchievementBadge';
 
 
 
@@ -197,6 +196,13 @@ function OtherUserProfile() {
                   </div>
                   <div className="text-sm text-muted-foreground">Joined</div>
                 </div>
+                <Separator orientation="vertical" className="h-8" />
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary">
+                    {achievementsLoading ? '...' : achievements.reduce((total: number, ua: any) => total + ((ua.achievements || ua).points || 0), 0)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Score</div>
+                </div>
               </div>
 
               <Button
@@ -227,32 +233,16 @@ function OtherUserProfile() {
                 <p className="text-sm text-muted-foreground">Loading achievements...</p>
               </div>
             ) : achievements.length > 0 ? (
-              <div className="grid gap-3">
-                {achievements.map((userAchievement: any) => {
-                  const achievement = userAchievement.achievement || userAchievement;
-                  const getAchievementIcon = (iconName: string) => {
-                    switch (iconName) {
-                      case 'trophy': return '🏆';
-                      case 'star': return '⭐';
-                      case 'handshake': return '🤝';
-                      case 'runner': return '🏃';
-                      case 'crown': return '👑';
-                      default: return '🎯';
-                    }
-                  };
-                  
-                  return (
-                    <div key={achievement.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                      <div className="text-2xl">{getAchievementIcon(achievement.icon)}</div>
-                      <div className="flex-1">
-                        <div className="font-medium">{achievement.name}</div>
-                        <div className="text-sm text-muted-foreground">{achievement.description}</div>
-                      </div>
-                      <div className="text-sm font-medium text-primary">+{achievement.points}pts</div>
-                    </div>
-                  );
-                })}
-              </div>
+              <AchievementGrid 
+                achievements={achievements.map((ua: any) => ({
+                  ...ua.achievements || ua,
+                  earned_at: ua.earned_at
+                }))} 
+                maxDisplay={12}
+                size="md"
+                layout="card"
+                showScore={true}
+              />
             ) : (
               <p className="text-muted-foreground text-center py-4">No achievements yet</p>
             )}

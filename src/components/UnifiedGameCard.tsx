@@ -8,6 +8,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
 import { formatTimeString } from '../lib/dateUtils';
+import { RealtimeAvatarStack } from './realtime-avatar-stack';
 
 interface Game {
   id: string;
@@ -151,9 +152,15 @@ export function UnifiedGameCard({
               )}
               
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>{getPlayerCount()}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Users className="w-4 h-4" />
+                    <span>{getPlayerCount()}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <RealtimeAvatarStack roomName={`game-${game.id}`} />
+                    <span className="text-xs text-muted-foreground">online</span>
+                  </div>
                 </div>
                 
                 {showJoinButton && (
@@ -224,6 +231,10 @@ export function UnifiedGameCard({
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-muted-foreground" />
           <span>{getPlayerCount()}</span>
+          <div className="flex items-center gap-1 ml-2">
+            <RealtimeAvatarStack roomName={`game-${game.id}`} />
+            <span className="text-xs text-muted-foreground">online</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />

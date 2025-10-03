@@ -38,6 +38,7 @@ import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
+import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { toast } from 'sonner';
 import { WeatherService, WeatherData } from '../lib/weatherService';
 import { SupabaseService } from '../lib/supabaseService';
@@ -826,7 +827,11 @@ function GameDetails() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-                              <CardTitle>Players ({players.length}/{game.maxPlayers})</CardTitle>
+              <CardTitle>Players ({players.length}/{game.maxPlayers})</CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Online now:</span>
+                <RealtimeAvatarStack roomName={`game-${gameId}`} />
+              </div>
             </div>
           </CardHeader>
           <CardContent>

@@ -68,7 +68,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
             {!sidebarCollapsed && (
               <div>
                 <h1 className="text-xl text-foreground">TribeUp</h1>
-                <p className="text-sm text-muted-foreground">Find your tribe</p>
+                <p className="text-sm text-gray-600 dark:text-muted-foreground">Find your tribe</p>
               </div>
             )}
             <Button
@@ -135,7 +135,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                           </Badge>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-gray-600 dark:text-muted-foreground">
                         {item.description}
                       </div>
                     </div>

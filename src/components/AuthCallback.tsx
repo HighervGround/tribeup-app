@@ -69,6 +69,46 @@ function AuthCallback() {
           }
         };
 
+        // Try to create user profile in database to avoid orphaned users
+        try {
+          // Check if user profile already exists
+          const existingProfile = await SupabaseService.getUserProfile(user.id);
+          
+          if (!existingProfile) {
+            // Create user profile in database
+            console.log('Creating user profile for OAuth user:', user.id);
+            await SupabaseService.createUserProfile(user.id, {
+              email: userProfile.email,
+              name: userProfile.name,
+              username: userProfile.username,
+              avatar: userProfile.avatar,
+              bio: userProfile.bio,
+              location: userProfile.location
+            });
+            console.log('✅ User profile created successfully');
+          } else {
+            console.log('✅ User profile already exists');
+            // Use existing profile data
+            setUser(existingProfile);
+            setStatus('success');
+            setMessage('Welcome back! Redirecting...');
+            
+            // Redirect logic for existing users
+            const pendingGameId = localStorage.getItem('pendingGameJoin');
+            if (pendingGameId) {
+              localStorage.removeItem('pendingGameJoin');
+              setTimeout(() => navigate(`/game/${pendingGameId}`), 1500);
+            } else {
+              setTimeout(() => navigate('/'), 1500);
+            }
+            return;
+          }
+        } catch (profileError) {
+          console.error('Error creating user profile:', profileError);
+          // Continue with OAuth data even if profile creation fails
+          console.log('⚠️ Using OAuth data without database profile');
+        }
+
         // Set user in app store
         setUser(userProfile);
         

@@ -48,9 +48,9 @@
   --secondary: var(--uf-core-blue);
   --secondary-foreground: #ffffff;
   --muted: var(--uf-warm-grey-1);
-  --muted-foreground: var(--uf-cool-grey-11);
+  --muted-foreground: #1a1a1a;
   --accent: var(--uf-cool-grey-3);
-  --accent-foreground: var(--uf-cool-grey-11);
+  --accent-foreground: #1a1a1a;
   --destructive: var(--uf-bottlebrush);
   --destructive-foreground: #ffffff;
   --success: var(--uf-gator);
@@ -1033,6 +1033,76 @@ html {
   html {
     font-size: 16px;
   }
+}
+
+/* Navigation contrast fixes */
+.text-muted-foreground {
+  color: var(--muted-foreground) !important;
+}
+
+/* Ensure proper contrast for navigation items in light mode */
+:root .text-muted-foreground {
+  color: #1a1a1a !important;
+}
+
+/* Hover states for better visibility */
+.text-muted-foreground:hover {
+  color: var(--foreground) !important;
+}
+
+/* Active states */
+.text-primary {
+  color: var(--primary) !important;
+}
+
+/* Dark mode adjustments */
+.dark .text-muted-foreground {
+  color: var(--uf-cool-grey-3) !important;
+}
+
+/* Specific fixes for navigation buttons */
+.hover\\:text-accent-foreground:hover {
+  color: #000000 !important;
+}
+
+/* Ensure navigation text is always visible in light mode */
+:root button .text-muted-foreground {
+  color: #2d2d2d !important;
+}
+
+:root button:hover .text-muted-foreground {
+  color: #000000 !important;
+}
+
+/* Fix for ghost button variant in navigation */
+:root [data-slot="button"][class*="ghost"] {
+  color: #2d2d2d !important;
+}
+
+:root [data-slot="button"][class*="ghost"]:hover {
+  color: #000000 !important;
+}
+
+/* Bottom navigation specific fixes */
+.fixed.bottom-0 button {
+  color: #2d2d2d !important;
+}
+
+.fixed.bottom-0 button:hover {
+  color: #000000 !important;
+}
+
+.fixed.bottom-0 .text-muted-foreground {
+  color: #2d2d2d !important;
+}
+
+.fixed.bottom-0 .text-muted-foreground:hover {
+  color: #000000 !important;
+}
+
+/* Ensure active navigation items are clearly visible */
+.fixed.bottom-0 .text-primary {
+  color: var(--uf-core-orange) !important;
 }
 
 /* Print styles */

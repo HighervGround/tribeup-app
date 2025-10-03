@@ -90,18 +90,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           DEBUG && console.log('[Auth] User set from auth data:', authUser.id);
           
           // Try to load full profile in background (non-blocking)
-          setTimeout(() => {
-            SupabaseService.getUserProfile(session.user.id)
-              .then(profile => {
-                if (profile) {
-                  DEBUG && console.log('[Auth] Profile loaded later:', profile.id);
-                  setAppUser(profile);
+          setTimeout(async () => {
+            try {
+              const profile = await SupabaseService.getUserProfile(session.user.id);
+              if (profile) {
+                DEBUG && console.log('[Auth] Profile loaded later:', profile.id);
+                setAppUser(profile);
+              } else {
+                // Profile doesn't exist - create it to prevent orphaned user issues
+                console.log('[Auth] No profile found, creating one for user:', session.user.id);
+                await SupabaseService.createUserProfile(session.user.id, {
+                  email: session.user.email,
+                  name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                  username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || `user_${Math.random().toString(36).substring(2, 10)}`,
+                  avatar: session.user.user_metadata?.avatar_url || '',
+                });
+                console.log('[Auth] ✅ Profile created successfully');
+                
+                // Load the newly created profile
+                const newProfile = await SupabaseService.getUserProfile(session.user.id);
+                if (newProfile) {
+                  setAppUser(newProfile);
                 }
-              })
-              .catch(error => {
-                console.warn('Profile loading failed (non-critical):', error.message);
-                // Keep using auth data - don't fail
-              });
+              }
+            } catch (error: any) {
+              console.warn('Profile loading/creation failed (non-critical):', error.message);
+              // Keep using auth data - don't fail
+            }
           }, 100);
         }
         

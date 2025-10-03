@@ -1,0 +1,41 @@
+/* EMERGENCY LIGHT MODE FIX - Target the actual .light class! */
+
+/* Apply to light theme specifically */
+.light * {
+  color: #1a1a1a !important;
+}
+
+/* Navigation specific fixes */
+.light .fixed.bottom-0 * {
+  color: #1a1a1a !important;
+}
+
+.light .fixed.bottom-0 button * {
+  color: #1a1a1a !important;
+}
+
+/* Active items should be orange */
+.light .text-primary,
+.light .text-primary * {
+  color: #FA4616 !important;
+}
+
+/* Sidebar fixes */
+.light aside * {
+  color: #1a1a1a !important;
+}
+
+/* Button text fixes */
+.light button {
+  color: #1a1a1a !important;
+}
+
+.light button span {
+  color: #1a1a1a !important;
+}
+
+/* Ensure primary buttons have white text */
+.light .bg-primary,
+.light .bg-primary * {
+  color: white !important;
+}

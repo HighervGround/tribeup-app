@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cva, type VariantProps } from 'class-variance-authority'
 import * as React from 'react'
 
@@ -38,43 +37,30 @@ const AvatarStack = ({
       className={cn(
         avatarStackVariants({ orientation }),
         className,
-        orientation === 'horizontal' ? '-space-x-0' : '-space-y-0'
       )}
       {...props}
     >
       {shownAvatars.map(({ name, image }, index) => (
-        <Tooltip key={`${name}-${image}-${index}`}>
-          <TooltipTrigger asChild>
-            <Avatar className="hover:z-10">
-              <AvatarImage src={image} />
-              <AvatarFallback>
-                {name
-                  ?.split(' ')
-                  ?.map((word) => word[0])
-                  ?.join('')
-                  ?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{name}</p>
-          </TooltipContent>
-        </Tooltip>
+        <div key={`${name}-${image}-${index}`} title={name}>
+          <Avatar className="hover:z-10">
+            <AvatarImage src={image} />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              {name
+                ?.split(' ')
+                ?.map((word) => word[0])
+                ?.join('')
+                ?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       ))}
 
       {hiddenAvatars.length ? (
-        <Tooltip key="hidden-avatars">
-          <TooltipTrigger asChild>
-            <Avatar>
-              <AvatarFallback>+{avatars.length - shownAvatars.length}</AvatarFallback>
-            </Avatar>
-          </TooltipTrigger>
-          <TooltipContent>
-            {hiddenAvatars.map(({ name }, index) => (
-              <p key={`${name}-${index}`}>{name}</p>
-            ))}
-          </TooltipContent>
-        </Tooltip>
+        <div title={hiddenAvatars.map(({ name }) => name).join(', ')}>
+          <Avatar>
+            <AvatarFallback>+{avatars.length - shownAvatars.length}</AvatarFallback>
+          </Avatar>
+        </div>
       ) : null}
     </div>
   )

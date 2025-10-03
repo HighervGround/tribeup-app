@@ -1165,19 +1165,35 @@ html:not(.dark) .fixed.bottom-0 button[data-slot="button"]:hover {
   color: #000000 !important;
 }
 
-/* Nuclear option - force all text in light mode navigation to be dark */
-html:not(.dark) .fixed.bottom-0 * {
+/* SIMPLE NUCLEAR OPTION - force ALL text to be visible in light mode */
+html:not(.dark) * {
   color: #1a1a1a !important;
 }
 
-html:not(.dark) .fixed.bottom-0 *:hover {
-  color: #000000 !important;
+/* Except for backgrounds and borders */
+html:not(.dark) .bg-primary,
+html:not(.dark) .bg-primary * {
+  color: white !important;
 }
 
-/* Except for active items which should be orange */
-html:not(.dark) .fixed.bottom-0 .text-primary,
-html:not(.dark) .fixed.bottom-0 .text-primary * {
+/* Active/primary items should be orange */
+html:not(.dark) .text-primary,
+html:not(.dark) .text-primary * {
   color: #FA4616 !important;
+}
+
+/* Links should be blue */
+html:not(.dark) a {
+  color: #2563eb !important;
+}
+
+/* Buttons should have proper contrast */
+html:not(.dark) button {
+  color: #1a1a1a !important;
+}
+
+html:not(.dark) button:hover {
+  color: #000000 !important;
 }
 
 /* Utility class for forcing text visibility in light mode */

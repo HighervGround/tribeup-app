@@ -9,17 +9,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-orange-600 text-white hover:bg-orange-700 hover:shadow-orange-600/25",
+        default: "bg-orange-600 text-white hover:bg-orange-700 hover:shadow-orange-600/25 hover:text-white active:text-white focus:text-white",
         destructive:
-          "bg-gradient-to-r from-destructive to-destructive/90 text-white hover:from-destructive/90 hover:to-destructive/80 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 hover:shadow-destructive/25",
+          "bg-gradient-to-r from-destructive to-destructive/90 text-white hover:from-destructive/90 hover:to-destructive/80 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 hover:shadow-destructive/25 hover:text-white active:text-white focus:text-white",
         outline:
-          "border-2 bg-background text-foreground hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 hover:border-primary/50",
+          "border-2 bg-background text-gray-900 hover:bg-accent hover:text-gray-900 dark:bg-input/30 dark:border-input dark:hover:bg-input/50 hover:border-primary/50 dark:text-white active:text-gray-900 focus:text-gray-900",
         secondary:
-          "bg-gradient-to-r from-secondary to-secondary/90 text-secondary-foreground hover:from-secondary/90 hover:to-secondary/80",
+          "bg-gradient-to-r from-secondary to-secondary/90 text-gray-900 hover:from-secondary/90 hover:to-secondary/80 hover:text-gray-900 active:text-gray-900 focus:text-gray-900 dark:text-white",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 hover:shadow-none",
-        link: "text-primary underline-offset-4 hover:underline shadow-none hover:shadow-none",
-        message: "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-blue-500/25 font-semibold",
+          "hover:bg-accent hover:text-gray-900 dark:hover:bg-accent/50 hover:shadow-none text-gray-900 dark:text-white active:text-gray-900 focus:text-gray-900",
+        link: "text-orange-600 underline-offset-4 hover:underline shadow-none hover:shadow-none hover:text-orange-700 active:text-orange-600 focus:text-orange-600 dark:text-orange-400",
+        message: "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-blue-500/25 font-semibold hover:text-white active:text-white focus:text-white",
       },
       size: {
         default: "h-10 px-5 py-2.5 has-[>svg]:px-4",

@@ -1,7 +1,7 @@
 /* EMERGENCY LIGHT MODE FIX - Target the actual .light class! */
 
-/* Apply to light theme specifically */
-.light * {
+/* SIMPLE NUCLEAR OPTION - force ALL text to be visible in light mode */
+.light *:not([class*="bg-gradient"]):not([class*="bg-primary"]) {
   color: #1a1a1a !important;
 }
 
@@ -36,6 +36,13 @@
 
 /* Ensure primary buttons have white text */
 .light .bg-primary,
-.light .bg-primary * {
+.light .bg-primary *,
+.light button[class*="bg-gradient-to-r"][class*="from-primary"],
+.light button[class*="bg-gradient-to-r"][class*="from-primary"] * {
+  color: white !important;
+}
+
+/* Force primary button text to be white regardless of other classes */
+.light .text-primary-foreground {
   color: white !important;
 }

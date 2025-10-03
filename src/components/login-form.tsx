@@ -185,7 +185,13 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                variant="default" 
+                className="w-full" 
+                disabled={isLoading}
+                style={{ backgroundColor: '#FA4616', color: 'white' }}
+              >
                 {isLoading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
               </Button>
 

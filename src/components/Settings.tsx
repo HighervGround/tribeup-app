@@ -28,14 +28,14 @@ import {
   Settings as SettingsIcon
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
-import { useAuth } from '../providers/AuthProvider';
+import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 import { useNotifications } from '../hooks/useNotifications';
 import { toast } from 'sonner';
 import { useAppStore } from '../store/appStore';
 
 function Settings() {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut } = useSimpleAuth();
   const { theme, effectiveTheme, toggleTheme, setTheme } = useTheme();
   const { user } = useAppStore();
   const { settings, updateSettings } = useNotifications();

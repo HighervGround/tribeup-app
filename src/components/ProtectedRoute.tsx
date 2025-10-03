@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
+import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
@@ -16,7 +16,7 @@ export function ProtectedRoute({
   const location = useLocation();
   
   try {
-    const { user, loading } = useAuth();
+    const { user, loading } = useSimpleAuth();
 
     // Show simple loading while checking auth state
     if (loading) {

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { toast } from 'sonner';
+import { AuthFallback } from '../components/AuthFallback';
 
 interface SimpleAuthContextType {
   user: User | null;
@@ -21,6 +22,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
   const { setUser: setAppUser } = useAppStore();
 
   // SINGLE useEffect - no race conditions

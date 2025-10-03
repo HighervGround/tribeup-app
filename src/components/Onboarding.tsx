@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
+import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 import { SupabaseService } from '../lib/supabaseService';
 import { toast } from 'sonner';
 
@@ -55,7 +55,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
     skillLevel: ''
   });
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
 
   const progress = (currentStep / onboardingSteps.length) * 100;
 

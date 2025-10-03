@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppRouter } from './components/AppRouter';
-import { AuthProvider } from './providers/AuthProvider';
+import { SimpleAuthProvider } from './providers/SimpleAuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from 'sonner';
@@ -10,9 +10,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <AuthProvider>
+        <SimpleAuthProvider>
           <AppRouter />
-        </AuthProvider>
+        </SimpleAuthProvider>
       </QueryProvider>
     </ErrorBoundary>
   );

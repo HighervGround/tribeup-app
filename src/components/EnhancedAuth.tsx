@@ -1,13 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoginForm } from './login-form';
-import { useAuth } from '../providers/AuthProvider';
+import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 import { SupabaseService } from '../lib/supabaseService';
 import { toast } from 'sonner';
 
 function EnhancedAuth() {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp } = useSimpleAuth();
 
   const handleEmailAuth = async (email: string, password: string, isSignUp: boolean) => {
     try {

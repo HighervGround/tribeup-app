@@ -4,7 +4,7 @@ import { SimpleAuthProvider } from './providers/SimpleAuthProvider';
 import { QueryProvider } from './providers/QueryProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from 'sonner';
-import './light-mode-fix.css';
+// import './light-mode-fix.css';
 
 export default function App() {
   return (

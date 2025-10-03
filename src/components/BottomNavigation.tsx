@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ClickableAvatar } from './ui/clickable-avatar';
+import { CurrentUserAvatar } from './current-user-avatar';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppStore } from '../store/appStore';
 import { Home, Search, Plus, Bell, User } from 'lucide-react';
@@ -47,13 +48,9 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
               >
                 <div className="relative">
                   {item.path === '/profile' && user ? (
-                    <ClickableAvatar
-                      src={user.avatar}
-                      alt={user.name}
-                      size="sm"
-                      onClick={() => navigate('/profile')}
-                      className="w-5 h-5"
-                    />
+                    <div onClick={() => navigate('/profile')} className="cursor-pointer">
+                      <CurrentUserAvatar size="sm" className="w-5 h-5" />
+                    </div>
                   ) : (
                     <Icon className="w-5 h-5" />
                   )}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
+import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 import { useAppStore } from '../store/appStore';
 import { LoadingSpinner } from './ui/loading-spinner';
 
@@ -10,7 +10,7 @@ interface ProfileCheckProps {
 
 export function ProfileCheck({ children = null }: ProfileCheckProps) {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useSimpleAuth();
   const { user: appUser } = useAppStore();
   const [checking, setChecking] = useState(true);
 

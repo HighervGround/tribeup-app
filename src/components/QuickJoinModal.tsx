@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { X, Mail, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../providers/AuthProvider';
+import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 
 interface QuickJoinModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ interface QuickJoinModalProps {
 }
 
 export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSuccess }: QuickJoinModalProps) {
-  const { signUp, signInWithOAuth } = useAuth();
+  const { signUp, signInWithOAuth } = useSimpleAuth();
   const [step, setStep] = useState<'signup' | 'verify'>('signup');
   const [formData, setFormData] = useState({
     name: '',

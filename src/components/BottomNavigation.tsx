@@ -41,7 +41,7 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
                 className={`flex flex-col items-center gap-1 p-2 h-auto w-full transition-all duration-200 ${
                   isActive 
                     ? 'text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-gray-700 dark:text-muted-foreground hover:text-black dark:hover:text-foreground'
                 }`}
                 aria-label={`Navigate to ${item.label}`}
                 aria-current={isActive ? 'page' : undefined}

@@ -1,7 +1,8 @@
-import { useAppStore } from '@/store/appStore'
+import { useAppStore } from '../store/appStore'
 
 export const useCurrentUserImage = () => {
   const { user } = useAppStore()
   
-  return user?.avatar || ''
+  // Return user avatar from app store
+  return user?.avatar || null
 }

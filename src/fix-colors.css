@@ -1,0 +1,50 @@
+/* DYNAMIC FIX - Works in both light and dark modes */
+
+/* Light mode colors */
+:root:not(.dark) .text-white {
+  color: #ffffff !important;
+}
+
+:root:not(.dark) .text-gray-700 {
+  color: #374151 !important;
+}
+
+:root:not(.dark) .text-gray-900 {
+  color: #111827 !important;
+}
+
+:root:not(.dark) .bg-orange-600 {
+  background-color: #ea580c !important;
+}
+
+/* Dark mode colors */
+:root.dark .text-white {
+  color: #ffffff !important;
+}
+
+:root.dark .text-gray-700 {
+  color: #d1d5db !important;
+}
+
+:root.dark .text-gray-900 {
+  color: #f9fafb !important;
+}
+
+:root.dark .bg-orange-600 {
+  background-color: #ea580c !important;
+}
+
+/* Navigation button fixes */
+:root:not(.dark) button[data-slot="button"] {
+  color: #374151 !important;
+}
+
+:root.dark button[data-slot="button"] {
+  color: #d1d5db !important;
+}
+
+/* Active navigation buttons */
+button[data-slot="button"].bg-orange-600 {
+  background-color: #ea580c !important;
+  color: #ffffff !important;
+}

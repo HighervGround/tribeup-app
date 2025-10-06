@@ -32,18 +32,21 @@ export function useNotifications() {
     soundEnabled: true
   });
 
-  // Load notifications from Supabase
+  // Load notifications from Supabase with error resilience
   useEffect(() => {
     const loadNotifications = async () => {
       try {
         const notificationsData = await SupabaseService.getNotifications();
-        setNotifications(notificationsData);
+        setNotifications(notificationsData || []); // Ensure array fallback
       } catch (error) {
-        console.error('Error loading notifications:', error);
+        console.warn('useNotifications: Failed to load notifications, using empty array:', error);
+        setNotifications([]); // Set empty array on error to prevent crashes
       }
     };
 
-    loadNotifications();
+    // Add small delay to prevent race conditions on refresh
+    const timeoutId = setTimeout(loadNotifications, 100);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Subscribe to real-time notifications

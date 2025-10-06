@@ -20,8 +20,14 @@ const navItems = [
 export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { unreadCount } = useNotifications();
+  
+  // Use safe defaults to prevent white screen on refresh
+  const notifications = useNotifications();
   const { user } = useAppStore();
+  
+  // Provide fallbacks if hooks return undefined/null
+  const unreadCount = notifications?.unreadCount || 0;
+  const safeUser = user || null;
 
   return (
     <div ref={ref} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
@@ -47,7 +53,7 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
                 aria-current={isActive ? 'page' : undefined}
               >
                 <div className="relative">
-                  {item.path === '/profile' && user ? (
+                  {item.path === '/profile' && safeUser ? (
                     <div onClick={() => navigate('/profile')} className="cursor-pointer">
                       <CurrentUserAvatar size="sm" className="w-5 h-5" />
                     </div>

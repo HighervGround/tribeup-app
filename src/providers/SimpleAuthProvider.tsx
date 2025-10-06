@@ -31,32 +31,79 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Increase timeout and rely more on auth state listener
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout')), 8000) // Increased back to 8s
+        );
+        
+        let session = null;
+        let sessionError = null;
+        
+        try {
+          const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
+          session = result.data?.session;
+          sessionError = result.error;
+          
+          if (session) {
+            console.log('✅ Session restored from getSession:', session.user?.id);
+          }
+        } catch (timeoutError) {
+          console.warn('🚨 getSession timed out, will rely on auth state listener');
+          // Don't set connection error - let auth state listener handle it
+          // setConnectionError(true);
+        }
         
         if (!mounted) return;
         
-        if (error) {
-          console.error('Auth initialization error:', error);
-          return;
+        if (sessionError) {
+          console.error('Auth initialization error:', sessionError);
+          // Don't return - continue with null session
         }
 
-        // Update state
+        // Update state (even if session is null)
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Handle user profile (only if we have a user)
-        if (session?.user) {
-          await handleUserProfile(session.user);
+        // Handle user profile (only if we have a user and no connection error)
+        if (session?.user && !connectionError) {
+          try {
+            await handleUserProfile(session.user);
+          } catch (profileError) {
+            console.warn('Profile loading failed, continuing anyway:', profileError);
+          }
         }
       } catch (error) {
         console.error('Auth initialization failed:', error);
+        if (error instanceof Error && error.message === 'getSession timeout') {
+          console.warn('🚨 Auth getSession timed out after 8s - continuing without session');
+          setConnectionError(true);
+        }
       } finally {
         if (mounted) {
           setLoading(false);
         }
       }
     };
+
+    // Force loading to false after 10 seconds regardless of auth state
+    const forceLoadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('🚨 Force stopping auth loading after 10s');
+        setLoading(false);
+      }
+    }, 10000);
+    
+    // Also try to get session from localStorage as backup
+    try {
+      const storedSession = localStorage.getItem('supabase.auth.token');
+      if (storedSession && !session) {
+        console.log('🔍 Found stored session, will wait for auth listener');
+        // Don't set loading to false yet - let the auth listener handle it
+      }
+    } catch (error) {
+      console.warn('Could not check localStorage for session:', error);
+    }
 
     // Handle user profile creation/loading
     const handleUserProfile = async (user: User) => {
@@ -116,19 +163,28 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       async (event: any, session: any) => {
         if (!mounted) return;
         
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('🔄 Auth state changed:', event, session?.user?.id);
         
         // Update state immediately
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Handle profile for new sessions
+        // Handle different auth events
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🎉 User signed in via auth state listener');
           await handleUserProfile(session.user);
           toast.success('Welcome!');
         } else if (event === 'SIGNED_OUT') {
+          console.log('👋 User signed out');
           setAppUser(null);
           toast.success('Signed out successfully');
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          console.log('🔄 Token refreshed, updating profile');
+          await handleUserProfile(session.user);
+        } else if (session?.user && !event) {
+          // Initial session restoration
+          console.log('🔄 Initial session restored via listener');
+          await handleUserProfile(session.user);
         }
         
         setLoading(false);
@@ -139,12 +195,21 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(forceLoadingTimeout);
     };
   }, []); // No dependencies needed - everything is handled inside
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (error) {
+      console.error('SignIn failed - network issue:', error);
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Network connection failed. Please check your internet connection and try again.');
+      }
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string, userData: any) => {

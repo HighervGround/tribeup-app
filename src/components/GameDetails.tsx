@@ -42,7 +42,7 @@ import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { toast } from 'sonner';
 import { WeatherService, WeatherData } from '../lib/weatherService';
 import { SupabaseService } from '../lib/supabaseService';
-import { formatEventHeader, formatCalendarInfo } from '../lib/dateUtils';
+import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '../lib/dateUtils';
 
 
 
@@ -52,6 +52,8 @@ function WeatherInfo({ game }: { game: any }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true; // Race condition fix
+    
     const getWeatherData = async () => {
       console.log('🌤️ Getting weather data for game:', game.id);
       console.log('📍 Coordinates:', game.latitude, game.longitude);
@@ -127,9 +129,12 @@ function WeatherInfo({ game }: { game: any }) {
           }
         }
         
-        if (weatherData) {
+        if (weatherData && isMounted) {
           console.log('✅ Weather data received:', weatherData);
           setWeather(weatherData);
+        } else if (!isMounted) {
+          console.log('🚫 Component unmounted, skipping weather update');
+          return;
         } else {
           throw new Error('No weather data available');
         }
@@ -148,41 +153,52 @@ function WeatherInfo({ game }: { game: any }) {
             const condition = fallbackData.weather[0].main;
             const description = fallbackData.weather[0].description;
             
-            setWeather({
-              temperature: temp,
-              condition,
-              description: `${description.charAt(0).toUpperCase() + description.slice(1)} (nearby area)`,
-              humidity: fallbackData.main.humidity,
-              windSpeed: Math.round(fallbackData.wind.speed),
-              precipitation: fallbackData.rain?.['1h'] || fallbackData.snow?.['1h'] || 0,
-              icon: condition === 'Clear' ? '☀️' : condition === 'Clouds' ? '☁️' : condition === 'Rain' ? '🌧️' : '🌤️',
-              isOutdoorFriendly: temp > 40 && temp < 95,
-              alerts: [`📍 Showing weather for nearby area - actual conditions at ${game.location || 'game location'} may vary`]
-            });
+            if (isMounted) {
+              setWeather({
+                temperature: temp,
+                condition,
+                description: `${description.charAt(0).toUpperCase() + description.slice(1)} (nearby area)`,
+                humidity: fallbackData.main.humidity,
+                windSpeed: Math.round(fallbackData.wind.speed),
+                precipitation: fallbackData.rain?.['1h'] || fallbackData.snow?.['1h'] || 0,
+                icon: condition === 'Clear' ? '☀️' : condition === 'Clouds' ? '☁️' : condition === 'Rain' ? '🌧️' : '🌤️',
+                isOutdoorFriendly: temp > 40 && temp < 95,
+                alerts: [`📍 Showing weather for nearby area - actual conditions at ${game.location || 'game location'} may vary`]
+              });
+            }
           } else {
             throw new Error('Fallback weather failed');
           }
         } catch (fallbackError) {
           console.error('❌ All weather sources failed:', fallbackError);
           // Final mock data
-          setWeather({
-            temperature: 72,
-            condition: 'Clear',
-            description: 'Weather data temporarily unavailable',
-            humidity: 65,
-            windSpeed: 8,
-            precipitation: 0,
-            icon: '🌤️',
-            isOutdoorFriendly: true,
-            alerts: [`🔄 Weather service temporarily unavailable for ${game.location || 'this location'}`]
-          });
+          if (isMounted) {
+            setWeather({
+              temperature: 72,
+              condition: 'Clear',
+              description: 'Weather data temporarily unavailable',
+              humidity: 65,
+              windSpeed: 8,
+              precipitation: 0,
+              icon: '🌤️',
+              isOutdoorFriendly: true,
+              alerts: [`🔄 Weather service temporarily unavailable for ${game.location || 'this location'}`]
+            });
+          }
         }
       }
       
-      setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     };
 
     getWeatherData();
+    
+    // Cleanup function to prevent race conditions
+    return () => {
+      isMounted = false;
+    };
   }, [game.latitude, game.longitude, game.location, game.date, game.time]);
 
   if (loading) {
@@ -263,6 +279,8 @@ function GameDetails() {
     title: '',
     description: '',
     location: '',
+    date: '',
+    time: '',
     duration: 60,
     maxPlayers: 0,
     cost: ''
@@ -473,6 +491,8 @@ function GameDetails() {
       title: game.title,
       description: game.description,
       location: game.location,
+      date: game.date,
+      time: game.time,
       duration: game.duration || 60,
       maxPlayers: game.maxPlayers,
       cost: game.cost
@@ -632,7 +652,7 @@ function GameDetails() {
                 <Calendar className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <div>{calendarInfo.date}</div>
-                  <div className="text-sm text-muted-foreground">{calendarInfo.time}</div>
+                  <div className="text-sm text-muted-foreground">{formatTimeString(game.time)}</div>
                 </div>
               </div>
               
@@ -648,7 +668,7 @@ function GameDetails() {
               <div className="flex items-center gap-3">
                 <DollarSign className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <div>{game.cost}</div>
+                  <div>{formatCost(game.cost)}</div>
                   <div className="text-sm text-muted-foreground">Cost</div>
                 </div>
               </div>
@@ -812,10 +832,11 @@ function GameDetails() {
                     >
                       {game.creatorData?.name || game.createdBy || 'Unknown'}
                     </button>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    {/* Rating temporarily hidden during early testing phase */}
+                    {/* <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Star className="w-3 h-3 fill-current text-warning" />
                       {game.creatorData?.rating || '4.5'}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
@@ -862,10 +883,11 @@ function GameDetails() {
                             <Badge variant="secondary" className="text-xs px-2 py-0">Host</Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        {/* Player rating temporarily hidden during early testing phase */}
+                        {/* <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Star className="w-3 h-3 fill-current text-warning" />
                           {player.rating}
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   </div>
@@ -950,6 +972,30 @@ function GameDetails() {
                 onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
                 placeholder="Game location"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="edit-date" className="text-sm font-medium">
+                  Date
+                </label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editFormData.date}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="edit-time" className="text-sm font-medium">
+                  Time
+                </label>
+                <Input
+                  id="edit-time"
+                  type="time"
+                  value={editFormData.time}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, time: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <label htmlFor="edit-duration" className="text-sm font-medium">

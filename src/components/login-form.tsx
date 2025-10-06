@@ -11,7 +11,7 @@ import {
 import { Input } from './ui/input'
 import { Alert, AlertDescription } from './ui/alert'
 import { useState } from 'react'
-import { Chrome, Apple, Mail } from 'lucide-react'
+import { Chrome, Mail } from 'lucide-react'
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
   onEmailAuth?: (email: string, password: string, isSignUp: boolean) => Promise<void>
@@ -28,7 +28,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
 
-  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+  const handleSocialLogin = async (provider: 'google') => {
     setIsLoading(true)
     setError(null)
 
@@ -82,27 +82,16 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
         <CardContent>
           {!showEmailForm ? (
             <div className="space-y-4">
-              {/* Social Login Buttons */}
-              <div className="grid grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleSocialLogin('google')}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  <Chrome className="mr-2 h-4 w-4" />
-                  Google
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleSocialLogin('apple')}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  <Apple className="mr-2 h-4 w-4" />
-                  Apple
-                </Button>
-              </div>
+              {/* Social Login Button */}
+              <Button
+                variant="outline"
+                onClick={() => handleSocialLogin('google')}
+                disabled={isLoading}
+                className="w-full"
+              >
+                <Chrome className="mr-2 h-4 w-4" />
+                Continue with Google
+              </Button>
 
               {/* Divider */}
               <div className="relative my-6">

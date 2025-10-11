@@ -21,6 +21,7 @@ function HomeScreen() {
   const { data: games = [], isLoading, error, refetch, isError, isPending, isRefetching } = useGames();
   const [refreshing, setRefreshing] = useState(false);
   const [forceTimeout, setForceTimeout] = useState(false);
+  
   // Real-time presence tracking (no polling)
   useUserPresence();
   // Location services for distance calculations

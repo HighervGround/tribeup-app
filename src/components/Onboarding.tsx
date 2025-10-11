@@ -74,8 +74,34 @@ function Onboarding({ onComplete }: OnboardingProps) {
       try {
         // Attempt to persist profile if authenticated
         if (user?.id) {
-          await SupabaseService.createUserProfile(user.id, payload);
+          // Check if profile exists first
+          const existingProfile = await SupabaseService.getUserProfile(user.id);
+          
+          if (existingProfile) {
+            // Update existing profile with onboarding data
+            console.log('Updating existing profile with onboarding data');
+            await SupabaseService.updateUserProfile(user.id, {
+              full_name: `${payload.firstName} ${payload.lastName}`.trim(),
+              username: `${payload.firstName}_${payload.lastName}`.toLowerCase().replace(/\s+/g, '_'),
+              bio: payload.bio,
+              preferred_sports: payload.selectedSports || []
+            });
+          } else {
+            // Create new profile
+            console.log('Creating new profile with onboarding data');
+            await SupabaseService.createUserProfile(user.id, payload);
+          }
         }
+        // Refresh user profile in app store to reflect onboarding changes
+        if (user?.id) {
+          const updatedProfile = await SupabaseService.getUserProfile(user.id);
+          if (updatedProfile) {
+            // Update the app store with the latest profile data
+            const { useAppStore } = await import('../store/appStore');
+            useAppStore.getState().setUser(updatedProfile);
+          }
+        }
+        
         // Notify caller for any additional side-effects
         onComplete?.(payload);
         toast.success("You're all set!", { description: 'Your profile is ready. Enjoy discovering games.' });

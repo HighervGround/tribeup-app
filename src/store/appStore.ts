@@ -252,10 +252,13 @@ export const useAppStore = create<AppState & AppActions>()(
         const { setLoading, setError, setGames } = get();
         const state = get();
         
-        // Prevent multiple simultaneous calls
-        if (state.isLoading) {
+        // Prevent multiple simultaneous calls with a flag
+        if (state.isLoading || (state as any).isInitializing) {
           return;
         }
+        
+        // Set initializing flag to prevent race conditions
+        set((state) => { (state as any).isInitializing = true; });
         
         try {
           setLoading(true);
@@ -269,6 +272,8 @@ export const useAppStore = create<AppState & AppActions>()(
           setError(error instanceof Error ? error.message : 'Failed to initialize auth');
         } finally {
           setLoading(false);
+          // Clear initializing flag to prevent race conditions
+          set((state) => { (state as any).isInitializing = false; });
         }
       },
       
@@ -290,10 +295,13 @@ export const useAppStore = create<AppState & AppActions>()(
           setLoading(true);
           const newGame = await SupabaseService.createGame(gameData);
           set((state) => {
-            state.games.unshift(newGame);
-            // Add to my games if I created it
-            if (newGame.createdBy === state.user?.id) {
-              state.myGames.unshift(newGame);
+            if (newGame && typeof newGame === 'object') {
+              state.games.unshift(newGame as any);
+              // Add to my games if I created it
+              const game = newGame as any;
+              if (game.createdBy === state.user?.id || game.creatorId === state.user?.id) {
+                state.myGames.unshift(newGame as any);
+              }
             }
           });
         } catch (error) {
@@ -307,22 +315,26 @@ export const useAppStore = create<AppState & AppActions>()(
         const { setLoading, setError } = get();
         try {
           setLoading(true);
-          // Note: This would need to be implemented in SupabaseService
-          // For now, we'll just update the local state
+          
+          // Call the actual Supabase service to update the database
+          const updatedGame = await SupabaseService.updateGame(gameId, updates);
+          
+          // Update local state with the response from database
           set((state) => {
             const gameIndex = state.games.findIndex(g => g.id === gameId);
             if (gameIndex !== -1) {
-              state.games[gameIndex] = { ...state.games[gameIndex], ...updates };
+              state.games[gameIndex] = updatedGame;
             }
             
             // Update in myGames if present
             const myGameIndex = state.myGames.findIndex(g => g.id === gameId);
             if (myGameIndex !== -1) {
-              state.myGames[myGameIndex] = { ...state.myGames[myGameIndex], ...updates };
+              state.myGames[myGameIndex] = updatedGame;
             }
           });
         } catch (error) {
           setError(error instanceof Error ? error.message : 'Failed to update game');
+          throw error; // Re-throw so UI can handle the error
         } finally {
           setLoading(false);
         }

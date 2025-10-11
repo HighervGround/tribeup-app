@@ -173,7 +173,8 @@ function OtherUserProfile() {
               )}
 
               <div className="flex items-center gap-4 pt-2">
-                <div className="text-center">
+                {/* Rating temporarily hidden during early testing phase */}
+                {/* <div className="text-center">
                   <div className="text-xl">
                     {statsLoading ? '...' : (userStats?.averageRating?.toFixed(1) || '0.0')}
                   </div>
@@ -182,7 +183,7 @@ function OtherUserProfile() {
                     Rating
                   </div>
                 </div>
-                <Separator orientation="vertical" className="h-8" />
+                <Separator orientation="vertical" className="h-8" /> */}
                 <div className="text-center">
                   <div className="text-xl">
                     {statsLoading ? '...' : (userStats?.totalGamesHosted || 0)}

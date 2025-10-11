@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Plus, RefreshCw, MapPin } from 'lucide-react';
-import { formatEventHeader, formatCalendarInfo } from '../lib/dateUtils';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';

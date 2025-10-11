@@ -7,7 +7,7 @@ import { ClickableAvatar } from './ui/clickable-avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
-import { formatTimeString } from '../lib/dateUtils';
+import { formatTimeString, formatCost } from '../lib/dateUtils';
 import { RealtimeAvatarStack } from './realtime-avatar-stack';
 
 interface Game {
@@ -110,7 +110,7 @@ export function UnifiedGameCard({
                 <Calendar className="w-3 h-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">{game.date}</span>
               </div>
-              <div className="text-sm font-medium">{game.time}</div>
+              <div className="text-sm font-medium">{formatTimeString(game.time)}</div>
             </div>
 
             {/* Sport Tag - Top Right */}
@@ -215,7 +215,7 @@ export function UnifiedGameCard({
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          {game.cost && <div className="text-sm font-medium">{game.cost}</div>}
+          {game.cost && <div className="text-sm font-medium">{formatCost(game.cost)}</div>}
           <div className="text-xs text-muted-foreground">
             {getPlayerCount()}
           </div>

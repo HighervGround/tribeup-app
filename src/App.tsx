@@ -7,6 +7,8 @@ import { Toaster } from 'sonner';
 // import './light-mode-fix.css';
 
 export default function App() {
+  console.log('🚀 App component rendering...');
+  
   return (
     <ErrorBoundary>
       <QueryProvider>
@@ -14,6 +16,7 @@ export default function App() {
           <AppRouter />
         </SimpleAuthProvider>
       </QueryProvider>
+      <Toaster />
     </ErrorBoundary>
   );
 }

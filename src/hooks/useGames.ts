@@ -22,16 +22,17 @@ export function useGames() {
   
   // Invalidate cache when user auth state changes to prevent stale data
   useEffect(() => {
-    console.log('🔄 [useGames] Auth state changed, invalidating cache for user:', user?.id || 'anonymous');
-    
-    // Clear stale cache completely when auth state changes
-    queryClient.removeQueries({ 
-      queryKey: gameKeys.lists(),
-      predicate: (query) => query.isStale()
-    });
-    
-    // Force fresh fetch
-    queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+    // Only invalidate if user actually changed (not just loading states)
+    if (user?.id) {
+      console.log('🔄 [useGames] User authenticated, invalidating cache for user:', user.id);
+      
+      // Use setTimeout to debounce rapid auth changes
+      const timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
   }, [user?.id, queryClient]);
   
   return useQuery({
@@ -54,14 +55,15 @@ export function useGames() {
         return games;
       } catch (error) {
         const duration = performance.now() - startTime;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('❌ [useGames] Fetch failed:', {
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage,
           duration: `${duration.toFixed(2)}ms`,
           user: user?.id || 'anonymous'
         });
         
         // If it's a timeout, this might be cache corruption
-        if ((error instanceof Error ? error.message : String(error))?.includes('timeout')) {
+        if (errorMessage.includes('timeout')) {
           console.warn('🧹 [useGames] Timeout detected - possible cache corruption');
           
           // After 2 timeouts, assume cache corruption and force clean
@@ -348,7 +350,7 @@ export function useCreateGame() {
       return await SupabaseService.createGame(gameData);
     },
     onSuccess: (newGame) => {
-      console.log('✅ Game created successfully:', newGame?.id || 'unknown');
+      console.log('✅ Game created successfully:', (newGame as any)?.id || 'unknown');
       
       // Invalidate games list to refetch
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -110,7 +110,7 @@ export function UserTestingSurvey({ isOpen, onClose, triggerContext = 'general' 
       <div className="flex justify-between items-center bg-muted p-4 rounded-lg">
         <RadioGroup
           value={value?.toString()}
-          onValueChange={(val) => onChange(parseInt(val))}
+          onValueChange={(val: string) => onChange(parseInt(val))}
           className="flex gap-4"
         >
           {[1, 2, 3, 4, 5].map((num) => (
@@ -224,7 +224,7 @@ export function UserTestingSurvey({ isOpen, onClose, triggerContext = 'general' 
                   <Label className="text-base font-medium">Were you able to successfully sign up for TribeUp? *</Label>
                   <RadioGroup
                     value={formData.signup_success}
-                    onValueChange={(value) => updateFormData('signup_success', value)}
+                    onValueChange={(value: string) => updateFormData('signup_success', value)}
                     className="mt-2"
                   >
                     <div className="flex items-center space-x-2">
@@ -268,7 +268,7 @@ export function UserTestingSurvey({ isOpen, onClose, triggerContext = 'general' 
                   <Label className="text-base font-medium">Were you able to create a new game? *</Label>
                   <RadioGroup
                     value={formData.create_game}
-                    onValueChange={(value) => updateFormData('create_game', value)}
+                    onValueChange={(value: string) => updateFormData('create_game', value)}
                     className="mt-2"
                   >
                     <div className="flex items-center space-x-2">

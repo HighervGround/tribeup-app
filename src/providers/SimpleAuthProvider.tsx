@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { toast } from 'sonner';
-import { AuthFallback } from '../components/AuthFallback';
 
 interface SimpleAuthContextType {
   user: User | null;
@@ -28,22 +27,65 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   // SINGLE useEffect - no race conditions
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('🔐 [SimpleAuthProvider] Initializing auth...');
+        
+        // Add timeout to prevent infinite loading on refresh
+        timeoutId = setTimeout(() => {
+          if (mounted && loading) {
+            console.warn('⚠️ [SimpleAuthProvider] Auth initialization timeout - forcing completion');
+            setLoading(false);
+            setConnectionError(true);
+          }
+        }, 8000); // 8 second timeout
+
+        // Get initial session with retry logic
+        let session = null;
+        let error = null;
+        
+        try {
+          const result = await supabase.auth.getSession();
+          session = result.data.session;
+          error = result.error;
+        } catch (getSessionError) {
+          console.warn('⚠️ [SimpleAuthProvider] getSession failed, trying to recover from localStorage');
+          
+          // Try to recover session from localStorage as fallback
+          const storedSession = localStorage.getItem('tribeup-auth');
+          if (storedSession) {
+            try {
+              const parsedSession = JSON.parse(storedSession);
+              if (parsedSession && parsedSession.access_token) {
+                console.log('🔄 [SimpleAuthProvider] Attempting session recovery from localStorage');
+                // Let the auth state change listener handle the session
+              }
+            } catch (parseError) {
+              console.error('Failed to parse stored session:', parseError);
+            }
+          }
+          error = getSessionError;
+        }
         
         if (!mounted) return;
         
-        if (error) {
+        // Clear timeout since we got a response
+        clearTimeout(timeoutId);
+        
+        if (error && !session) {
           console.error('Auth initialization error:', error);
-          return;
+          setConnectionError(true);
+          // Don't return - still try to set state
         }
+
+        console.log('🔐 [SimpleAuthProvider] Session retrieved:', session ? 'AUTHENTICATED' : 'NOT AUTHENTICATED');
 
         // Update state
         setSession(session);
         setUser(session?.user ?? null);
+        setConnectionError(false);
 
         // Handle user profile (only if we have a user)
         if (session?.user) {
@@ -51,6 +93,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         }
       } catch (error) {
         console.error('Auth initialization failed:', error);
+        setConnectionError(true);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -138,6 +181,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     // Cleanup
     return () => {
       mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []); // No dependencies needed - everything is handled inside
@@ -187,6 +231,28 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     signInWithOAuth,
     signOut
   };
+
+  // Show connection error if auth initialization failed
+  if (connectionError && !loading) {
+    return (
+      <SimpleAuthContext.Provider value={value}>
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center space-y-4 p-6">
+            <div className="text-destructive text-lg font-semibold">Connection Error</div>
+            <p className="text-muted-foreground max-w-md">
+              Unable to connect to authentication service. Please check your internet connection and try again.
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </SimpleAuthContext.Provider>
+    );
+  }
 
   return (
     <SimpleAuthContext.Provider value={value}>

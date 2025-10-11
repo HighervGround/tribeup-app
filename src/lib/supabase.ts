@@ -32,7 +32,9 @@ const createSupabaseClient = () => {
       autoRefreshToken: true, // Re-enable auto refresh
       detectSessionInUrl: true,
       storageKey: 'tribeup-auth',
-      flowType: 'implicit', // Use implicit flow for OAuth compatibility
+      flowType: 'pkce', // Use PKCE flow for better security and reliability
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      debug: false, // Set to true for debugging auth issues
     },
     db: {
       schema: 'public',
@@ -52,13 +54,8 @@ const createSupabaseClient = () => {
   });
 };
 
-// Force fresh client creation on refresh to avoid stale state
-const shouldCreateFresh = typeof window !== 'undefined' && 
-  performance.navigation?.type === 1; // 1 = reload
-
-export const supabase = (shouldCreateFresh || !globalThis.__supabase__) 
-  ? createSupabaseClient() 
-  : globalThis.__supabase__;
+// Use singleton pattern but allow fresh creation if needed
+export const supabase = globalThis.__supabase__ || createSupabaseClient();
 
 // Cache the client on the globalThis to avoid duplicates across HMR boundaries
 if (typeof globalThis !== 'undefined') {

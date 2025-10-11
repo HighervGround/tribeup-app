@@ -34,6 +34,23 @@ export function CacheClearButton() {
       // Clear query debugger cache
       queryDebugger.clearAllGameQueries();
       
+      // Clear potential auth issues
+      try {
+        const authToken = localStorage.getItem('supabase.auth.token');
+        if (authToken) {
+          console.log('🔐 Found auth token, checking validity...');
+          // Parse and check if token is expired
+          const tokenData = JSON.parse(authToken);
+          if (tokenData.expires_at && new Date(tokenData.expires_at * 1000) < new Date()) {
+            console.log('🚨 Auth token expired, clearing...');
+            localStorage.removeItem('supabase.auth.token');
+            localStorage.removeItem('tribeup-auth');
+          }
+        }
+      } catch (authError) {
+        console.warn('⚠️ Could not check auth token:', authError);
+      }
+      
       setLastCleared(new Date());
       console.log('✅ [CacheClearButton] Game cache cleared successfully');
       

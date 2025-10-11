@@ -562,8 +562,35 @@ export class SupabaseService {
       console.log(`📊 Query took: ${queryTime.toFixed(2)}ms`);
 
       if (error) {
-        console.error('❌ Query failed:', error);
-        throw error;
+        console.error('❌ Complex query failed:', error);
+        
+        // Fallback to simple query without joins
+        console.log('🔄 Falling back to simple query...');
+        try {
+          const { data: simpleGames, error: simpleError } = await supabase
+            .from('games')
+            .select('*')
+            .gte('date', new Date().toISOString().split('T')[0])
+            .order('date', { ascending: true })
+            .limit(50);
+            
+          if (simpleError) throw simpleError;
+          
+          // Transform to basic game objects without join status
+          const fallbackGames = (simpleGames || []).map((game: any) => 
+            transformGameFromDB(game, false)
+          );
+          
+          console.log(`✅ Fallback query successful: ${fallbackGames.length} games`);
+          return fallbackGames;
+          
+        } catch (fallbackError) {
+          console.error('❌ Fallback query also failed:', fallbackError);
+          
+          // Return empty array as last resort
+          console.log('🚨 All queries failed - returning empty array');
+          return [];
+        }
       }
       
       // Transform games with proper isJoined calculation

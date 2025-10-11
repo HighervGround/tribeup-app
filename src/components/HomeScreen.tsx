@@ -10,6 +10,7 @@ import { useAllGamesRealtime } from '../hooks/useGameRealtime';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 import { CacheClearButton } from './CacheClearButton';
+import { FeedbackButton } from './FeedbackButton';
 
 
 
@@ -307,6 +308,7 @@ function HomeScreen() {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Game
                 </Button>
+                <FeedbackButton variant="outline" size="default" />
               </div>
             </div>
 

@@ -23,6 +23,7 @@ const AdminDashboard = lazy(() => import('./AdminDashboard'));
 import AuthCallback from './AuthCallback';
 const TermsOfService = lazy(() => import('./TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./PrivacyPolicy'));
+const FeedbackPage = lazy(() => import('./FeedbackPage'));
 
 const Onboarding = lazy(() => import('./Onboarding'));
 const NavigationTest = lazy(() => import('./NavigationTest'));
@@ -87,6 +88,16 @@ export function AppRouter() {
 
                 {/* Development Routes */}
                 <Route path="navigation-test" element={<NavigationTest />} />
+
+                {/* Feedback Route */}
+                <Route 
+                  path="feedback" 
+                  element={
+                    <Suspense fallback={<RouteLoader text="Loading feedback..." />}>
+                      <FeedbackPage />
+                    </Suspense>
+                  } 
+                />
 
               </Route>
 

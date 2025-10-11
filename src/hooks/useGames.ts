@@ -55,13 +55,13 @@ export function useGames() {
       } catch (error) {
         const duration = performance.now() - startTime;
         console.error('❌ [useGames] Fetch failed:', {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           duration: `${duration.toFixed(2)}ms`,
           user: user?.id || 'anonymous'
         });
         
         // If it's a timeout, this might be cache corruption
-        if (error.message?.includes('timeout')) {
+        if ((error instanceof Error ? error.message : String(error))?.includes('timeout')) {
           console.warn('🧹 [useGames] Timeout detected - possible cache corruption');
           
           // After 2 timeouts, assume cache corruption and force clean

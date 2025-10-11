@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, RefreshCw, MapPin, Clock, Users } from 'lucide-react';
-import { formatEventHeader, formatCalendarInfo, formatTimeString } from '../lib/dateUtils';
-import { SupabaseService } from '../lib/supabaseService';
+import { Plus, RefreshCw, MapPin } from 'lucide-react';
+import { formatEventHeader, formatCalendarInfo } from '../lib/dateUtils';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';
@@ -22,15 +21,13 @@ function HomeScreen() {
   const { user } = useAppStore();
   const { data: games = [], isLoading, error, refetch, isError, isPending, isRefetching } = useGames();
   const [refreshing, setRefreshing] = useState(false);
-  const [timedOut, setTimedOut] = useState(false);
   const [forceTimeout, setForceTimeout] = useState(false);
-  const userPreferredSports = useMemo(() => user?.preferences?.sports ?? [], [user]);
   // Real-time presence tracking (no polling)
-  const { onlineCount, isLoading: presenceLoading } = useUserPresence();
+  useUserPresence();
   // Location services for distance calculations
-  const { currentLocation, isLoading: locationLoading, permission, requestLocation, getFormattedDistanceTo } = useLocation();
+  const { currentLocation, permission, requestLocation, getFormattedDistanceTo } = useLocation();
   // Real-time updates for all games
-  const { isConnected: realtimeConnected } = useAllGamesRealtime();
+  useAllGamesRealtime();
   
   // Force timeout if loading takes too long
   useEffect(() => {
@@ -161,7 +158,6 @@ function HomeScreen() {
   const handleRefresh = async () => {
     if (refreshing) return; // Prevent multiple concurrent refreshes
     
-    setTimedOut(false);
     setRefreshing(true);
     try {
       await refetch();
@@ -170,9 +166,6 @@ function HomeScreen() {
     }
   };
 
-  const handleCreateGame = () => {
-    navigate('/create');
-  };
 
   // Sort games chronologically with smart grouping
   const sortedGames = games
@@ -254,7 +247,6 @@ function HomeScreen() {
               onClick={() => {
                 console.log('🔄 [HomeScreen] Error state refresh');
                 setForceTimeout(false);
-                setTimedOut(false);
                 refetch();
               }}
             >

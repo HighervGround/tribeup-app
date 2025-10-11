@@ -1,7 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+import './styles/globals.css'
 import './index.css'
+import './fix-colors.css'
 import { CacheCorruptionDetector } from './utils/cacheCorruptionDetector'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically

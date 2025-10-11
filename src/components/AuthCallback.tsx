@@ -79,15 +79,24 @@ function AuthCallback() {
             console.log('Creating user profile for OAuth user:', user.id);
             await SupabaseService.createUserProfile(user.id, {
               email: userProfile.email,
-              name: userProfile.name,
+              full_name: userProfile.name,
               username: userProfile.username,
-              avatar: userProfile.avatar,
+              avatar_url: userProfile.avatar,
               bio: userProfile.bio,
               location: userProfile.location
             });
             console.log('✅ User profile created successfully');
           } else {
             console.log('✅ User profile already exists');
+            // Check if profile has been customized (not just default Google data)
+            const hasCustomData = existingProfile.bio || 
+                                 (existingProfile.preferences?.sports?.length || 0) > 0 ||
+                                 (existingProfile.name !== user.user_metadata?.full_name);
+            
+            if (!hasCustomData) {
+              console.log('Profile exists but appears to be default Google data, may need onboarding');
+            }
+            
             // Use existing profile data
             setUser(existingProfile);
             setStatus('success');
@@ -122,17 +131,9 @@ function AuthCallback() {
           // Redirect to game page
           setTimeout(() => navigate(`/game/${pendingGameId}`), 1500);
         } else {
-          // Check if profile is complete
-          if (userProfile) {
-            const isComplete = userProfile.name && userProfile.username;
-            if (!isComplete) {
-              setTimeout(() => navigate('/onboarding'), 1500);
-            } else {
-              setTimeout(() => navigate('/'), 1500);
-            }
-          } else {
-            setTimeout(() => navigate('/onboarding'), 1500);
-          }
+          // For new OAuth users, always go through onboarding to set sport preferences
+          // Even though they have name/username from OAuth, they need to select sports
+          setTimeout(() => navigate('/onboarding'), 1500);
         }
 
       } catch (error) {

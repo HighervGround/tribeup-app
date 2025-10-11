@@ -77,7 +77,7 @@ export function formatEventHeader(dateStr?: string, timeStr?: string, locale?: s
   const eventDate = toLocalDate(parsed);
   const diffDays = Math.round((eventDate.getTime() - today.getTime()) / 86400000);
 
-  const timeLabel = timeStr ? formatTime(parsed, locale) : '';
+  const timeLabel = timeStr ? formatTimeString(timeStr) : '';
   let dateLabel = '';
   let isToday = false;
 
@@ -113,6 +113,13 @@ export function formatCalendarInfo(dateStr?: string, timeStr?: string, locale?: 
     date: formatMonthDay(parsed, locale),
     time: formatTime(parsed, locale),
   };
+}
+
+// Format cost display - convert $0 to Free
+export function formatCost(cost: string): string {
+  if (!cost) return 'Free';
+  if (cost === '$0' || cost === '0' || cost.toLowerCase() === 'free') return 'Free';
+  return cost;
 }
 
 // Convert 24-hour time string to 12-hour format

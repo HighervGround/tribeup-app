@@ -268,15 +268,17 @@ export class SupabaseService {
   static async updateUserProfile(userId: string, updates: any) {
     console.log('🔧 updateUserProfile called with:', { userId, updates });
     
-    // Build update object without role column until migration is applied
-    const updateData: any = {
-      full_name: updates.full_name,
-      username: updates.username,
-      avatar_url: updates.avatar_url,
-      bio: updates.bio,
-      location: updates.location,
-      preferred_sports: updates.preferred_sports || updates.sports_preferences
-    };
+    // Build update object matching the actual database schema
+    const updateData: any = {};
+    
+    // Only include fields that are provided and exist in the database
+    if (updates.full_name !== undefined) updateData.full_name = updates.full_name;
+    if (updates.username !== undefined) updateData.username = updates.username;
+    if (updates.avatar_url !== undefined) updateData.avatar_url = updates.avatar_url;
+    if (updates.bio !== undefined) updateData.bio = updates.bio;
+    if (updates.location !== undefined) updateData.location = updates.location;
+    if (updates.preferred_sports !== undefined) updateData.preferred_sports = updates.preferred_sports;
+    if (updates.sports_preferences !== undefined) updateData.preferred_sports = updates.sports_preferences;
 
     // Only include role if it's provided and the column exists
     if (updates.role) {

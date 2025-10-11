@@ -105,6 +105,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
         // Notify caller for any additional side-effects
         onComplete?.(payload);
         toast.success("You're all set!", { description: 'Your profile is ready. Enjoy discovering games.' });
+        
       } catch (err) {
         console.error('Error completing onboarding:', err);
         toast.error('Could not save your profile. You can update it anytime in Profile.');

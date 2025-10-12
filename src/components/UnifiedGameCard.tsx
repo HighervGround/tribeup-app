@@ -9,6 +9,7 @@ import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
 import { formatTimeString, formatCost } from '../lib/dateUtils';
 import { RealtimeAvatarStack } from './realtime-avatar-stack';
+import { SimpleCalendarButton } from './SimpleCalendarButton';
 
 interface Game {
   id: string;
@@ -163,17 +164,23 @@ export function UnifiedGameCard({
                   </div>
                 </div>
                 
-                {showJoinButton && (
-                  <Button 
-                    size="sm" 
-                    variant={getButtonVariant(game)}
-                    onClick={handleJoinClick}
-                    className="transition-all duration-200"
-                    disabled={isLoading || (game.currentPlayers >= game.maxPlayers && !game.isJoined)}
-                  >
-                    {game.currentPlayers >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {showJoinButton && (
+                    <Button 
+                      size="sm" 
+                      variant={getButtonVariant(game)}
+                      onClick={handleJoinClick}
+                      className="transition-all duration-200 flex-1"
+                      disabled={isLoading || (game.currentPlayers >= game.maxPlayers && !game.isJoined)}
+                    >
+                      {game.currentPlayers >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
+                    </Button>
+                  )}
+                  <SimpleCalendarButton 
+                    game={game} 
+                    className="flex-shrink-0"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>

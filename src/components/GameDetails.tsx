@@ -8,6 +8,7 @@ import { ClickableAvatar } from './ui/clickable-avatar';
 import { Separator } from './ui/separator';
 import { GameChat } from './GameChat';
 import { Alert, AlertDescription } from './ui/alert';
+import { SimpleCalendarButton } from './SimpleCalendarButton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
@@ -703,6 +704,14 @@ function GameDetails() {
                 getButtonText(game)
               )}
             </Button>
+
+            {/* Calendar Integration */}
+            <SimpleCalendarButton 
+              game={game} 
+              variant="outline" 
+              size="default"
+              className="w-full h-12"
+            />
           </CardContent>
         </Card>
 

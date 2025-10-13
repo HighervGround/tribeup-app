@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
+import { env } from './envUtils';
 
 // Environment variables - these will need to be set in your .env file
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL?.trim();
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY?.trim();
+const supabaseUrl = env.SUPABASE_URL?.trim();
+const supabaseAnonKey = env.SUPABASE_ANON_KEY?.trim();
 
 // Environment variables loaded successfully - FORCE DEPLOYMENT v3 - ALL FIXES INCLUDED
 console.log('🚀 App starting with environment variables:', {
@@ -14,8 +15,8 @@ console.log('🚀 App starting with environment variables:', {
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables!');
-  console.error('Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
-  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+  console.error('Please set SUPABASE_URL and SUPABASE_ANON_KEY with appropriate prefixes (VITE_, PUBLIC_, or NEXT_PUBLIC_) in your .env file.');
+  throw new Error('Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_ANON_KEY with appropriate prefixes in your .env file.');
 }
 
 // HMR-safe singleton in dev to prevent multiple clients/listeners

@@ -5,7 +5,7 @@ export interface EnvConfig {
   supabaseAnonKey: string;
   
   // Weather API
-  openWeatherApiKey?: string;
+  weatherApiKey?: string;
   weatherTempUnit: string;
   weatherUpdateInterval: number;
   weatherIncludeHourly: boolean;
@@ -55,7 +55,7 @@ class EnvironmentConfig {
       supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY,
       
       // Weather API (optional)
-      openWeatherApiKey: env.VITE_OPENWEATHER_API_KEY,
+      weatherApiKey: env.VITE_WEATHERAPI_KEY,
       weatherTempUnit: env.VITE_WEATHER_TEMP_UNIT || 'fahrenheit',
       weatherUpdateInterval: parseInt(env.VITE_WEATHER_UPDATE_INTERVAL || '3600'),
       weatherIncludeHourly: env.VITE_WEATHER_INCLUDE_HOURLY !== 'false',
@@ -143,8 +143,8 @@ class EnvironmentConfig {
     // Warnings for optional but recommended variables
     const warnings: string[] = [];
     
-    if (!this.config.openWeatherApiKey) {
-      warnings.push('VITE_OPENWEATHER_API_KEY not set - weather features will use mock data');
+    if (!this.config.weatherApiKey) {
+      warnings.push('VITE_WEATHERAPI_KEY not set - weather features will use mock data');
     }
     
     if (!this.config.vapidPublicKey) {
@@ -167,7 +167,7 @@ class EnvironmentConfig {
   public isFeatureEnabled(feature: 'weather' | 'pushNotifications' | 'mockData'): boolean {
     switch (feature) {
       case 'weather':
-        return !!this.config.openWeatherApiKey;
+        return !!this.config.weatherApiKey;
       case 'pushNotifications':
         return !!this.config.vapidPublicKey;
       case 'mockData':

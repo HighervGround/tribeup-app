@@ -1,3 +1,5 @@
+import { env } from './envUtils';
+
 export interface WeatherData {
   temperature: number;
   condition: string;
@@ -12,7 +14,7 @@ export interface WeatherData {
 
 export class WeatherService {
   private static readonly BASE_URL = 'https://api.weatherapi.com/v1';
-  private static readonly API_KEY = (import.meta as any).env?.VITE_WEATHERAPI_KEY;
+  private static readonly API_KEY = env.WEATHERAPI_KEY;
 
   // Get current weather for coordinates
   static async getCurrentWeather(lat: number, lng: number): Promise<WeatherData | null> {

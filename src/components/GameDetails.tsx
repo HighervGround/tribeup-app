@@ -9,6 +9,7 @@ import { Separator } from './ui/separator';
 import { GameChat } from './GameChat';
 import { Alert, AlertDescription } from './ui/alert';
 import { SimpleCalendarButton } from './SimpleCalendarButton';
+import { WeatherWidget } from './WeatherWidget';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
@@ -41,207 +42,8 @@ import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
 import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { toast } from 'sonner';
-import { WeatherService, WeatherData } from '../lib/weatherService';
 import { SupabaseService } from '../lib/supabaseService';
 import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '../lib/dateUtils';
-
-
-
-// Weather Info Component
-function WeatherInfo({ game }: { game: any }) {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true; // Race condition fix
-    
-    const getWeatherData = async () => {
-      console.log('🌤️ Getting weather data for game:', game.id);
-      console.log('📍 Coordinates:', game.latitude, game.longitude);
-      console.log('📍 Location:', game.location);
-      
-      try {
-        let weatherData: WeatherData | null = null;
-        const gameDateTime = new Date(`${game.date} ${game.time}`);
-        
-        if (game.latitude && game.longitude) {
-          // Use exact coordinates
-          console.log('🎯 Using exact coordinates for weather');
-          weatherData = await WeatherService.getGameWeather(game.latitude, game.longitude, gameDateTime);
-        } else if (game.location) {
-          // Use Google Maps Geocoding API (same as the map uses)
-          console.log('🗺️ Using Google Maps geocoding for weather (same as map)');
-          const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;
-          
-          try {
-            const geocodeResponse = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(game.location)}&key=${googleApiKey}`
-            );
-            
-            if (geocodeResponse.ok) {
-              const geocodeData = await geocodeResponse.json();
-              console.log('🗺️ Google geocoding results:', geocodeData);
-              
-              if (geocodeData.status === 'OK' && geocodeData.results && geocodeData.results.length > 0) {
-                const { lat, lng } = geocodeData.results[0].geometry.location;
-                console.log('🎯 Using Google Maps coordinates for weather:', lat, lng);
-                weatherData = await WeatherService.getGameWeather(lat, lng, gameDateTime);
-                console.log('✅ Weather from Google Maps coordinates:', weatherData);
-              } else {
-                console.warn('🗺️ Google geocoding failed:', geocodeData.status, geocodeData.error_message);
-              }
-            } else {
-              console.error('🗺️ Google geocoding HTTP error:', geocodeResponse.status, geocodeResponse.statusText);
-            }
-          } catch (error) {
-            console.error('❌ Google Maps geocoding failed:', error);
-          }
-          
-          // Fallback to zipcode if Google Maps geocoding fails
-          if (!weatherData) {
-            const zipcode = WeatherService.extractZipcode(game.location);
-            if (zipcode) {
-              console.log('📮 Fallback: Using zipcode for weather:', zipcode);
-              weatherData = await WeatherService.getWeatherByZipcode(zipcode, gameDateTime);
-            }
-          }
-          
-          // Final fallback to simple location search
-          if (!weatherData) {
-            console.log('🌤️ Final fallback: Simple weather search');
-            const simpleResponse = await fetch(
-              `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(game.location)}&appid=${(import.meta as any).env?.VITE_OPENWEATHER_API_KEY}&units=imperial`
-            );
-            
-            if (simpleResponse.ok) {
-              const simpleData = await simpleResponse.json();
-              weatherData = {
-                temperature: Math.round(simpleData.main.temp),
-                condition: simpleData.weather[0].main,
-                description: simpleData.weather[0].description,
-                humidity: simpleData.main.humidity,
-                windSpeed: Math.round(simpleData.wind.speed),
-                precipitation: simpleData.rain?.['1h'] || simpleData.snow?.['1h'] || 0,
-                icon: simpleData.weather[0].main === 'Clear' ? '☀️' : simpleData.weather[0].main === 'Clouds' ? '☁️' : simpleData.weather[0].main === 'Rain' ? '🌧️' : '🌤️',
-                isOutdoorFriendly: true,
-                alerts: []
-              };
-            }
-          }
-        }
-        
-        if (weatherData && isMounted) {
-          console.log('✅ Weather data received:', weatherData);
-          setWeather(weatherData);
-        } else if (!isMounted) {
-          console.log('🚫 Component unmounted, skipping weather update');
-          return;
-        } else {
-          throw new Error('No weather data available');
-        }
-      } catch (error) {
-        console.error('❌ Weather error:', error);
-        // Try one more fallback with current weather for a default US location
-        try {
-          console.log('🔄 Final attempt: Using current weather API');
-          const fallbackResponse = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?zip=10001,US&appid=${(import.meta as any).env?.VITE_OPENWEATHER_API_KEY}&units=imperial`
-          );
-          
-          if (fallbackResponse.ok) {
-            const fallbackData = await fallbackResponse.json();
-            const temp = Math.round(fallbackData.main.temp);
-            const condition = fallbackData.weather[0].main;
-            const description = fallbackData.weather[0].description;
-            
-            if (isMounted) {
-              setWeather({
-                temperature: temp,
-                condition,
-                description: `${description.charAt(0).toUpperCase() + description.slice(1)} (nearby area)`,
-                humidity: fallbackData.main.humidity,
-                windSpeed: Math.round(fallbackData.wind.speed),
-                precipitation: fallbackData.rain?.['1h'] || fallbackData.snow?.['1h'] || 0,
-                icon: condition === 'Clear' ? '☀️' : condition === 'Clouds' ? '☁️' : condition === 'Rain' ? '🌧️' : '🌤️',
-                isOutdoorFriendly: temp > 40 && temp < 95,
-                alerts: [`📍 Showing weather for nearby area - actual conditions at ${game.location || 'game location'} may vary`]
-              });
-            }
-          } else {
-            throw new Error('Fallback weather failed');
-          }
-        } catch (fallbackError) {
-          console.error('❌ All weather sources failed:', fallbackError);
-          // Final mock data
-          if (isMounted) {
-            setWeather({
-              temperature: 72,
-              condition: 'Clear',
-              description: 'Weather data temporarily unavailable',
-              humidity: 65,
-              windSpeed: 8,
-              precipitation: 0,
-              icon: '🌤️',
-              isOutdoorFriendly: true,
-              alerts: [`🔄 Weather service temporarily unavailable for ${game.location || 'this location'}`]
-            });
-          }
-        }
-      }
-      
-      if (isMounted) {
-        setLoading(false);
-      }
-    };
-
-    getWeatherData();
-    
-    // Cleanup function to prevent race conditions
-    return () => {
-      isMounted = false;
-    };
-  }, [game.latitude, game.longitude, game.location, game.date, game.time]);
-
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading weather...</div>;
-  }
-
-  if (!weather) {
-    return <div className="text-sm text-muted-foreground">Weather unavailable</div>;
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{weather.icon}</span>
-          <div>
-            <div className="font-medium">{weather.temperature}°F</div>
-            <div className="text-sm text-muted-foreground">{weather.description}</div>
-          </div>
-        </div>
-        <div className="text-right text-sm text-muted-foreground">
-          <div>Humidity: {weather.humidity}%</div>
-          <div>Wind: {weather.windSpeed} mph</div>
-        </div>
-      </div>
-      
-      {weather.alerts && weather.alerts.length > 0 && (
-        <div className="space-y-1">
-          {weather.alerts.map((alert, index) => (
-            <div key={index} className="text-xs bg-yellow-50 text-yellow-800 p-2 rounded">
-              {alert}
-            </div>
-          ))}
-        </div>
-      )}
-      
-      <div className="text-xs text-muted-foreground">
-        {WeatherService.getWeatherRecommendation(weather)}
-      </div>
-    </div>
-  );
-}
 
 function GameDetails() {
   const navigate = useNavigate();
@@ -770,16 +572,50 @@ function GameDetails() {
 
         {/* Weather */}
         {((game.latitude && game.longitude) || game.location) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                ☀️ Weather Forecast
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WeatherInfo game={game} />
-            </CardContent>
-          </Card>
+          <WeatherWidget
+            latitude={game.latitude}
+            longitude={game.longitude}
+            location={game.location}
+            gameDateTime={(() => {
+              // Create proper datetime from game date and time
+              const dateStr = game.date; // e.g., "2024-10-12"
+              const timeStr = game.time; // e.g., "14:30" or "2:30 PM"
+              
+              console.log(`🎮 Raw game data: date="${dateStr}", time="${timeStr}"`);
+              
+              // Handle different time formats
+              let hour, minute;
+              if (timeStr && timeStr.includes(':')) {
+                const timeParts = timeStr.split(':');
+                hour = parseInt(timeParts[0]);
+                minute = parseInt(timeParts[1].split(' ')[0]); // Remove AM/PM if present
+                
+                // Handle AM/PM format
+                if (timeStr.toLowerCase().includes('pm') && hour !== 12) {
+                  hour += 12;
+                } else if (timeStr.toLowerCase().includes('am') && hour === 12) {
+                  hour = 0;
+                }
+              } else {
+                console.warn(`🎮 Invalid time format: "${timeStr}", using 12:00 PM`);
+                hour = 12; // Default fallback
+                minute = 0;
+              }
+              
+              // Create date in local timezone to avoid UTC conversion issues
+              const gameDateTime = new Date(dateStr + 'T00:00:00');
+              gameDateTime.setHours(hour, minute, 0, 0);
+              
+              console.log(`🎮 Parsed DateTime: ${dateStr} ${timeStr} → ${gameDateTime.toISOString()}`);
+              console.log(`🎮 Local time: ${gameDateTime.toLocaleString()}`);
+              console.log(`🎮 Current time: ${new Date().toLocaleString()}`);
+              
+              const hoursDiff = (gameDateTime.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+              console.log(`🎮 Time difference: ${hoursDiff > 0 ? `${Math.round(hoursDiff)} hours in future` : `${Math.round(Math.abs(hoursDiff))} hours in past`}`);
+              
+              return gameDateTime;
+            })()}
+          />
         )}
 
         {/* Description */}

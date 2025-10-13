@@ -98,7 +98,7 @@ export default defineConfig({
     __SW_ENABLED__: true
   },
   server: {
-      port: 3000,
+      port: 3008,
       open: true,
     },
   });

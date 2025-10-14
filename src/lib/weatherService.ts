@@ -147,28 +147,33 @@ export class WeatherService {
       windSpeed: Math.round(current.wind_mph),
       precipitation: current.precip_in || 0,
       icon: this.getWeatherIcon(current.condition.text),
-      isOutdoorFriendly: this.isOutdoorFriendly(temp, current.condition.text, current.wind_mph, data.alerts?.alert?.map((alert: any) => alert.headline) || []),
-      alerts: data.alerts?.alert?.map((alert: any) => alert.headline) || []
+      isOutdoorFriendly: this.isOutdoorFriendly(temp, current.condition.text, current.wind_mph, this.parseAlerts(data.alerts)),
+      alerts: this.parseAlerts(data.alerts)
     };
   }
 
   // Find the best forecast match for game time
   private static findBestForecastMatch(data: any, gameDateTime: Date): WeatherData {
-    const gameTime = gameDateTime.getTime();
+    console.log(`🎯 Looking for forecast match for: ${gameDateTime.toISOString()}`);
     
     // Look through forecast days and hours to find closest match
     let bestMatch = null;
     let smallestDiff = Infinity;
     
     for (const day of data.forecast.forecastday) {
+      console.log(`📅 Checking day: ${day.date}`);
+      
       // Check hourly forecasts for this day
       for (const hour of day.hour) {
-        const hourTime = new Date(hour.time).getTime();
-        const diff = Math.abs(hourTime - gameTime);
+        // Parse the hour time in local timezone
+        const hourTime = new Date(hour.time_epoch * 1000);
+        const gameTime = gameDateTime.getTime();
+        const diff = Math.abs(hourTime.getTime() - gameTime);
         
         if (diff < smallestDiff) {
           smallestDiff = diff;
           bestMatch = hour;
+          console.log(`⏰ Better match found: ${hour.time} (diff: ${(diff / (1000 * 60 * 60)).toFixed(1)}h)`);
         }
       }
     }
@@ -187,8 +192,8 @@ export class WeatherService {
         windSpeed: Math.round(bestMatch.wind_mph),
         precipitation: bestMatch.precip_in || 0,
         icon: this.getWeatherIcon(bestMatch.condition.text),
-        isOutdoorFriendly: this.isOutdoorFriendly(temp, bestMatch.condition.text, bestMatch.wind_mph, data.alerts?.alert?.map((alert: any) => alert.headline) || []),
-        alerts: data.alerts?.alert?.map((alert: any) => alert.headline) || []
+        isOutdoorFriendly: this.isOutdoorFriendly(temp, bestMatch.condition.text, bestMatch.wind_mph, this.parseAlerts(data.alerts)),
+        alerts: this.parseAlerts(data.alerts)
       };
     }
     
@@ -204,8 +209,8 @@ export class WeatherService {
       windSpeed: Math.round(dayForecast.maxwind_mph),
       precipitation: dayForecast.totalprecip_in || 0,
       icon: this.getWeatherIcon(dayForecast.condition.text),
-      isOutdoorFriendly: this.isOutdoorFriendly(temp, dayForecast.condition.text, dayForecast.maxwind_mph, data.alerts?.alert?.map((alert: any) => alert.headline) || []),
-      alerts: data.alerts?.alert?.map((alert: any) => alert.headline) || []
+      isOutdoorFriendly: this.isOutdoorFriendly(temp, dayForecast.condition.text, dayForecast.maxwind_mph, this.parseAlerts(data.alerts)),
+      alerts: this.parseAlerts(data.alerts)
     };
   }
 
@@ -264,6 +269,26 @@ export class WeatherService {
         conditionLower.includes('drizzle')) return false;
     
     return true;
+  }
+
+  // Parse weather alerts from API response
+  private static parseAlerts(alertsData: any): string[] {
+    if (!alertsData || !alertsData.alert) {
+      return [];
+    }
+    
+    // Handle both array and single alert formats
+    const alerts = Array.isArray(alertsData.alert) ? alertsData.alert : [alertsData.alert];
+    
+    return alerts.map((alert: any) => {
+      // Use headline if available, otherwise use event + description
+      if (alert.headline) {
+        return alert.headline;
+      } else if (alert.event) {
+        return `${alert.event}${alert.desc ? ': ' + alert.desc.substring(0, 100) + '...' : ''}`;
+      }
+      return 'Weather alert active';
+    }).filter(Boolean);
   }
 
   // Extract zipcode from location string

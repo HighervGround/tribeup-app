@@ -163,20 +163,50 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        const users = new Set(Object.keys(state));
-        setOnlineUsers(users);
-        console.log('👥 Online users updated:', users.size);
+        // Extract unique user_ids from all presence entries
+        const uniqueUserIds = new Set<string>();
+        Object.values(state).forEach((presences: any) => {
+          presences.forEach((presence: any) => {
+            if (presence.user_id) {
+              uniqueUserIds.add(presence.user_id);
+            }
+          });
+        });
+        setOnlineUsers(uniqueUserIds);
+        console.log('👥 Online users updated:', uniqueUserIds.size);
       })
-      .on('presence', { event: 'join' }, ({ key }: { key: string }) => {
-        console.log('👋 User joined:', key);
-        setOnlineUsers(prev => new Set([...prev, key]));
+      .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string, newPresences: any[] }) => {
+        // Extract user_id from the presence data
+        const userIds = newPresences
+          .map((presence: any) => presence.user_id)
+          .filter(Boolean);
+        
+        userIds.forEach((userId: string) => {
+          console.log('👋 User joined:', userId);
+          setOnlineUsers(prev => new Set([...prev, userId]));
+        });
       })
-      .on('presence', { event: 'leave' }, ({ key }: { key: string }) => {
-        console.log('👋 User left:', key);
-        setOnlineUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(key);
-          return newSet;
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string, leftPresences: any[] }) => {
+        // Extract user_id from the presence data
+        const userIds = leftPresences
+          .map((presence: any) => presence.user_id)
+          .filter(Boolean);
+          
+        userIds.forEach((userId: string) => {
+          console.log('👋 User left:', userId);
+          // Only remove if no other tabs for this user are still connected
+          const state = channel.presenceState();
+          const userStillOnline = Object.values(state).some((presences: any) =>
+            presences.some((p: any) => p.user_id === userId)
+          );
+          
+          if (!userStillOnline) {
+            setOnlineUsers(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(userId);
+              return newSet;
+            });
+          }
         });
       })
       .subscribe(async (status: string) => {

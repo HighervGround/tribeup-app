@@ -73,9 +73,16 @@ export function formatEventHeader(dateStr?: string, timeStr?: string, locale?: s
     };
   }
 
-  const today = toLocalDate(now);
-  const eventDate = toLocalDate(parsed);
-  const diffDays = Math.round((eventDate.getTime() - today.getTime()) / 86400000);
+  // Use local dates for comparison to avoid timezone issues
+  const today = new Date();
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const eventLocal = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  
+  // Calculate difference in days using local date comparison
+  const diffMs = eventLocal.getTime() - todayLocal.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  
+  console.log(`📅 Date comparison: Today=${todayLocal.toDateString()}, Event=${eventLocal.toDateString()}, Diff=${diffDays} days`);
 
   const timeLabel = timeStr ? formatTimeString(timeStr) : '';
   let dateLabel = '';

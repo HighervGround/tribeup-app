@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Alert, AlertDescription } from './ui/alert';
 import { Loader2, Cloud, AlertTriangle } from 'lucide-react';
 import { WeatherService, WeatherData } from '../lib/weatherService';
 
@@ -113,7 +112,6 @@ export function WeatherWidget({
             precipitation: 0,
             icon: '🌤️',
             isOutdoorFriendly: true,
-            alerts: ['Weather forecast unavailable - please check location details']
           };
         }
         
@@ -225,18 +223,6 @@ export function WeatherWidget({
           </Badge>
         </div>
 
-        {/* Weather Alerts */}
-        {weather.alerts && weather.alerts.length > 0 && (
-          <div className="space-y-2">
-            {weather.alerts.map((alert, index) => (
-              <Alert key={index} className="py-2">
-                <AlertDescription className="text-xs">
-                  {alert}
-                </AlertDescription>
-              </Alert>
-            ))}
-          </div>
-        )}
 
         {/* Weather Recommendation */}
         <div className="text-xs text-muted-foreground border-t pt-2">

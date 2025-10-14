@@ -7,7 +7,7 @@ import { ClickableAvatar } from './ui/clickable-avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
-import { formatTimeString, formatCost } from '../lib/dateUtils';
+import { formatTimeString, formatCost, formatEventHeader } from '../lib/dateUtils';
 import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { SimpleCalendarButton } from './SimpleCalendarButton';
 
@@ -109,7 +109,7 @@ export function UnifiedGameCard({
             <div className="absolute top-3 left-3 bg-background/95 backdrop-blur-sm rounded-lg px-3 py-2 min-w-[80px]">
               <div className="flex items-center gap-1 mb-1">
                 <Calendar className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{game.date}</span>
+                <span className="text-xs text-muted-foreground">{formatEventHeader(game.date, game.time).date}</span>
               </div>
               <div className="text-sm font-medium">{formatTimeString(game.time)}</div>
             </div>

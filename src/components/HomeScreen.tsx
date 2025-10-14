@@ -167,25 +167,35 @@ function HomeScreen() {
     }
   };
 
-
   // Sort games chronologically with smart grouping
   const sortedGames = games
     .map(game => {
-      const gameDate = new Date(game.date);
-      const today = new Date();
+      // Parse game date properly - game.date is like "2025-10-15"
+      const [year, month, day] = game.date.split('-').map(Number);
+      const gameDate = new Date(year, month - 1, day); // month is 0-indexed
+      
+      // Get today's date in local timezone
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      console.log(`🎯 Game "${game.title}": game.date="${game.date}", gameDate="${gameDate.toDateString()}", today="${today.toDateString()}", tomorrow="${tomorrow.toDateString()}"`);
       
       // Determine game category for sorting and display
       let category = 'future';
       let sortOrder = gameDate.getTime();
       
-      if (gameDate.toDateString() === today.toDateString()) {
+      if (gameDate.getTime() === today.getTime()) {
         category = 'today';
         sortOrder = 0; // Today's games first
-      } else if (gameDate.toDateString() === tomorrow.toDateString()) {
+        console.log(`✅ "${game.title}" is TODAY`);
+      } else if (gameDate.getTime() === tomorrow.getTime()) {
         category = 'tomorrow';
         sortOrder = 1; // Tomorrow's games second
+        console.log(`✅ "${game.title}" is TOMORROW`);
+      } else {
+        console.log(`📅 "${game.title}" is FUTURE (${gameDate.toDateString()})`);
       }
       
       return {
@@ -196,11 +206,11 @@ function HomeScreen() {
       };
     })
     .sort((a, b) => {
-      // First sort by category (today, tomorrow, future)
-      if (a.sortOrder !== b.sortOrder) {
+      // First sort by category (today first, then chronological)
+      if (a.sortOrder !== b.sortOrder && (a.category === 'today' || b.category === 'today')) {
         return a.sortOrder - b.sortOrder;
       }
-      // Then sort by time within each category
+      // Then sort by time chronologically
       return a.gameDate.getTime() - b.gameDate.getTime();
     });
 

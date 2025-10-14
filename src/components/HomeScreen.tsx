@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Plus, RefreshCw, MapPin } from 'lucide-react';
+import { RefreshCw, MapPin } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';
@@ -311,13 +311,6 @@ function HomeScreen() {
                 <p className="text-muted-foreground">Find your next game</p>
               </div>
               <div className="flex gap-2">
-                <Button 
-                  onClick={() => navigate('/create-game')}
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Game
-                </Button>
                 <FeedbackButton variant="outline" size="default" />
               </div>
             </div>

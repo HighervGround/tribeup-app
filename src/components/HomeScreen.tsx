@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { RefreshCw, MapPin } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { useUserPresence } from '../hooks/useUserPresence';
 import { useGames } from '../hooks/useGames';
 import { useLocation } from '../hooks/useLocation';
 import { useAllGamesRealtime } from '../hooks/useGameRealtime';
@@ -23,8 +22,6 @@ function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [forceTimeout, setForceTimeout] = useState(false);
   
-  // Real-time presence tracking (no polling)
-  useUserPresence();
   // Location services for distance calculations
   const { currentLocation, permission, requestLocation, getFormattedDistanceTo } = useLocation();
   // Real-time updates for all games

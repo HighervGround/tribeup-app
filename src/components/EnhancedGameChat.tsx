@@ -3,12 +3,11 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Send, MessageSquare, Users } from 'lucide-react';
+import { MessageSquare, Send } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
-
 interface ChatMessage {
   id: string;
   game_id: string;
@@ -33,7 +32,6 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
 
@@ -161,64 +159,10 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           setTimeout(scrollToBottom, 100);
         }
       })
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        // Extract unique user_ids from all presence entries
-        const uniqueUserIds = new Set<string>();
-        Object.values(state).forEach((presences: any) => {
-          presences.forEach((presence: any) => {
-            if (presence.user_id) {
-              uniqueUserIds.add(presence.user_id);
-            }
-          });
-        });
-        setOnlineUsers(uniqueUserIds);
-        console.log('👥 Online users updated:', uniqueUserIds.size);
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string, newPresences: any[] }) => {
-        // Extract user_id from the presence data
-        const userIds = newPresences
-          .map((presence: any) => presence.user_id)
-          .filter(Boolean);
-        
-        userIds.forEach((userId: string) => {
-          console.log('👋 User joined:', userId);
-          setOnlineUsers(prev => new Set([...prev, userId]));
-        });
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string, leftPresences: any[] }) => {
-        // Extract user_id from the presence data
-        const userIds = leftPresences
-          .map((presence: any) => presence.user_id)
-          .filter(Boolean);
-          
-        userIds.forEach((userId: string) => {
-          console.log('👋 User left:', userId);
-          // Only remove if no other tabs for this user are still connected
-          const state = channel.presenceState();
-          const userStillOnline = Object.values(state).some((presences: any) =>
-            presences.some((p: any) => p.user_id === userId)
-          );
-          
-          if (!userStillOnline) {
-            setOnlineUsers(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(userId);
-              return newSet;
-            });
-          }
-        });
-      })
       .subscribe(async (status: string) => {
         console.log('📡 Enhanced chat subscription status:', status);
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
-          // Track user presence
-          await channel.track({
-            user_id: user.id,
-            username: user.name,
-            online_at: new Date().toISOString(),
-          });
         }
       });
 
@@ -357,8 +301,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-green-500" : "bg-gray-400")} />
-            <Users className="w-4 h-4" />
-            <span>{onlineUsers.size}</span>
+            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
           </div>
         </CardTitle>
       </CardHeader>

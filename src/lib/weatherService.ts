@@ -9,7 +9,6 @@ export interface WeatherData {
   precipitation: number;
   icon: string;
   isOutdoorFriendly: boolean;
-  alerts?: string[];
 }
 
 export class WeatherService {
@@ -62,8 +61,7 @@ export class WeatherService {
         if (currentWeather) {
           return {
             ...currentWeather,
-            description: `Current conditions (game was ${Math.abs(hoursDiff).toFixed(0)}h ago)`,
-            alerts: [`Game was ${Math.abs(hoursDiff).toFixed(0)} hours ago - showing current weather conditions`]
+            description: `Current conditions (game was ${Math.abs(hoursDiff).toFixed(0)}h ago)`
           };
         }
       }
@@ -72,7 +70,7 @@ export class WeatherService {
       const days = Math.max(1, Math.ceil(hoursDiff / 24) + 1); // Get enough days to cover the game
       
       const response = await fetch(
-        `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${lat},${lng}&days=${days}&aqi=no&alerts=yes`
+        `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${lat},${lng}&days=${days}&aqi=no&alerts=no`
       );
 
       if (!response.ok) {
@@ -109,8 +107,7 @@ export class WeatherService {
           const weather = this.transformCurrentWeatherData(data);
           return {
             ...weather,
-            description: `Current conditions (game was ${Math.abs(hoursDiff).toFixed(0)}h ago)`,
-            alerts: [`Game was ${Math.abs(hoursDiff).toFixed(0)} hours ago - showing current weather conditions`]
+            description: `Current conditions (game was ${Math.abs(hoursDiff).toFixed(0)}h ago)`
           };
         }
       } else {
@@ -118,7 +115,7 @@ export class WeatherService {
         const days = Math.max(1, Math.ceil(hoursDiff / 24) + 1);
         
         const response = await fetch(
-          `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${zipcode}&days=${days}&aqi=no&alerts=yes`
+          `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${zipcode}&days=${days}&aqi=no&alerts=no`
         );
         
         if (response.ok) {
@@ -147,8 +144,7 @@ export class WeatherService {
       windSpeed: Math.round(current.wind_mph),
       precipitation: current.precip_in || 0,
       icon: this.getWeatherIcon(current.condition.text),
-      isOutdoorFriendly: this.isOutdoorFriendly(temp, current.condition.text, current.wind_mph, this.parseAlerts(data.alerts)),
-      alerts: this.parseAlerts(data.alerts)
+      isOutdoorFriendly: this.isOutdoorFriendly(temp, current.condition.text, current.wind_mph)
     };
   }
 
@@ -192,8 +188,7 @@ export class WeatherService {
         windSpeed: Math.round(bestMatch.wind_mph),
         precipitation: bestMatch.precip_in || 0,
         icon: this.getWeatherIcon(bestMatch.condition.text),
-        isOutdoorFriendly: this.isOutdoorFriendly(temp, bestMatch.condition.text, bestMatch.wind_mph, this.parseAlerts(data.alerts)),
-        alerts: this.parseAlerts(data.alerts)
+        isOutdoorFriendly: this.isOutdoorFriendly(temp, bestMatch.condition.text, bestMatch.wind_mph)
       };
     }
     
@@ -209,8 +204,7 @@ export class WeatherService {
       windSpeed: Math.round(dayForecast.maxwind_mph),
       precipitation: dayForecast.totalprecip_in || 0,
       icon: this.getWeatherIcon(dayForecast.condition.text),
-      isOutdoorFriendly: this.isOutdoorFriendly(temp, dayForecast.condition.text, dayForecast.maxwind_mph, this.parseAlerts(data.alerts)),
-      alerts: this.parseAlerts(data.alerts)
+      isOutdoorFriendly: this.isOutdoorFriendly(temp, dayForecast.condition.text, dayForecast.maxwind_mph)
     };
   }
 
@@ -231,30 +225,8 @@ export class WeatherService {
   }
 
   // Determine if conditions are outdoor friendly
-  private static isOutdoorFriendly(temp: number, condition: string, windSpeed: number, alerts: string[] = []): boolean {
+  private static isOutdoorFriendly(temp: number, condition: string, windSpeed: number): boolean {
     const conditionLower = condition.toLowerCase();
-    
-    // Check for dangerous weather alerts that affect general outdoor activities
-    if (alerts && alerts.length > 0) {
-      const generalDangerAlerts = alerts.some(alert => {
-        const alertLower = alert.toLowerCase();
-        // Only block for alerts that affect general outdoor activities
-        return alertLower.includes('tornado') ||
-               alertLower.includes('hurricane') ||
-               alertLower.includes('severe thunderstorm') ||
-               alertLower.includes('winter storm') ||
-               alertLower.includes('blizzard') ||
-               alertLower.includes('ice storm') ||
-               (alertLower.includes('flood') && !alertLower.includes('coastal')) || // General flooding, not coastal
-               (alertLower.includes('warning') && (
-                 alertLower.includes('heat') ||
-                 alertLower.includes('wind') ||
-                 alertLower.includes('storm')
-               ));
-      });
-      
-      if (generalDangerAlerts) return false;
-    }
     
     // Temperature check (40-90°F is comfortable)
     if (temp < 40 || temp > 90) return false;
@@ -271,25 +243,6 @@ export class WeatherService {
     return true;
   }
 
-  // Parse weather alerts from API response
-  private static parseAlerts(alertsData: any): string[] {
-    if (!alertsData || !alertsData.alert) {
-      return [];
-    }
-    
-    // Handle both array and single alert formats
-    const alerts = Array.isArray(alertsData.alert) ? alertsData.alert : [alertsData.alert];
-    
-    return alerts.map((alert: any) => {
-      // Use headline if available, otherwise use event + description
-      if (alert.headline) {
-        return alert.headline;
-      } else if (alert.event) {
-        return `${alert.event}${alert.desc ? ': ' + alert.desc.substring(0, 100) + '...' : ''}`;
-      }
-      return 'Weather alert active';
-    }).filter(Boolean);
-  }
 
   // Extract zipcode from location string
   static extractZipcode(location: string): string | null {
@@ -300,33 +253,6 @@ export class WeatherService {
 
   // Get weather recommendation text
   static getWeatherRecommendation(weather: WeatherData): string {
-    // Check for weather alerts and categorize them
-    if (weather.alerts && weather.alerts.length > 0) {
-      const generalDangerAlerts = weather.alerts.filter(alert => {
-        const alertLower = alert.toLowerCase();
-        return alertLower.includes('tornado') ||
-               alertLower.includes('hurricane') ||
-               alertLower.includes('severe thunderstorm') ||
-               alertLower.includes('winter storm') ||
-               alertLower.includes('blizzard') ||
-               alertLower.includes('ice storm') ||
-               (alertLower.includes('flood') && !alertLower.includes('coastal'));
-      });
-      
-      const coastalAlerts = weather.alerts.filter(alert => {
-        const alertLower = alert.toLowerCase();
-        return alertLower.includes('coastal flood') ||
-               alertLower.includes('rip current') ||
-               alertLower.includes('beach') ||
-               alertLower.includes('marine');
-      });
-      
-      if (generalDangerAlerts.length > 0) {
-        return '⚠️ Severe weather alerts in effect - consider indoor alternatives or postponing outdoor activities.';
-      } else if (coastalAlerts.length > 0) {
-        return '🌊 Coastal/marine alerts active - avoid waterfront areas, but inland activities should be fine.';
-      }
-    }
     
     if (weather.isOutdoorFriendly) {
       return 'Perfect conditions for outdoor sports! 🌟';
@@ -364,7 +290,6 @@ export class WeatherService {
       precipitation: 0,
       icon: '🌤️',
       isOutdoorFriendly: true,
-      alerts: ['Weather forecast unavailable - using default conditions']
     };
   }
 }

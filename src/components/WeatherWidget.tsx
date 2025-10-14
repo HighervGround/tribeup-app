@@ -208,8 +208,8 @@ export function WeatherWidget({
             </div>
           </div>
           <div className="text-right text-sm text-muted-foreground">
-            <div>💧 {weather.humidity}%</div>
-            <div>💨 {weather.windSpeed} mph</div>
+            <div>Humidity: {weather.humidity}%</div>
+            <div>Wind: {weather.windSpeed} mph</div>
           </div>
         </div>
 

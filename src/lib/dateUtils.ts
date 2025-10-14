@@ -57,7 +57,7 @@ function formatMonthDay(dt: Date, locale?: string) {
 }
 
 export function formatEventHeader(dateStr?: string, timeStr?: string, locale?: string) {
-  const now = new Date();
+  const currentTime = new Date();
   const parsed = safeParse(dateStr, timeStr);
   if (!parsed) {
     // Fallback to simple join if parsing fails
@@ -74,15 +74,15 @@ export function formatEventHeader(dateStr?: string, timeStr?: string, locale?: s
   }
 
   // Use local dates for comparison to avoid timezone issues
-  const today = new Date();
-  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const now = new Date();
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const eventLocal = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
   
   // Calculate difference in days using local date comparison
   const diffMs = eventLocal.getTime() - todayLocal.getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   
-  console.log(`📅 Date comparison: Today=${todayLocal.toDateString()}, Event=${eventLocal.toDateString()}, Diff=${diffDays} days`);
+  console.log(`📅 Date Debug: Today=${todayLocal.toDateString()}, Event=${eventLocal.toDateString()}, Diff=${diffDays} days, Raw=${diffMs}ms`);
 
   const timeLabel = timeStr ? formatTimeString(timeStr) : '';
   let dateLabel = '';
@@ -99,7 +99,7 @@ export function formatEventHeader(dateStr?: string, timeStr?: string, locale?: s
 
   const label = [dateLabel, timeLabel].filter(Boolean).join(' · ');
   const aria = `Event ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ''}`;
-  const isPast = parsed.getTime() < now.getTime();
+  const isPast = parsed.getTime() < currentTime.getTime();
 
   return {
     label,

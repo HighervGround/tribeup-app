@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { RefreshCw, MapPin } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { useGames } from '../hooks/useGames';
+import { useGamesWithCreators } from '../hooks/useGamesWithCreators';
 import { useLocation } from '../hooks/useLocation';
 import { useAllGamesRealtime } from '../hooks/useGameRealtime';
 import { UnifiedGameCard } from './UnifiedGameCard';
@@ -14,12 +14,11 @@ import { OrphanedUserFixer } from './OrphanedUserFixer';
 
 
 
-// Using UnifiedGameCard component for consistency
 
 function HomeScreen() {
   const navigate = useNavigate();
   const { user } = useAppStore();
-  const { data: games = [], isLoading, error, refetch, isError, isPending, isRefetching } = useGames();
+  const { games, userById, usersLoaded, loading: isLoading, error, refetch } = useGamesWithCreators();
   const [refreshing, setRefreshing] = useState(false);
   const [forceTimeout, setForceTimeout] = useState(false);
   
@@ -30,7 +29,7 @@ function HomeScreen() {
   
   // Force timeout if loading takes too long
   useEffect(() => {
-    if (isLoading || isPending) {
+    if (isLoading) {
       console.log('🕰️ [HomeScreen] Starting loading timeout timer');
       const timeout = setTimeout(() => {
         console.warn('⚠️ [HomeScreen] Force timeout after 20 seconds');
@@ -42,7 +41,7 @@ function HomeScreen() {
         setForceTimeout(false);
       };
     }
-  }, [isLoading, isPending]);
+  }, [isLoading]);
   
   // Game selection handler
   const handleGameSelect = (gameId: string) => {
@@ -213,14 +212,14 @@ function HomeScreen() {
     });
 
   // Show loading state with timeout handling
-  if ((isLoading || isPending) && games.length === 0 && !forceTimeout) {
+  if ((isLoading || isLoading) && games.length === 0 && !forceTimeout) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading games...</p>
           <p className="text-xs text-muted-foreground/70">
-            {isRefetching ? 'Refreshing...' : 'This should only take a moment'}
+            {refreshing ? 'Refreshing...' : 'This should only take a moment'}
           </p>
           <Button 
             variant="outline" 
@@ -239,7 +238,7 @@ function HomeScreen() {
   }
   
   // Show error state
-  if ((isError || error || forceTimeout) && games.length === 0) {
+  if ((!!error || error || forceTimeout) && games.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -281,20 +280,19 @@ function HomeScreen() {
   // Log current state for debugging
   console.log('📊 [HomeScreen] Current state:', {
     isLoading,
-    isPending,
-    isError,
-    isRefetching,
+    hasError: !!error,
+    refreshing,
     forceTimeout,
     gamesCount: games.length,
-    error: error?.message,
-    user: user?.id || 'anonymous'
+    errorMessage: error?.message,
+    userId: user?.id || 'anonymous'
   });
 
   return (
     <div className="min-h-screen bg-background">
       {/* Cache Clear Button - only show in development or if there are stale queries */}
       {(typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || isError || forceTimeout)) && (
+        (window.location.hostname === 'localhost' || !!error || forceTimeout)) && (
         <CacheClearButton />
       )}
       

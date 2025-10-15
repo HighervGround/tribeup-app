@@ -29,9 +29,7 @@ export async function ensureUserProfile({
     p_username: username,
     p_full_name: full_name,
     p_avatar_url: avatar_url,
-    p_bio: bio,
-    p_location: location,
-    p_preferred_sports: preferred_sports,
+    // Note: The function only accepts these 4 parameters based on the error message
   });
 
   if (error) {

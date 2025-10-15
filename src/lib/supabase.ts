@@ -73,36 +73,57 @@ if (typeof window !== 'undefined') {
 export type { Database } from './database.types';
 
 // Helper functions for data transformation
-export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any => ({
-  id: dbGame.id,
-  title: dbGame.title,
-  sport: dbGame.sport,
-  date: dbGame.date,
-  time: dbGame.time,
-  duration: dbGame.duration || 60, // Default to 60 minutes if not set
-  location: dbGame.location,
-  latitude: dbGame.latitude,
-  longitude: dbGame.longitude,
-  cost: dbGame.cost,
-  maxPlayers: dbGame.max_players,
-  currentPlayers: dbGame.current_players,
-  description: dbGame.description,
-  imageUrl: dbGame.image_url || '',
-  sportColor: getSportColor(dbGame.sport),
-  isJoined,
-  createdBy: dbGame.creator?.full_name || dbGame.creator?.username || `Unknown User (${dbGame.creator_id?.slice(0, 8) || 'No ID'})`,
-  creatorId: dbGame.creator_id,
-  creatorData: dbGame.creator ? {
-    id: dbGame.creator.id,
-    name: dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`,
-    avatar: dbGame.creator.avatar_url || ''
-  } : {
+export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any => {
+  // Defensive fallback for creator display
+  let createdBy = 'Loading user...';
+  let creatorData = {
     id: dbGame.creator_id,
-    name: `Unknown User (${dbGame.creator_id?.slice(0, 8) || 'No ID'})`,
+    name: 'Loading user...',
     avatar: ''
-  },
-  createdAt: dbGame.created_at,
-});
+  };
+
+  if (dbGame.creator) {
+    // We have creator data loaded
+    createdBy = dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`;
+    creatorData = {
+      id: dbGame.creator.id,
+      name: createdBy,
+      avatar: dbGame.creator.avatar_url || ''
+    };
+  } else if (dbGame.creator === null) {
+    // Explicitly null means user doesn't exist (only show after we've tried to load)
+    createdBy = `Unknown User (${dbGame.creator_id?.slice(0, 8) || 'No ID'})`;
+    creatorData = {
+      id: dbGame.creator_id,
+      name: createdBy,
+      avatar: ''
+    };
+  }
+  // If dbGame.creator is undefined, we're still loading - show "Loading user..."
+
+  return {
+    id: dbGame.id,
+    title: dbGame.title,
+    sport: dbGame.sport,
+    date: dbGame.date,
+    time: dbGame.time,
+    duration: dbGame.duration || 60, // Default to 60 minutes if not set
+    location: dbGame.location,
+    latitude: dbGame.latitude,
+    longitude: dbGame.longitude,
+    cost: dbGame.cost,
+    maxPlayers: dbGame.max_players,
+    currentPlayers: dbGame.current_players,
+    description: dbGame.description,
+    imageUrl: dbGame.image_url || '',
+    sportColor: getSportColor(dbGame.sport),
+    isJoined,
+    createdBy,
+    creatorId: dbGame.creator_id,
+    creatorData,
+    createdAt: dbGame.created_at,
+  };
+};
 
 export const transformUserFromDB = (dbUser: Database['public']['Tables']['users']['Row']): any => ({
   id: dbUser.id,

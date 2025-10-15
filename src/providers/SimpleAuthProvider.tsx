@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
+import { ProfileEnsurer } from '../components/ProfileEnsurer';
 import { toast } from 'sonner';
 
 interface SimpleAuthContextType {
@@ -22,6 +23,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
+  const [profileCreationInProgress, setProfileCreationInProgress] = useState<Set<string>>(new Set());
   const { setUser: setAppUser } = useAppStore();
 
   // SINGLE useEffect - no race conditions
@@ -127,49 +129,111 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     // Handle user profile creation/loading
     const handleUserProfile = async (user: User) => {
       try {
+        console.log('🔍 Handling user profile for authenticated user:', user.id);
+        
+        // Ensure we have a valid session before profile operations
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.warn('⚠️ No session found, cannot create profile');
+          return;
+        }
+        
         // Check if profile exists
         let profile = await SupabaseService.getUserProfile(user.id);
         
         if (!profile) {
-          // Create profile if it doesn't exist (prevents orphaned users!)
-          console.log('Creating missing user profile for:', user.id);
-          await SupabaseService.createUserProfile(user.id, {
+          console.log('🚨 No profile found - this might be an orphaned user from auth.users');
+          console.log('🔧 User details:', {
+            id: user.id,
             email: user.email,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            username: user.user_metadata?.username || user.email?.split('@')[0] || `user_${Date.now()}`,
-            avatar: user.user_metadata?.avatar_url || '',
+            metadata: user.user_metadata
           });
           
-          // Fetch the newly created profile
-          profile = await SupabaseService.getUserProfile(user.id);
+          // Prevent multiple simultaneous profile creation attempts
+          if (profileCreationInProgress.has(user.id)) {
+            console.log('🔄 Profile creation already in progress for user:', user.id);
+            return;
+          }
+          
+          // Mark profile creation as in progress
+          setProfileCreationInProgress(prev => new Set(prev).add(user.id));
+          
+          try {
+            // Create profile if it doesn't exist (prevents orphaned users!)
+            console.log('🔧 Creating missing user profile for authenticated user:', user.id);
+          
+            // Use the idempotent ensure_user_profile RPC function
+            const profileParams = {
+              p_email: user.email || session.user.email,
+              p_username: user.user_metadata?.username || user.email?.split('@')[0] || `user_${Date.now()}`,
+              p_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+              p_avatar_url: user.user_metadata?.avatar_url || null,
+              p_bio: '',
+              p_location: '',
+              p_preferred_sports: []
+            };
+            
+            console.log('📝 Calling ensure_user_profile RPC with params:', profileParams);
+            
+            // Call the idempotent RPC function (prevents race conditions)
+            const { data: newProfile, error } = await supabase
+              .rpc('ensure_user_profile', profileParams);
+              
+            if (error) {
+              console.error('❌ Profile creation via RPC failed:', error);
+              throw error;
+            } else {
+              console.log('✅ Profile created/updated via RPC successfully:', newProfile);
+              profile = newProfile;
+            }
+          } finally {
+            // Clear the in-progress flag
+            setProfileCreationInProgress(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(user.id);
+              return newSet;
+            });
+          }
         }
         
-        // Update app store with complete profile
+        // Update app store with complete profile (only if different from current)
         if (profile && mounted) {
-          setAppUser(profile);
+          const currentUser = useAppStore.getState().user;
+          if (!currentUser || currentUser.id !== profile.id) {
+            console.log('🔄 Setting new user profile:', profile.id);
+            setAppUser(profile);
+          } else {
+            console.log('🔄 Skipping duplicate user profile update:', profile.id);
+          }
         }
       } catch (error) {
         console.error('Profile handling error:', error);
-        // Create basic user object as fallback
+        // Create basic user object as fallback (only if no current user)
         if (mounted) {
-          setAppUser({
-            id: user.id,
-            email: user.email || '',
-            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            username: user.email?.split('@')[0] || 'user',
-            avatar: user.user_metadata?.avatar_url || '',
-            role: 'user',
-            preferences: {
-              theme: 'auto',
-              highContrast: false,
-              largeText: false,
-              reducedMotion: false,
-              colorBlindFriendly: false,
-              notifications: { push: true, email: false, gameReminders: true },
-              privacy: { locationSharing: true, profileVisibility: 'public' },
-              sports: []
-            }
-          });
+          const currentUser = useAppStore.getState().user;
+          if (!currentUser || currentUser.id !== user.id) {
+            console.log('🔄 Setting fallback user profile:', user.id);
+            setAppUser({
+              id: user.id,
+              email: user.email || '',
+              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+              username: user.email?.split('@')[0] || 'user',
+              avatar: user.user_metadata?.avatar_url || '',
+              role: 'user',
+              preferences: {
+                theme: 'auto',
+                highContrast: false,
+                largeText: false,
+                reducedMotion: false,
+                colorBlindFriendly: false,
+                notifications: { push: true, email: false, gameReminders: true },
+                privacy: { locationSharing: true, profileVisibility: 'public' },
+                sports: []
+              }
+            });
+          } else {
+            console.log('🔄 Skipping duplicate fallback user update:', user.id);
+          }
         }
       }
     };
@@ -188,22 +252,37 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Handle different auth events
+        // Handle different auth events (with duplicate prevention)
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('🎉 User signed in via auth state listener');
-          await handleUserProfile(session.user);
-          toast.success('Welcome!');
+          const currentUser = useAppStore.getState().user;
+          if (!currentUser || currentUser.id !== session.user.id) {
+            await handleUserProfile(session.user);
+            toast.success('Welcome!');
+          } else {
+            console.log('🔄 User already set, skipping profile reload');
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log('👋 User signed out');
           setAppUser(null);
           toast.success('Signed out successfully');
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          console.log('🔄 Token refreshed, updating profile');
-          await handleUserProfile(session.user);
+          console.log('🔄 Token refreshed, checking if profile update needed');
+          const currentUser = useAppStore.getState().user;
+          if (!currentUser || currentUser.id !== session.user.id) {
+            await handleUserProfile(session.user);
+          } else {
+            console.log('🔄 Profile already current, skipping refresh update');
+          }
         } else if (session?.user && !event) {
           // Initial session restoration
           console.log('🔄 Initial session restored via listener');
-          await handleUserProfile(session.user);
+          const currentUser = useAppStore.getState().user;
+          if (!currentUser || currentUser.id !== session.user.id) {
+            await handleUserProfile(session.user);
+          } else {
+            console.log('🔄 User already restored, skipping duplicate restoration');
+          }
         }
         
         setLoading(false);
@@ -297,6 +376,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <SimpleAuthContext.Provider value={value}>
+      {/* Use the React guard pattern for profile creation */}
+      <ProfileEnsurer user={user} session={session} />
       {children}
     </SimpleAuthContext.Provider>
   );

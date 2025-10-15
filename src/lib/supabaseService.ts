@@ -86,8 +86,14 @@ export class SupabaseService {
       console.log('Calling ensure_user_profile RPC with params:', profileParams);
       
       // Use the idempotent RPC function (prevents race conditions)
+      // Use only the 4 parameters the function actually accepts
       const { data, error } = await supabase
-        .rpc('ensure_user_profile', profileParams);
+        .rpc('ensure_user_profile', {
+          p_email: profileParams.p_email,
+          p_username: profileParams.p_username,
+          p_full_name: profileParams.p_full_name,
+          p_avatar_url: profileParams.p_avatar_url,
+        });
       
       if (error) {
         console.error('Error creating profile via RPC:', error);
@@ -507,10 +513,10 @@ export class SupabaseService {
     ];
   }
 
-  // Games methods - Ultra-fast direct query
+  // Games methods - Two-step fetch with proper user mapping
   static async getGames(): Promise<Game[]> {
     const startTime = performance.now();
-    console.log('🚀 Starting getGames...');
+    console.log('🚀 Starting getGames with two-step fetch...');
     console.log('🔍 Network status:', navigator.onLine ? 'ONLINE' : 'OFFLINE');
     
     try {
@@ -519,72 +525,70 @@ export class SupabaseService {
       const userId = user?.id;
       console.log(`🔍 Getting games for user: ${userId || 'anonymous'}`);
       
+      // Step 1: Fetch games with basic data and participation info
       const queryStart = performance.now();
-      
-      // Query games with participants to calculate isJoined status
-      const { data: gamesWithParticipants, error } = await supabase
+      const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
           *,
-          game_participants(user_id),
-          creator:users!games_creator_id_fkey(
-            id,
-            full_name,
-            username,
-            email,
-            avatar_url
-          )
+          game_participants(user_id)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
         .limit(50);
         
-      console.log('🔍 Query completed!', { data: gamesWithParticipants?.length, error });
+      if (gamesError) {
+        console.error('❌ Games query failed:', gamesError);
+        return [];
+      }
       
-      const queryTime = performance.now() - queryStart;
-      console.log(`📊 Query took: ${queryTime.toFixed(2)}ms`);
-
-      if (error) {
-        console.error('❌ Complex query failed:', error);
-        
-        // Fallback to simple query without joins
-        console.log('🔄 Falling back to simple query...');
-        try {
-          const { data: simpleGames, error: simpleError } = await supabase
-            .from('games')
-            .select('*')
-            .gte('date', new Date().toISOString().split('T')[0])
-            .order('date', { ascending: true })
-            .limit(50);
-            
-          if (simpleError) throw simpleError;
+      console.log(`📊 Step 1 completed: ${gamesData?.length || 0} games fetched`);
+      
+      // Step 2: Get all unique creator IDs and fetch their user profiles
+      const creatorIds = [...new Set(gamesData?.map(game => game.creator_id).filter(Boolean) || [])];
+      console.log(`🔍 Step 2: Fetching ${creatorIds.length} unique creators`);
+      
+      let usersMap = new Map();
+      if (creatorIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, username, email, avatar_url')
+          .in('id', creatorIds);
           
-          // Transform to basic game objects without join status
-          const fallbackGames = (simpleGames || []).map((game: any) => 
-            transformGameFromDB(game, false)
-          );
-          
-          console.log(`✅ Fallback query successful: ${fallbackGames.length} games`);
-          return fallbackGames;
-          
-        } catch (fallbackError) {
-          console.error('❌ Fallback query also failed:', fallbackError);
-          
-          // Return empty array as last resort
-          console.log('🚨 All queries failed - returning empty array');
-          return [];
+        if (usersError) {
+          console.error('❌ Users query failed:', usersError);
+          // Continue with empty user map - will show loading state
+        } else {
+          // Build user map: user_id -> user data
+          usersData?.forEach(user => {
+            usersMap.set(user.id, user);
+          });
+          console.log(`✅ Step 2 completed: ${usersData?.length || 0} users fetched`);
         }
       }
       
-      // Transform games with proper isJoined calculation
-      const games = (gamesWithParticipants || []).map((game: any) => {
+      const queryTime = performance.now() - queryStart;
+      console.log(`📊 Total query time: ${queryTime.toFixed(2)}ms`);
+      
+      // Step 3: Transform games with proper user mapping
+      const games = (gamesData || []).map((game: any) => {
         const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
-        console.log(`🎯 Game ${game.id} isJoined check:`, {
-          userId,
-          participants: game.game_participants?.map(p => p.user_id),
-          isJoined
+        const creator = usersMap.get(game.creator_id);
+        
+        // Enhanced game object with proper creator data
+        const enhancedGame = {
+          ...game,
+          creator: creator || null, // Will be null if user not found
+          game_participants: game.game_participants
+        };
+        
+        console.log(`🎯 Game "${game.title}" creator mapping:`, {
+          creator_id: game.creator_id,
+          creator_found: !!creator,
+          creator_name: creator?.full_name || 'Not loaded'
         });
-        return transformGameFromDB(game, isJoined);
+        
+        return transformGameFromDB(enhancedGame, isJoined);
       });
       
       const totalTime = performance.now() - startTime;

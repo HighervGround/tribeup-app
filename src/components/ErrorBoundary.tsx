@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -20,26 +20,35 @@ export class ErrorBoundary extends Component<Props, State> {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
   }
-
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error, errorInfo: null };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error('🚨 [ErrorBoundary] Error caught:', error);
+    console.error('🚨 [ErrorBoundary] Error info:', errorInfo);
+    
+    // Handle chunk loading errors by reloading the page
+    if (error.message?.includes('Loading chunk') || 
+        error.message?.includes('dynamically imported module') ||
+        error.message?.includes('Failed to fetch')) {
+      console.warn('🔄 [ErrorBoundary] Chunk loading error detected, reloading page...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      return;
+    }
     
     this.setState({
       error,
       errorInfo,
     });
-
-    // Call custom error handler if provided
+    
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
     // Log to error reporting service (e.g., Sentry)
-    // Sentry.captureException(error, { extra: errorInfo });
   }
 
   handleRetry = () => {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { SupabaseService } from '../lib/supabaseService';
+import { joinGame, leaveGame, getGameParticipants, isUserInGame } from '../lib/gameParticipantService';
 import { useAppStore } from '../store/appStore';
 import { toast } from 'sonner';
 import { CacheCorruptionDetector } from '../utils/cacheCorruptionDetector';
@@ -172,7 +173,7 @@ export function useGameParticipants(gameId: string) {
     queryKey: gameKeys.participants(gameId),
     queryFn: async () => {
       console.log('🔍 Fetching participants for game:', gameId);
-      const participants = await SupabaseService.getGameParticipants(gameId);
+      const participants = await getGameParticipants(gameId);
       console.log('✅ Participants fetched:', participants.length);
       return participants;
     },
@@ -195,7 +196,11 @@ export function useJoinGame() {
   return useMutation({
     mutationFn: async (gameId: string) => {
       console.log('🔧 Joining game:', gameId);
-      await SupabaseService.joinGame(gameId);
+      const result = await joinGame(gameId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to join game');
+      }
+      return result;
     },
     onMutate: async (gameId) => {
       // Cancel outgoing refetches for all related queries
@@ -283,7 +288,11 @@ export function useLeaveGame() {
   return useMutation({
     mutationFn: async (gameId: string) => {
       console.log('🔧 Leaving game:', gameId);
-      await SupabaseService.leaveGame(gameId);
+      const result = await leaveGame(gameId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to leave game');
+      }
+      return result;
     },
     onMutate: async (gameId) => {
       // Cancel outgoing refetches for all related queries
@@ -389,5 +398,22 @@ export function useCreateGame() {
         description: 'Please try again later',
       });
     },
+  });
+}
+
+// Hook for checking if user is in a game
+export function useIsUserInGame(gameId: string) {
+  return useQuery({
+    queryKey: [...gameKeys.detail(gameId), 'userInGame'],
+    queryFn: async () => {
+      console.log('🔍 Checking if user is in game:', gameId);
+      const inGame = await isUserInGame(gameId);
+      console.log('✅ User in game check:', inGame);
+      return inGame;
+    },
+    enabled: !!gameId,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    retry: 2,
   });
 }

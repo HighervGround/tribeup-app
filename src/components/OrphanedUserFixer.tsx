@@ -50,8 +50,14 @@ export function OrphanedUserFixer() {
       console.log('📝 Calling ensure_user_profile RPC for fix:', profileParams);
 
       // Call the idempotent RPC function (prevents race conditions)
+      // Use only the 4 parameters the function actually accepts
       const { data, error } = await supabase
-        .rpc('ensure_user_profile', profileParams);
+        .rpc('ensure_user_profile', {
+          p_email: profileParams.p_email,
+          p_username: profileParams.p_username,
+          p_full_name: profileParams.p_full_name,
+          p_avatar_url: profileParams.p_avatar_url,
+        });
 
       if (error) {
         console.error('❌ Profile fix failed:', error);
@@ -98,6 +104,7 @@ export function OrphanedUserFixer() {
   // Only show if user needs fixing and we're in development or they have the specific orphaned ID
   const shouldShow = needsFix || 
     (user?.id === 'ca2ee1cc-3ccc-4d34-8f8e-b9e02c38bfc0') ||
+    (user?.id === '654fbc89-0211-4c1e-9977-21f42084b918') || // New orphaned user
     (typeof window !== 'undefined' && window.location.hostname === 'localhost');
 
   if (!shouldShow) return null;

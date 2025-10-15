@@ -176,8 +176,14 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             console.log('📝 Calling ensure_user_profile RPC with params:', profileParams);
             
             // Call the idempotent RPC function (prevents race conditions)
+            // Use only the 4 parameters the function actually accepts
             const { data: newProfile, error } = await supabase
-              .rpc('ensure_user_profile', profileParams);
+              .rpc('ensure_user_profile', {
+                p_email: profileParams.p_email,
+                p_username: profileParams.p_username,
+                p_full_name: profileParams.p_full_name,
+                p_avatar_url: profileParams.p_avatar_url,
+              });
               
             if (error) {
               console.error('❌ Profile creation via RPC failed:', error);

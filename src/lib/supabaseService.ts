@@ -59,17 +59,6 @@ export class SupabaseService {
     console.log('Creating/updating user profile with data:', { userId, userData });
     
     try {
-      // First, check if the user exists
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
-      }
-      
       // Ensure we have a valid email (column is NOT NULL + UNIQUE)
       let email: string | null = userData.email || null;
       if (!email) {
@@ -80,38 +69,32 @@ export class SupabaseService {
         throw new Error('Unable to determine user email for profile creation');
       }
       
-      // Prepare the profile data according to the database schema
-      // Note: do NOT include non-existent columns like updated_at
-      const profileData = {
-        id: userId,
-        email,
-        full_name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.name || 'New User',
-        username: userData.username || `user_${Math.random().toString(36).substring(2, 10)}`,
-        bio: userData.bio || '',
-        location: userData.location || '',
-        role: userData.role || 'user',
-        preferred_sports: Array.isArray(userData.selectedSports)
+      // Prepare parameters for the idempotent RPC function
+      const profileParams = {
+        p_email: email,
+        p_username: userData.username || `user_${Math.random().toString(36).substring(2, 10)}`,
+        p_full_name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.name || 'New User',
+        p_avatar_url: userData.avatar || null,
+        p_bio: userData.bio || '',
+        p_location: userData.location || '',
+        p_preferred_sports: Array.isArray(userData.selectedSports)
           ? (userData.selectedSports
               .filter((s: any): s is string => typeof s === 'string' && s.trim().length > 0))
           : []
-        // created_at has a default; let the DB handle it
-      } as const;
+      };
       
-      console.log('Profile data to save:', profileData);
+      console.log('Calling ensure_user_profile RPC with params:', profileParams);
       
-      // Use upsert to handle both insert and update in one operation
+      // Use the idempotent RPC function (prevents race conditions)
       const { data, error } = await supabase
-        .from('users')
-        .upsert(profileData, { onConflict: 'id' })
-        .select()
-        .single();
+        .rpc('ensure_user_profile', profileParams);
       
       if (error) {
-        console.error('Error saving profile:', error);
+        console.error('Error creating profile via RPC:', error);
         throw error;
       }
       
-      console.log('Profile saved successfully:', data);
+      console.log('Profile created/updated successfully via RPC:', data);
       return data;
       
     } catch (error) {

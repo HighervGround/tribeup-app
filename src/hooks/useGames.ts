@@ -23,15 +23,36 @@ export function useGames() {
   // Invalidate cache when user auth state changes to prevent stale data
   useEffect(() => {
     // Only invalidate if user actually changed (not just loading states)
+    // Add debouncing and prevent invalidation during initial auth flow
     if (user?.id) {
-      console.log('🔄 [useGames] User authenticated, invalidating cache for user:', user.id);
+      console.log('🔄 [useGames] User authenticated, checking if cache invalidation needed:', user.id);
       
-      // Use setTimeout to debounce rapid auth changes
+      // Check if this is the same user as before to prevent unnecessary invalidations
+      const lastUserId = sessionStorage.getItem('tribeup_last_user_id');
+      const lastInvalidationTime = parseInt(sessionStorage.getItem('tribeup_last_invalidation') || '0');
+      const now = Date.now();
+      
+      // Skip if same user AND recent invalidation (within 10 seconds)
+      if (lastUserId === user.id && (now - lastInvalidationTime) < 10000) {
+        console.log('🔄 [useGames] Same user with recent invalidation, skipping');
+        return;
+      }
+      
+      // Store current user ID and timestamp to prevent future unnecessary invalidations
+      sessionStorage.setItem('tribeup_last_user_id', user.id);
+      sessionStorage.setItem('tribeup_last_invalidation', now.toString());
+      
+      // Use longer debounce to let auth stabilize
       const timeoutId = setTimeout(() => {
+        console.log('🔄 [useGames] Invalidating cache for user:', user.id);
         queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
-      }, 100);
+      }, 1000); // Increased to 1 second to let auth fully stabilize
       
       return () => clearTimeout(timeoutId);
+    } else {
+      // Clear stored user ID when user signs out
+      sessionStorage.removeItem('tribeup_last_user_id');
+      sessionStorage.removeItem('tribeup_last_invalidation');
     }
   }, [user?.id, queryClient]);
   
@@ -113,9 +134,11 @@ export function useGames() {
     },
     // Remove authentication requirement - games should load for all users
     // enabled: !!user, // Only fetch when user is authenticated
-    refetchOnMount: false, // Don't refetch on every mount - use cache
+    refetchOnMount: 'always', // Always refetch on mount to ensure fresh data
     refetchOnWindowFocus: false, // Don't refetch on window focus - reduces queries
     refetchOnReconnect: true, // Only refetch when network reconnects
+    // Prevent queries from being cancelled during auth state changes
+    notifyOnChangeProps: ['data', 'error', 'isLoading'],
     meta: {
       errorMessage: 'Failed to load games. Please refresh the page.'
     }

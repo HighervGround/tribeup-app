@@ -10,6 +10,7 @@ import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 import { CacheClearButton } from './CacheClearButton';
 import { FeedbackButton } from './FeedbackButton';
+import { OrphanedUserFixer } from './OrphanedUserFixer';
 
 
 
@@ -431,6 +432,9 @@ function HomeScreen() {
           </div>
         </div>
       </div>
+      
+      {/* Orphaned User Fixer - shows for users who need profile fixes */}
+      <OrphanedUserFixer />
     </div>
   );
 }

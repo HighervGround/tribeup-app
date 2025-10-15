@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const { setUser: setAppUser, initializeAuth } = useAppStore();
+  const { setUser: setAppUser } = useAppStore();
 
   useEffect(() => {
     const DEBUG = typeof window !== 'undefined' && localStorage.getItem('DEBUG_AUTH') === '1';
@@ -61,69 +61,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          DEBUG && console.log('[Auth] Found session, creating user from auth data...');
+          DEBUG && console.log('[Auth] Found session, loading profile for user:', session.user.id);
           
-          // Create user immediately from auth data - don't wait for profile
-          const authUser = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email || '',
-            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
-            avatar: session.user.user_metadata?.avatar_url || '',
-            role: 'user' as const,
-            preferences: { 
-              sports: [], 
-              notifications: { push: true, email: true, gameReminders: true },
-              theme: 'light' as const,
-              highContrast: false,
-              largeText: false,
-              reducedMotion: false,
-              colorBlindFriendly: false,
-              privacy: {
-                locationSharing: true,
-                profileVisibility: 'public' as const
-              }
+          // Load profile first, only fall back to auth data if profile doesn't exist
+          try {
+            const profile = await SupabaseService.getUserProfile(session.user.id);
+            if (profile) {
+              DEBUG && console.log('[Auth] Profile loaded successfully:', profile.id);
+              setAppUser(profile);
+            } else {
+              // Profile doesn't exist - create basic user from auth data first
+              const authUser = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.full_name || session.user.email || '',
+                username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+                avatar: session.user.user_metadata?.avatar_url || '',
+                role: 'user' as const,
+                preferences: { 
+                  sports: [], 
+                  notifications: { push: true, email: true, gameReminders: true },
+                  theme: 'light' as const,
+                  highContrast: false,
+                  largeText: false,
+                  reducedMotion: false,
+                  colorBlindFriendly: false,
+                  privacy: {
+                    locationSharing: true,
+                    profileVisibility: 'public' as const
+                  }
+                }
+              };
+              
+              setAppUser(authUser);
+              DEBUG && console.log('[Auth] Set basic user from auth data:', authUser.id);
+              
+              // Create profile in background (non-blocking)
+              setTimeout(async () => {
+                try {
+                  console.log('[Auth] Creating profile for user:', session.user.id);
+                  await SupabaseService.createUserProfile(session.user.id, {
+                    email: session.user.email,
+                    name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                    username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || `user_${Math.random().toString(36).substring(2, 10)}`,
+                    avatar: session.user.user_metadata?.avatar_url || '',
+                  });
+                  console.log('[Auth] ✅ Profile created successfully');
+                  
+                  // Load the newly created profile (this will update user state once more)
+                  const newProfile = await SupabaseService.getUserProfile(session.user.id);
+                  if (newProfile) {
+                    setAppUser(newProfile);
+                  }
+                } catch (error: any) {
+                  console.warn('Profile creation failed (non-critical):', error.message);
+                }
+              }, 100);
             }
-          };
-          
-          setAppUser(authUser);
-          DEBUG && console.log('[Auth] User set from auth data:', authUser.id);
-          
-          // Try to load full profile in background (non-blocking)
-          setTimeout(async () => {
-            try {
-              const profile = await SupabaseService.getUserProfile(session.user.id);
-              if (profile) {
-                DEBUG && console.log('[Auth] Profile loaded later:', profile.id);
-                setAppUser(profile);
-              } else {
-                // Profile doesn't exist - create it to prevent orphaned user issues
-                console.log('[Auth] No profile found, creating one for user:', session.user.id);
-                await SupabaseService.createUserProfile(session.user.id, {
-                  email: session.user.email,
-                  name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-                  username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || `user_${Math.random().toString(36).substring(2, 10)}`,
-                  avatar: session.user.user_metadata?.avatar_url || '',
-                });
-                console.log('[Auth] ✅ Profile created successfully');
-                
-                // Load the newly created profile
-                const newProfile = await SupabaseService.getUserProfile(session.user.id);
-                if (newProfile) {
-                  setAppUser(newProfile);
+          } catch (error: any) {
+            console.warn('Profile loading failed, using auth data:', error.message);
+            
+            // Fall back to auth data if profile loading fails
+            const authUser = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.full_name || session.user.email || '',
+              username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+              avatar: session.user.user_metadata?.avatar_url || '',
+              role: 'user' as const,
+              preferences: { 
+                sports: [], 
+                notifications: { push: true, email: true, gameReminders: true },
+                theme: 'light' as const,
+                highContrast: false,
+                largeText: false,
+                reducedMotion: false,
+                colorBlindFriendly: false,
+                privacy: {
+                  locationSharing: true,
+                  profileVisibility: 'public' as const
                 }
               }
-            } catch (error: any) {
-              console.warn('Profile loading/creation failed (non-critical):', error.message);
-              // Keep using auth data - don't fail
-            }
-          }, 100);
+            };
+            
+            setAppUser(authUser);
+            DEBUG && console.log('[Auth] Set fallback user from auth data:', authUser.id);
+          }
         }
         
         // Don't call initializeAuth here to prevent loops
       } catch (error) {
         console.error('Error getting initial session:', error);
-        if (error.message === 'getSession timeout') {
+        if ((error as Error)?.message === 'getSession timeout') {
           console.warn('[Auth] getSession timed out - proceeding without session');
           toast.info('Session expired, please log in again');
           setSession(null);
@@ -140,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes - NO ASYNC OPERATIONS INSIDE
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event: any, session: any) => {
         DEBUG && console.log('[Auth] onAuthStateChange:', event, session?.user?.id);
         
         // Only update auth state - no async operations
@@ -218,7 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
     } catch (error: any) {
       console.error('Sign in error:', error);
-      throw new Error(error.message || 'Failed to sign in');
+      throw new Error((error as Error).message || 'Failed to sign in');
     }
   };
 

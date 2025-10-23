@@ -59,6 +59,73 @@ export class SupabaseService {
     console.log('Creating/updating user profile with data:', { userId, userData });
     
     try {
+      // Get authenticated user
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) throw error ?? new Error('No user after sign-in');
+
+      // Create or ensure your user row exists using auth_user_id
+      const { data: profileData, error: upsertError } = await supabase.from('users').upsert(
+        {
+          auth_user_id: user.id,
+          email: user.email ?? null,
+          full_name: userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'New User',
+          username: userData.username || `${userData.firstName || 'user'}_${userData.lastName || 'name'}`.toLowerCase().replace(/\s+/g, '_'),
+          bio: userData.bio || '',
+          avatar_url: userData.avatar || null,
+          location: userData.location || '',
+          preferred_sports: Array.isArray(userData.selectedSports)
+            ? (userData.selectedSports
+                .filter((s: any): s is string => typeof s === 'string' && s.trim().length > 0))
+            : []
+        },
+        { onConflict: 'auth_user_id' }
+      );
+
+      if (upsertError) {
+        console.error('Error upserting profile:', upsertError);
+        throw upsertError;
+      }
+
+      console.log('Profile created/updated successfully:', profileData);
+      
+      return profileData;
+    } catch (err) {
+      console.error('Error creating profile:', err);
+      throw err;
+    }
+  }
+
+  // Complete onboarding for a user
+  static async completeOnboarding(userId: string) {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) throw error ?? new Error('No user after sign-in');
+
+      // Mark onboarding as completed
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update({ onboarding_completed: true })
+        .eq('auth_user_id', user.id)
+        .select();
+
+      if (updateError) {
+        console.error('Error completing onboarding:', updateError);
+        throw updateError;
+      }
+
+      console.log('Onboarding completed successfully:', data);
+      return data;
+    } catch (err) {
+      console.error('Error completing onboarding:', err);
+      throw err;
+    }
+  }
+
+  // Legacy method for backward compatibility
+  static async createUserProfileLegacy(userId: string, userData: any) {
+    console.log('Creating/updating user profile with data (legacy):', { userId, userData });
+    
+    try {
       // Ensure we have a valid email (column is NOT NULL + UNIQUE)
       let email: string | null = userData.email || null;
       if (!email) {

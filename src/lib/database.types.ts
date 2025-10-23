@@ -225,6 +225,7 @@ export type Database = {
           full_name: string | null
           id: string
           location: string | null
+          onboarding_completed: boolean | null
           preferred_sports: string[] | null
           role: 'user' | 'moderator' | 'admin'
           stats: Json | null
@@ -238,6 +239,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           location?: string | null
+          onboarding_completed?: boolean | null
           preferred_sports?: string[] | null
           role?: 'user' | 'moderator' | 'admin'
           stats?: Json | null
@@ -251,6 +253,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           location?: string | null
+          onboarding_completed?: boolean | null
           preferred_sports?: string[] | null
           role?: 'user' | 'moderator' | 'admin'
           stats?: Json | null

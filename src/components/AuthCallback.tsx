@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { SupabaseService } from '../lib/supabaseService';
@@ -37,7 +37,7 @@ function AuthCallback() {
         const user = data.session.user;
         console.log('OAuth user authenticated:', user.id);
 
-        // Create user profile from OAuth data
+        // Create optimized user profile from OAuth data
         const userProfile = {
           id: user.id,
           email: user.email || '',
@@ -69,60 +69,40 @@ function AuthCallback() {
           }
         };
 
-        // Try to create user profile in database to avoid orphaned users
-        try {
-          // Check if user profile already exists
-          const existingProfile = await SupabaseService.getUserProfile(user.id);
-          
-          if (!existingProfile) {
-            // Create user profile in database
-            console.log('Creating user profile for OAuth user:', user.id);
-            await SupabaseService.createUserProfile(user.id, {
-              email: userProfile.email,
-              full_name: userProfile.name,
-              username: userProfile.username,
-              avatar_url: userProfile.avatar,
-              bio: userProfile.bio,
-              location: userProfile.location
-            });
-            console.log('✅ User profile created successfully');
-          } else {
-            console.log('✅ User profile already exists');
-            // Check if profile has been customized (not just default Google data)
-            const hasCustomData = existingProfile.bio || 
-                                 (existingProfile.preferences?.sports?.length || 0) > 0 ||
-                                 (existingProfile.name !== user.user_metadata?.full_name);
-            
-            if (!hasCustomData) {
-              console.log('Profile exists but appears to be default Google data, may need onboarding');
-            }
-            
-            // Use existing profile data
-            setUser(existingProfile);
-            setStatus('success');
-            setMessage('Welcome back! Redirecting...');
-            
-            // Redirect logic for existing users
-            const pendingGameId = localStorage.getItem('pendingGameJoin');
-            if (pendingGameId) {
-              localStorage.removeItem('pendingGameJoin');
-              setTimeout(() => navigate(`/game/${pendingGameId}`), 1500);
-            } else {
-              setTimeout(() => navigate('/'), 1500);
-            }
-            return;
-          }
-        } catch (profileError) {
-          console.error('Error creating user profile:', profileError);
-          // Continue with OAuth data even if profile creation fails
-          console.log('⚠️ Using OAuth data without database profile');
-        }
-
-        // Set user in app store
+        // Set user immediately for faster UI response
         setUser(userProfile);
-        
         setStatus('success');
         setMessage('Authentication successful! Redirecting...');
+
+        // Handle profile creation asynchronously (non-blocking)
+        setTimeout(async () => {
+          try {
+            // Check if user profile already exists
+            const existingProfile = await SupabaseService.getUserProfile(user.id);
+            
+            if (!existingProfile) {
+              // Create user profile in database (non-blocking)
+              console.log('Creating user profile for OAuth user:', user.id);
+              await SupabaseService.createUserProfile(user.id, {
+                email: userProfile.email,
+                full_name: userProfile.name,
+                username: userProfile.username,
+                avatar_url: userProfile.avatar,
+                bio: userProfile.bio,
+                location: userProfile.location
+              });
+              console.log('✅ User profile created successfully');
+            } else {
+              console.log('✅ User profile already exists');
+              // Update app store with complete profile data
+              setUser(existingProfile);
+            }
+          } catch (profileError) {
+            console.error('Error creating user profile:', profileError);
+            // Continue with OAuth data - profile creation is non-critical
+            console.log('⚠️ Using OAuth data without database profile');
+          }
+        }, 100); // Small delay to allow UI to update first
 
         // Check for pending game join
         const pendingGameId = localStorage.getItem('pendingGameJoin');
@@ -131,9 +111,9 @@ function AuthCallback() {
           // Redirect to game page
           setTimeout(() => navigate(`/game/${pendingGameId}`), 1500);
         } else {
-          // For new OAuth users, always go through onboarding to set sport preferences
-          // Even though they have name/username from OAuth, they need to select sports
-          setTimeout(() => navigate('/onboarding'), 1500);
+          // For OAuth users, let the ProtectedRoute handle onboarding detection
+          // This ensures consistent behavior with email/password users
+          setTimeout(() => navigate('/'), 1500);
         }
 
       } catch (error) {

@@ -69,6 +69,15 @@ export class SupabaseService {
         throw new Error('Unable to determine user email for profile creation');
       }
       
+      // Ensure userId matches auth.uid() for RLS compatibility
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        throw new Error('User must be authenticated to create profile');
+      }
+      if (userId !== authUser.id) {
+        throw new Error(`User ID mismatch: expected ${authUser.id}, got ${userId}`);
+      }
+      
       // Prepare parameters for the idempotent RPC function
       const profileParams = {
         p_email: email,
@@ -86,7 +95,7 @@ export class SupabaseService {
       console.log('Calling ensure_user_profile RPC with params:', profileParams);
       
       // Use the idempotent RPC function (prevents race conditions)
-      // Use only the 4 parameters the function actually accepts
+      // The RPC function will use auth.uid() internally, ensuring ID consistency
       const { data, error } = await supabase
         .rpc('ensure_user_profile', {
           p_email: profileParams.p_email,
@@ -101,6 +110,22 @@ export class SupabaseService {
       }
       
       console.log('Profile created/updated successfully via RPC:', data);
+      
+      // If onboarding_completed is provided, update it separately
+      if (userData.onboarding_completed !== undefined) {
+        console.log('Updating onboarding_completed field:', userData.onboarding_completed);
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ onboarding_completed: userData.onboarding_completed })
+          .eq('id', userId);
+        
+        if (updateError) {
+          console.error('Error updating onboarding_completed:', updateError);
+        } else {
+          console.log('Successfully updated onboarding_completed field');
+        }
+      }
+      
       return data;
       
     } catch (error) {
@@ -109,118 +134,47 @@ export class SupabaseService {
     }
   }
 
-  static async getUserProfile(userId: string): Promise<User | null> {
+  static async getUserProfile(_userId: string): Promise<User | null> {
     try {
-      console.log('🔍 Getting user profile for:', userId);
-      
-      // Validate userId format
-      if (!userId || userId.trim() === '') {
-        console.log('❌ Invalid user ID provided:', userId);
+      console.log('🔍 Checking auth session...');
+      const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser();
+      if (userErr) {
+        console.error('❌ Auth error:', userErr);
         return null;
       }
-      
-      // Check if current user is authenticated - if not, return null quickly
-      console.log('🔍 Checking if user is authenticated...');
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      console.log('🔍 Current user from auth:', currentUser?.id);
-      
       if (!currentUser) {
-        console.log('ℹ️ Anonymous user cannot access user profiles due to RLS - returning null');
+        console.log('ℹ️ No authenticated user - returning null');
         return null;
       }
-      
-      // Only proceed with query if user is authenticated
-      console.log('🔍 User is authenticated, executing query for user ID:', userId.trim());
-      
-      // Let query complete naturally - no artificial timeouts
-      console.log('🔍 Starting database query...');
-      console.log('🔍 Executing Supabase query...');
-      
-      // Use explicit field selection to avoid PGRST116 coercion errors
+
+      const authId = currentUser.id;
+      console.log('🔍 Authenticated user id:', authId);
+
+      // Read profile for the authenticated user
+      console.log('🔍 Reading profile row...');
       const { data, error } = await supabase
         .from('users')
-        .select(`
-          id,
-          email,
-          username,
-          full_name,
-          avatar_url,
-          bio,
-          location,
-          preferred_sports,
-          role,
-          stats,
-          created_at
-        `)
-        .eq('id', userId.trim())
+        .select('id,email,username,full_name,avatar_url,bio,location,preferred_sports,stats,onboarding_completed,created_at,updated_at')
+        .eq('id', authId)
         .maybeSingle();
-      
-      console.log('🔍 Query completed. Data:', data, 'Error:', error);
-      
+
       if (error) {
-        // Handle PGRST116 specifically - this means data coercion failed
-        if (error.code === 'PGRST116') {
-          console.error('❌ PGRST116 Error: Cannot coerce result to single JSON object');
-          console.error('❌ This usually means multiple rows returned or data type mismatch');
-          
-          // Try a fallback query with just basic fields
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('users')
-            .select('id, email, username, full_name, avatar_url, bio, location, role')
-            .eq('id', userId.trim())
-            .limit(1)
-            .single();
-            
-          if (fallbackError) {
-            throw fallbackError;
-          }
-          
-          console.log('✅ Fallback query succeeded, using basic user data');
-          // Create a minimal user object with fallback data
-          const data = {
-            ...fallbackData,
-            preferred_sports: [],
-            stats: {},
-            created_at: new Date().toISOString()
-          };
-        } else {
-          throw error;
-        }
+        console.error('❌ Read error:', error);
+        return null;
       }
 
       if (!data) {
-        console.log('❌ No user found for ID:', userId);
-        // Let's also check if there are any users in the table
-        const { data: allUsers, error: countError } = await supabase
-          .from('users')
-          .select('id, full_name')
-          .limit(5);
-        console.log('🔍 Sample users in database:', allUsers?.map(u => ({ id: u.id, name: u.full_name })));
+        console.log('ℹ️ No profile found - user needs onboarding');
         return null;
       }
 
-      console.log('✅ User profile loaded:', data?.id, data?.full_name);
-      console.log('🔍 Raw user data from DB:', {
-        id: data?.id,
-        full_name: data?.full_name,
-        username: data?.username,
-        email: data?.email,
-        avatar_url: data?.avatar_url,
-        bio: data?.bio,
-        location: data?.location,
-        preferred_sports: data?.preferred_sports,
-        role: data?.role
-      });
+      console.log('✅ Profile data found:', data);
       const transformedUser = transformUserFromDB(data);
-      console.log('🔍 Transformed user (complete):', transformedUser);
+      console.log('🔍 Transformed user:', transformedUser);
       return transformedUser;
-    } catch (error) {
-      console.error('❌ getUserProfile failed:', error);
-      if (error instanceof Error && error.message === 'getUserProfile timeout') {
-        // Return null on timeout to prevent infinite loading
-        return null;
-      }
-      return null; // Return null instead of throwing to prevent app crashes
+    } catch (err) {
+      console.error('❌ getUserProfile failed:', err);
+      return null;
     }
   }
 
@@ -268,6 +222,7 @@ export class SupabaseService {
     if (updates.location !== undefined) updateData.location = updates.location;
     if (updates.preferred_sports !== undefined) updateData.preferred_sports = updates.preferred_sports;
     if (updates.sports_preferences !== undefined) updateData.preferred_sports = updates.sports_preferences;
+    if (updates.onboarding_completed !== undefined) updateData.onboarding_completed = updates.onboarding_completed;
 
     // Only include role if it's provided and the column exists
     if (updates.role) {

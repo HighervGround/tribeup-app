@@ -119,12 +119,14 @@ export function AppRouter() {
               <Route
                 path="onboarding"
                 element={
-                  <Suspense fallback={<RouteLoader text="Loading onboarding..." />}>
-                    <Onboarding onComplete={(data) => {
-                      console.log('Onboarding completed with data:', data);
-                      // The onboarding component handles navigation internally
-                    }} />
-                  </Suspense>
+                  <ProtectedRoute skipOnboardingCheck={true}>
+                    <Suspense fallback={<RouteLoader text="Loading onboarding..." />}>
+                      <Onboarding onComplete={(data) => {
+                        console.log('Onboarding completed with data:', data);
+                        // The onboarding component handles navigation internally
+                      }} />
+                    </Suspense>
+                  </ProtectedRoute>
                 }
               />
 

@@ -73,40 +73,59 @@ function Onboarding({ onComplete }: OnboardingProps) {
         locationPermission
       };
       try {
-        // Use upsert to create or update the profile with onboarding completion
-        if (user?.id) {
-          console.log('Upserting profile with onboarding completion...');
-          const { error } = await supabase
-            .from('users')
-            .upsert({
-              id: user.id,                    // MUST equal auth.uid()
-              email: user.email ?? null,
-              full_name: `${payload.firstName} ${payload.lastName}`.trim(),
-              username: `${payload.firstName}_${payload.lastName}`.toLowerCase().replace(/\s+/g, '_'),
-              bio: payload.bio,
-              preferred_sports: payload.selectedSports ?? [],
-              onboarding_completed: true,    // Mark as completed
-            }, { onConflict: 'id' });
+        // Get authenticated user
+        const { data: { user: authUser }, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !authUser) throw userErr ?? new Error('No user after sign-in');
 
-          if (error) {
-            console.error('❌ Profile upsert error:', error);
-            toast.error('Failed to save profile. Please try again.');
-            return;
-          }
+        console.log('🎯 [Onboarding] Completing onboarding for user:', authUser.id);
 
-          console.log('✅ Profile upserted successfully');
-          
-          // Update the app store with the latest profile data
-          const updatedProfile = await SupabaseService.getUserProfile(user.id);
-          if (updatedProfile) {
-            const { useAppStore } = await import('../store/appStore');
-            useAppStore.getState().setUser(updatedProfile);
-            console.log('✅ Updated app store with completed onboarding profile');
-          }
-          
-          // Clear localStorage flag (no longer needed with proper DB tracking)
-          localStorage.removeItem(`onboarding_completed_${user.id}`);
-          console.log('✅ Cleared localStorage onboarding flag');
+        // First, upsert the profile with all the onboarding data
+        const { error: upsertError } = await supabase.from('users').upsert(
+          {
+            auth_user_id: authUser.id,
+            email: authUser.email ?? null,
+            full_name: `${payload.firstName} ${payload.lastName}`.trim(),
+            username: `${payload.firstName}_${payload.lastName}`.toLowerCase().replace(/\s+/g, '_'),
+            bio: payload.bio,
+            preferred_sports: payload.selectedSports ?? [],
+            location: payload.locationPermission === 'granted' ? 'Location enabled' : null,
+          },
+          { onConflict: 'auth_user_id' }
+        );
+
+        if (upsertError) {
+          console.error('❌ [Onboarding] Error upserting profile:', upsertError);
+          toast.error('Failed to save profile. Please try again.');
+          return;
+        }
+
+        console.log('✅ [Onboarding] Profile upserted successfully');
+
+        // Then, mark onboarding as completed
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ onboarding_completed: true })
+          .eq('auth_user_id', authUser.id);
+
+        if (updateError) {
+          console.error('❌ [Onboarding] Error completing onboarding:', updateError);
+          toast.error('Failed to complete onboarding. Please try again.');
+          return;
+        }
+
+        console.log('✅ [Onboarding] Onboarding completed successfully');
+        
+        // Update the app store with the latest profile data
+        const updatedProfile = await SupabaseService.getUserProfile(authUser.id);
+        if (updatedProfile) {
+          const { useAppStore } = await import('../store/appStore');
+          useAppStore.getState().setUser(updatedProfile);
+          console.log('✅ [Onboarding] Updated app store with completed onboarding profile');
+        }
+        
+        // Clear localStorage flag (no longer needed with proper DB tracking)
+        localStorage.removeItem(`onboarding_completed_${authUser.id}`);
+        console.log('✅ [Onboarding] Cleared localStorage onboarding flag');
         }
         
         // Notify caller for any additional side-effects

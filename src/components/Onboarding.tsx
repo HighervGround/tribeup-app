@@ -18,6 +18,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useNavigate } from 'react-router-dom';
 import { useSimpleAuth } from '../providers/SimpleAuthProvider';
 import { SupabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 interface OnboardingProps {
@@ -72,45 +73,58 @@ function Onboarding({ onComplete }: OnboardingProps) {
         locationPermission
       };
       try {
-        // Attempt to persist profile if authenticated
+        // Use upsert to create or update the profile with onboarding completion
         if (user?.id) {
-          // Check if profile exists first
-          const existingProfile = await SupabaseService.getUserProfile(user.id);
-          
-          if (existingProfile) {
-            // Update existing profile with onboarding data
-            console.log('Updating existing profile with onboarding data');
-            await SupabaseService.updateUserProfile(user.id, {
+          console.log('Upserting profile with onboarding completion...');
+          const { error } = await supabase
+            .from('users')
+            .upsert({
+              id: user.id,                    // MUST equal auth.uid()
+              email: user.email ?? null,
               full_name: `${payload.firstName} ${payload.lastName}`.trim(),
               username: `${payload.firstName}_${payload.lastName}`.toLowerCase().replace(/\s+/g, '_'),
               bio: payload.bio,
-              preferred_sports: payload.selectedSports || []
-            });
-          } else {
-            // Create new profile
-            console.log('Creating new profile with onboarding data');
-            await SupabaseService.createUserProfile(user.id, payload);
+              preferred_sports: payload.selectedSports ?? [],
+              onboarding_completed: true,    // Mark as completed
+            }, { onConflict: 'id' });
+
+          if (error) {
+            console.error('❌ Profile upsert error:', error);
+            toast.error('Failed to save profile. Please try again.');
+            return;
           }
-        }
-        // Refresh user profile in app store to reflect onboarding changes
-        if (user?.id) {
+
+          console.log('✅ Profile upserted successfully');
+          
+          // Update the app store with the latest profile data
           const updatedProfile = await SupabaseService.getUserProfile(user.id);
           if (updatedProfile) {
-            // Update the app store with the latest profile data
             const { useAppStore } = await import('../store/appStore');
             useAppStore.getState().setUser(updatedProfile);
+            console.log('✅ Updated app store with completed onboarding profile');
           }
+          
+          // Clear localStorage flag (no longer needed with proper DB tracking)
+          localStorage.removeItem(`onboarding_completed_${user.id}`);
+          console.log('✅ Cleared localStorage onboarding flag');
         }
         
         // Notify caller for any additional side-effects
         onComplete?.(payload);
         toast.success("You're all set!", { description: 'Your profile is ready. Enjoy discovering games.' });
         
+        // Add a small delay to ensure the profile update is processed
+        setTimeout(() => {
+          navigate('/', { replace: true, state: { fromOnboarding: true } });
+        }, 1000);
+        
       } catch (err) {
         console.error('Error completing onboarding:', err);
         toast.error('Could not save your profile. You can update it anytime in Profile.');
-      } finally {
-        navigate('/', { replace: true, state: { fromOnboarding: true } });
+        // Still navigate to home even if there's an error
+        setTimeout(() => {
+          navigate('/', { replace: true, state: { fromOnboarding: true } });
+        }, 1000);
       }
     }
   };

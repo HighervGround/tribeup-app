@@ -126,92 +126,119 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       console.warn('Could not check localStorage for session:', error);
     }
 
-    // Handle user profile creation/loading
+        // Handle user profile creation/loading - OPTIMIZED VERSION
     const handleUserProfile = async (user: User) => {
       try {
         console.log('🔍 Handling user profile for authenticated user:', user.id);
         
-        // Ensure we have a valid session before profile operations
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.warn('⚠️ No session found, cannot create profile');
+        // Check if profile creation is already in progress
+        if (profileCreationInProgress.has(user.id)) {
+          console.log('🔄 Profile creation already in progress for user:', user.id);
           return;
         }
         
-        // Check if profile exists
-        let profile = await SupabaseService.getUserProfile(user.id);
-        
-        if (!profile) {
-          console.log('🚨 No profile found - this might be an orphaned user from auth.users');
-          console.log('🔧 User details:', {
-            id: user.id,
-            email: user.email,
-            metadata: user.user_metadata
-          });
-          
-          // Prevent multiple simultaneous profile creation attempts
-          if (profileCreationInProgress.has(user.id)) {
-            console.log('🔄 Profile creation already in progress for user:', user.id);
-            return;
+        // Create basic user object immediately for faster UI response
+        const basicUser = {
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          username: user.user_metadata?.username || user.user_metadata?.preferred_username || user.email?.split('@')[0] || 'user',
+          avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+          role: 'user' as const,
+          preferences: {
+            theme: 'auto' as const,
+            highContrast: false,
+            largeText: false,
+            reducedMotion: false,
+            colorBlindFriendly: false,
+            notifications: { push: true, email: false, gameReminders: true },
+            privacy: { locationSharing: true, profileVisibility: 'public' as const },
+            sports: []
           }
-          
-          // Mark profile creation as in progress
-          setProfileCreationInProgress(prev => new Set(prev).add(user.id));
-          
-          try {
-            // Create profile if it doesn't exist (prevents orphaned users!)
-            console.log('🔧 Creating missing user profile for authenticated user:', user.id);
-          
-            // Use the idempotent ensure_user_profile RPC function
-            const profileParams = {
-              p_email: user.email || session.user.email,
-              p_username: user.user_metadata?.username || user.email?.split('@')[0] || `user_${Date.now()}`,
-              p_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              p_avatar_url: user.user_metadata?.avatar_url || null,
-              p_bio: '',
-              p_location: '',
-              p_preferred_sports: []
-            };
-            
-            console.log('📝 Calling ensure_user_profile RPC with params:', profileParams);
-            
-            // Call the idempotent RPC function (prevents race conditions)
-            // Use only the 4 parameters the function actually accepts
-            const { data: newProfile, error } = await supabase
-              .rpc('ensure_user_profile', {
-                p_email: profileParams.p_email,
-                p_username: profileParams.p_username,
-                p_full_name: profileParams.p_full_name,
-                p_avatar_url: profileParams.p_avatar_url,
-              });
-              
-            if (error) {
-              console.error('❌ Profile creation via RPC failed:', error);
-              throw error;
-            } else {
-              console.log('✅ Profile created/updated via RPC successfully:', newProfile);
-              profile = newProfile;
-            }
-          } finally {
-            // Clear the in-progress flag
-            setProfileCreationInProgress(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(user.id);
-              return newSet;
-            });
-          }
-        }
+        };
         
-        // Update app store with complete profile (only if different from current)
-        if (profile && mounted) {
+        // Set basic user immediately
+        if (mounted) {
           const currentUser = useAppStore.getState().user;
-          if (!currentUser || currentUser.id !== profile.id) {
-            console.log('🔄 Setting new user profile:', profile.id);
-            setAppUser(profile);
-          } else {
-            console.log('🔄 Skipping duplicate user profile update:', profile.id);
+          if (!currentUser || currentUser.id !== user.id) {
+            console.log('🔄 Setting basic user profile immediately:', user.id);
+            setAppUser(basicUser);
           }
         }
+        
+        // Handle database profile creation synchronously to prevent race conditions
+        (async () => {
+          try {
+            // Ensure we have a valid session before profile operations
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+              console.warn('⚠️ No session found, cannot create profile');
+              return;
+            }
+            
+            // Check if profile exists
+            let profile = await SupabaseService.getUserProfile(user.id);
+            
+            if (!profile) {
+              console.log('🚨 No profile found - creating database profile');
+              
+              // Mark profile creation as in progress
+              setProfileCreationInProgress(prev => new Set(prev).add(user.id));
+              
+              try {
+                // Use the idempotent ensure_user_profile RPC function
+                const profileParams = {
+                  p_email: user.email || session.user.email,
+                  p_username: user.user_metadata?.username || 
+                             user.user_metadata?.preferred_username || 
+                             user.email?.split('@')[0] || 
+                             `user_${Date.now()}`,
+                  p_full_name: user.user_metadata?.full_name || 
+                              user.user_metadata?.name || 
+                              user.email?.split('@')[0] || 
+                              'User',
+                  p_avatar_url: user.user_metadata?.avatar_url || 
+                               user.user_metadata?.picture || 
+                               null,
+                };
+                
+                console.log('📝 Calling ensure_user_profile RPC with params:', profileParams);
+                
+                // Call the idempotent RPC function (prevents race conditions)
+                const { data: newProfile, error } = await supabase
+                  .rpc('ensure_user_profile', profileParams);
+                  
+                if (error) {
+                  console.error('❌ Profile creation via RPC failed:', error);
+                  throw error;
+                } else {
+                  console.log('✅ Profile created/updated via RPC successfully:', newProfile);
+                  profile = newProfile;
+                }
+              } finally {
+                // Clear the in-progress flag
+                setProfileCreationInProgress(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(user.id);
+                  return newSet;
+                });
+              }
+            }
+            
+            // Update app store with complete profile (only if different from current)
+            if (profile && mounted) {
+              const currentUser = useAppStore.getState().user;
+              if (!currentUser || currentUser.id !== profile.id) {
+                console.log('🔄 Updating with complete user profile:', profile.id);
+                setAppUser(profile);
+              }
+            }
+          } catch (error) {
+            console.error('Profile handling error:', error);
+            // Keep using basic user object - profile creation is non-critical
+          }
+        })(); // Execute immediately without delay
+        
       } catch (error) {
         console.error('Profile handling error:', error);
         // Create basic user object as fallback (only if no current user)
@@ -222,9 +249,9 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             setAppUser({
               id: user.id,
               email: user.email || '',
-              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              username: user.email?.split('@')[0] || 'user',
-              avatar: user.user_metadata?.avatar_url || '',
+              name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+              username: user.user_metadata?.username || user.user_metadata?.preferred_username || user.email?.split('@')[0] || 'user',
+              avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
               role: 'user',
               preferences: {
                 theme: 'auto',
@@ -237,8 +264,6 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
                 sports: []
               }
             });
-          } else {
-            console.log('🔄 Skipping duplicate fallback user update:', user.id);
           }
         }
       }

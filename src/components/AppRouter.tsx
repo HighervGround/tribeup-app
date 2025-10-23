@@ -4,6 +4,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { QueryErrorBoundary } from './QueryErrorBoundary';
 import { LoadingSpinner } from './ui/loading-spinner';
 import { ProtectedRoute } from './ProtectedRoute';
+import AuthGate from './AuthGate';
 import AppContent from './AppContent';
 
 // Lazy load components for better performance
@@ -52,11 +53,15 @@ export function AppRouter() {
           <AppWrapper>
             <Suspense fallback={<RouteLoader text="Loading application..." />}>
               <Routes>
-              {/* Protected Routes - require authentication */}
-              <Route path="/" element={
-                <ProtectedRoute>
+              {/* Public Routes */}
+              <Route path="/login" element={<Auth />} />
+              <Route path="/onboarding" element={<Onboarding onComplete={() => {}} />} />
+              
+              {/* Protected Routes - require authentication and onboarding */}
+              <Route path="/*" element={
+                <AuthGate>
                   <AppContent />
-                </ProtectedRoute>
+                </AuthGate>
               }>
                 {/* Main App Routes */}
                 <Route index element={<HomeScreen />} />
@@ -105,29 +110,14 @@ export function AppRouter() {
               <Route
                 path="/auth"
                 element={
-                  <ProtectedRoute requireAuth={false}>
-                    <Suspense fallback={<RouteLoader text="Loading authentication..." />}>
-                      <Auth />
-                    </Suspense>
-                  </ProtectedRoute>
+                  <Suspense fallback={<RouteLoader text="Loading authentication..." />}>
+                    <Auth />
+                  </Suspense>
                 }
               />
               <Route
                 path="/auth/callback"
                 element={<AuthCallback />}
-              />
-              <Route
-                path="onboarding"
-                element={
-                  <ProtectedRoute skipOnboardingCheck={true}>
-                    <Suspense fallback={<RouteLoader text="Loading onboarding..." />}>
-                      <Onboarding onComplete={(data) => {
-                        console.log('Onboarding completed with data:', data);
-                        // The onboarding component handles navigation internally
-                      }} />
-                    </Suspense>
-                  </ProtectedRoute>
-                }
               />
 
               {/* Legal Pages */}

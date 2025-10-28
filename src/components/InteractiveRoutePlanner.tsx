@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { X, Navigation } from 'lucide-react';
 import { computeRoute, decodePolyline } from '../lib/routesApi';
+import { loadGoogleMapsApi } from '../lib/googleMapsLoader';
 
 interface Waypoint {
   lat: number;
@@ -37,13 +37,7 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
     const apiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey || !mapRef.current) return;
 
-    const loader = new Loader({
-      apiKey,
-      version: 'weekly',
-      libraries: ['places', 'geometry'] // Add geometry for distance calculations
-    });
-
-    loader.load().then(() => {
+    loadGoogleMapsApi(apiKey).then(() => {
       if (!mapRef.current) return;
 
       const map = new google.maps.Map(mapRef.current, {

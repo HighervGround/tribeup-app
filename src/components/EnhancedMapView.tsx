@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { loadGoogleMapsApi } from '../lib/googleMapsLoader';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -124,13 +124,7 @@ function EnhancedMapView({
           throw new Error('Google Maps API key not found. Please set VITE_GOOGLE_MAPS_API_KEY in your environment variables.');
         }
         
-        const loader = new Loader({
-          apiKey,
-          version: 'weekly',
-          libraries: ['places', 'geometry']
-        });
-
-        await loader.load();
+        await loadGoogleMapsApi(apiKey);
         
         if (!mapRef.current) {
           console.error('Map container ref not available');

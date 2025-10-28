@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { LoadingSpinner } from './ui/loading-spinner';
 
@@ -10,90 +10,145 @@ interface AuthGateProps {
 export default function AuthGate({ children }: AuthGateProps) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const checkInProgressRef = useRef(false);
+  const lastCheckRef = useRef<number>(0);
 
   useEffect(() => {
     let isMounted = true;
+    let debounceTimer: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
 
-    const run = async () => {
+    // Timeout to prevent infinite loading
+    timeoutId = setTimeout(() => {
+      if (isMounted) {
+        console.warn('⚠️ [AuthGate] Loading timeout, forcing completion');
+        setLoading(false);
+        checkInProgressRef.current = false;
+      }
+    }, 3000);
+
+    const checkAuth = async () => {
+      // Prevent multiple simultaneous checks
+      if (checkInProgressRef.current) {
+        console.log('🔐 [AuthGate] Auth check already in progress, skipping');
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      // Debounce rapid auth checks (within 500ms)
+      const now = Date.now();
+      if (now - lastCheckRef.current < 500) {
+        console.log('🔐 [AuthGate] Debouncing rapid auth check');
+        if (isMounted) setLoading(false);
+        return;
+      }
+      lastCheckRef.current = now;
+      checkInProgressRef.current = true;
+
       try {
         console.log('🔐 [AuthGate] Checking authentication...');
         
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.user) {
-          console.log('🔐 [AuthGate] No session found, redirecting to login');
-          navigate('/login', { replace: true });
+          // Only redirect to login if we're not already there
+          if (location.pathname !== '/login') {
+            console.log('🔐 [AuthGate] No session found, redirecting to login');
+            navigate('/login', { replace: true });
+          }
+          if (isMounted) setLoading(false);
+          checkInProgressRef.current = false;
           return;
         }
 
         const user = session.user;
         console.log('🔐 [AuthGate] User found:', user.id);
 
-        // Ensure user row exists with auth_user_id
-        console.log('🔐 [AuthGate] Ensuring user row exists...');
-        const { error: upsertErr } = await supabase.from('users').upsert(
-          { 
-            auth_user_id: user.id, 
-            email: user.email ?? null 
-          },
-          { onConflict: 'auth_user_id' }
-        );
-
-        if (upsertErr) {
-          console.error('❌ [AuthGate] Error upserting user:', upsertErr);
-          throw upsertErr;
-        }
-
-        console.log('✅ [AuthGate] User row ensured');
-
-        // Read onboarding status
+        // Profile creation is handled by SimpleAuthProvider/ensure_user_profile RPC
+        // RLS policy (auth.uid() = id) ensures we only get current user's row
         console.log('🔐 [AuthGate] Checking onboarding status...');
-        const { data: rows, error: selErr } = await supabase
+        const { data: userRow, error: selErr } = await supabase
           .from('users')
           .select('onboarding_completed')
-          .eq('auth_user_id', user.id)
-          .limit(1);
+          .maybeSingle();
 
         if (selErr) {
           console.error('❌ [AuthGate] Error reading onboarding status:', selErr);
-          throw selErr;
+          // Profile might not exist yet - let SimpleAuthProvider create it
+          // Don't block navigation, just assume onboarding not done
+          console.log('⚠️ [AuthGate] Profile may not exist yet, allowing navigation');
         }
 
-        const onboardingDone = rows?.[0]?.onboarding_completed === true;
+        const onboardingDone = userRow?.onboarding_completed === true;
         console.log('🔐 [AuthGate] Onboarding status:', { 
           onboardingDone, 
-          rows: rows?.[0] 
+          userRow 
         });
 
         if (!onboardingDone) {
-          console.log('🔐 [AuthGate] Onboarding not completed, redirecting to onboarding');
-          navigate('/onboarding', { replace: true });
+          // Only redirect if we're not already on onboarding page
+          if (location.pathname !== '/onboarding') {
+            console.log('🔐 [AuthGate] Onboarding not completed, redirecting to onboarding');
+            navigate('/onboarding', { replace: true });
+          }
         } else {
           console.log('✅ [AuthGate] User authenticated and onboarded');
+          // Redirect authenticated users away from login/onboarding pages
+          if (location.pathname === '/login' || location.pathname === '/onboarding') {
+            console.log('🔐 [AuthGate] Redirecting authenticated user to home');
+            navigate('/', { replace: true });
+          }
         }
       } catch (e) {
         console.error('❌ [AuthGate] Error:', e);
-        navigate('/login', { replace: true });
+        if (location.pathname !== '/login') {
+          navigate('/login', { replace: true });
+        }
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          checkInProgressRef.current = false;
+        }
       }
     };
 
-    run();
+    // Initial check
+    checkAuth();
 
-    // React to auth changes (e.g., sign-in/out)
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        console.log('🔐 [AuthGate] Auth state changed - no user, redirecting to login');
-        navigate('/login', { replace: true });
+    // React to auth changes (e.g., sign-in/out) with debouncing
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      // Clear any pending debounce timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
       }
+
+      // Debounce auth state changes
+      debounceTimer = setTimeout(() => {
+        if (!session?.user) {
+          // Only redirect if we're not already on login page
+          if (location.pathname !== '/login') {
+            console.log('🔐 [AuthGate] Auth state changed - no user, redirecting to login');
+            navigate('/login', { replace: true });
+          }
+        } else {
+          // User signed in - check auth and onboarding
+          console.log('🔐 [AuthGate] Auth state changed - user signed in, checking auth');
+          checkAuth();
+        }
+      }, 100); // Small debounce to prevent rapid-fire redirects
     });
 
     return () => {
       isMounted = false;
+      checkInProgressRef.current = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (timeoutId) clearTimeout(timeoutId);
       sub.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   if (loading) {
     return (

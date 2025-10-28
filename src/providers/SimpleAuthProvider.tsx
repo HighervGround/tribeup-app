@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, transformUserFromDB } from '../lib/supabase';
 import { SupabaseService } from '../lib/supabaseService';
 import { useAppStore } from '../store/appStore';
 import { ProfileEnsurer } from '../components/ProfileEnsurer';
@@ -212,8 +212,13 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
                   console.error('❌ Profile creation via RPC failed:', error);
                   throw error;
                 } else {
-                  console.log('✅ Profile created/updated via RPC successfully:', newProfile);
-                  profile = newProfile;
+                  console.log('✅ Profile created/updated via RPC successfully');
+                  // RPC returns the full user row - use it directly
+                  if (newProfile) {
+                    profile = transformUserFromDB(newProfile as any);
+                  } else {
+                    profile = await SupabaseService.getUserProfile(user.id);
+                  }
                 }
               } finally {
                 // Clear the in-progress flag
@@ -225,12 +230,33 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               }
             }
             
-            // Update app store with complete profile (only if different from current)
+            // Update app store with complete profile from database
+            // Always update to ensure we have the latest full profile data (preferred_sports, bio, etc.)
             if (profile && mounted) {
               const currentUser = useAppStore.getState().user;
+              // Only update if this is a different user OR if we don't have the same profile loaded
+              // (profile from DB has more complete data than basic user object)
               if (!currentUser || currentUser.id !== profile.id) {
                 console.log('🔄 Updating with complete user profile:', profile.id);
                 setAppUser(profile);
+              } else {
+                // Same user - update if database profile has more complete data
+                // Check if profile has sports/preferences that basic user doesn't have
+                const hasMoreData = (
+                  (profile.preferences?.sports?.length ?? 0) > 0 ||
+                  profile.bio ||
+                  profile.location ||
+                  currentUser.preferences?.sports?.length === 0
+                );
+                
+                if (hasMoreData) {
+                  console.log('🔄 Updating profile with complete database data:', {
+                    sports: profile.preferences?.sports,
+                    bio: profile.bio,
+                    location: profile.location
+                  });
+                  setAppUser(profile);
+                }
               }
             }
           } catch (error) {

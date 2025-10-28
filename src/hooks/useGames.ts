@@ -173,7 +173,8 @@ export function useGameParticipants(gameId: string) {
     queryKey: gameKeys.participants(gameId),
     queryFn: async () => {
       console.log('🔍 Fetching participants for game:', gameId);
-      const participants = await getGameParticipants(gameId);
+      // Use SupabaseService which joins with user data
+      const participants = await SupabaseService.getGameParticipants(gameId);
       console.log('✅ Participants fetched:', participants.length);
       return participants;
     },

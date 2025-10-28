@@ -7,7 +7,9 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { ArrowLeft, CheckCircle, Loader2, MapPin, Clock, Users, DollarSign, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Loader2, MapPin, Clock, Users, DollarSign, AlertCircle, Navigation } from 'lucide-react';
+import { InteractiveRoutePlanner } from './InteractiveRoutePlanner';
+import { toast } from 'sonner';
 import { useAppStore } from '../store/appStore';
 import { SupabaseService } from '../lib/supabaseService';
 import { useLocationSearch } from '../hooks/useLocationSearch';
@@ -42,6 +44,9 @@ const sportOptions = [
   { value: 'volleyball', label: 'Volleyball', icon: '🏐' },
   { value: 'football', label: 'Football', icon: '🏈' },
   { value: 'baseball', label: 'Baseball', icon: '⚾' },
+  { value: 'running', label: 'Running', icon: '🏃' },
+  { value: 'cycling', label: 'Cycling', icon: '🚴' },
+  { value: 'hiking', label: 'Hiking', icon: '🥾' },
 ];
 
 const steps = [
@@ -89,7 +94,8 @@ function CreateGame() {
     longitude: null as number | null,
     maxPlayers: '10', // Will be updated from system config
     cost: 'FREE',
-    imageUrl: ''
+    imageUrl: '',
+    plannedRoute: null as any
   });
 
   // Load system configuration on component mount
@@ -160,6 +166,7 @@ function CreateGame() {
     golf: { maxPlayers: 4 },
     running: { maxPlayers: 20 },
     cycling: { maxPlayers: 15 },
+    hiking: { maxPlayers: 20 },
     swimming: { maxPlayers: 8 },
     yoga: { maxPlayers: 15 },
     crossfit: { maxPlayers: 12 }
@@ -413,6 +420,7 @@ function CreateGame() {
         const updated = [value, ...recentLocations.filter(loc => loc !== value)].slice(0, 5);
         setRecentLocations(updated);
         localStorage.setItem('recentGameLocations', JSON.stringify(updated));
+        
       }
       
       return newData;
@@ -528,7 +536,8 @@ function CreateGame() {
         maxPlayers: parseInt(formData.maxPlayers) || 10,
         cost: formData.cost || 'Free',
         description: '', // Default empty description
-        imageUrl: formData.imageUrl
+        imageUrl: formData.imageUrl,
+        plannedRoute: formData.plannedRoute || null
         // Note: Removed skill-related fields as they don't exist in current database schema
         // TODO: Add skill fields to database schema if needed
       };
@@ -973,6 +982,65 @@ function CreateGame() {
                     </p>
                   )}
                 </div>
+
+                {/* Route Planning for Running/Hiking/Cycling */}
+                {['running', 'hiking', 'cycling'].includes(formData.sport.toLowerCase()) && (
+                  <div className="space-y-2 mt-6">
+                    <label className="block text-sm font-medium text-foreground flex items-center gap-2">
+                      <Navigation className="w-4 h-4" />
+                      Plan Route (Optional)
+                    </label>
+                    <div className="border rounded-lg p-4 bg-muted/50 space-y-3">
+                      {formData.plannedRoute ? (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-green-50 dark:bg-green-950 rounded border border-green-200 dark:border-green-800">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                                  ✓ Route saved
+                                </p>
+                                <p className="text-xs text-green-700 dark:text-green-300">
+                                  {formData.plannedRoute.path?.length || 0} waypoints • {formData.plannedRoute.distance || 'Distance calculated on save'}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, plannedRoute: null }));
+                                }}
+                                className="text-xs"
+                              >
+                                Clear
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        formData.latitude && formData.longitude ? (
+                          <InteractiveRoutePlanner
+                            centerLat={formData.latitude}
+                            centerLng={formData.longitude}
+                            onRouteSave={(route) => {
+                              console.log('💾 [CreateGame] Route saved callback:', route);
+                              setFormData(prev => {
+                                const updated = { ...prev, plannedRoute: route };
+                                console.log('💾 [CreateGame] Updated formData with route:', updated.plannedRoute);
+                                return updated;
+                              });
+                            }}
+                            sport={formData.sport}
+                          />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Please set your game location above first, then you can plan your route.
+                          </p>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

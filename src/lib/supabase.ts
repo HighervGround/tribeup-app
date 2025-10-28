@@ -107,7 +107,15 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     sport: dbGame.sport,
     date: dbGame.date,
     time: dbGame.time,
-    duration: dbGame.duration || 60, // Default to 60 minutes if not set
+    duration: (() => {
+      const dur = (dbGame as any).duration;
+      // Handle null, undefined, or invalid values
+      if (dur == null) return 60;
+      // Convert string to number if needed
+      const num = typeof dur === 'number' ? dur : parseInt(dur, 10);
+      // Ensure it's a valid positive number
+      return (isNaN(num) || num <= 0) ? 60 : num;
+    })(),
     location: dbGame.location,
     latitude: dbGame.latitude,
     longitude: dbGame.longitude,
@@ -122,7 +130,17 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     creatorId: dbGame.creator_id,
     creatorData,
     createdAt: dbGame.created_at,
+    // planned_route is JSONB, so it's already an object - no need to parse
+    plannedRoute: (dbGame as any).planned_route || undefined,
   };
+  
+  // Debug log route transformation
+  if ((dbGame as any).planned_route) {
+    console.log('🗺️ [transformGameFromDB] Route transformed:', {
+      original: (dbGame as any).planned_route,
+      transformed: (dbGame as any).planned_route
+    });
+  }
 };
 
 export const transformUserFromDB = (dbUser: Database['public']['Tables']['users']['Row']): any => ({

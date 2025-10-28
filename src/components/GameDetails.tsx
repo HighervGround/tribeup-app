@@ -99,6 +99,26 @@ function GameDetails() {
     }));
   }, [participants, game?.creator_id]);
 
+  // Debug: Log route data structure
+  useEffect(() => {
+    if (game?.plannedRoute) {
+      console.log('🗺️ [GameDetails] Planned route data:', game.plannedRoute);
+      console.log('🗺️ [GameDetails] Route keys:', Object.keys(game.plannedRoute));
+    }
+  }, [game?.plannedRoute]);
+
+  // Debug: Log game data including duration
+  useEffect(() => {
+    if (game) {
+      console.log('🎮 [GameDetails] Game data:', {
+        id: game.id,
+        duration: game.duration,
+        durationType: typeof game.duration,
+        durationValue: game.duration
+      });
+    }
+  }, [game?.duration]);
+
   // Precompute formatted date/time labels for header and calendar
   const headerInfo = useMemo(() => {
     if (!game) return { label: '', aria: '' };
@@ -462,7 +482,29 @@ function GameDetails() {
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <div>2 hours</div>
+                  <div>
+                    {(() => {
+                      // Ensure duration is a valid number
+                      let minutes = typeof game.duration === 'number' ? game.duration : parseInt(game.duration as any) || 60;
+                      if (isNaN(minutes) || minutes <= 0) {
+                        minutes = 60; // Default fallback
+                      }
+                      
+                      if (minutes < 60) {
+                        return `${minutes} min`;
+                      } else if (minutes === 60) {
+                        return '1 hour';
+                      } else {
+                        const hours = Math.floor(minutes / 60);
+                        const remainingMinutes = minutes % 60;
+                        if (remainingMinutes === 0) {
+                          return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+                        } else {
+                          return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${remainingMinutes} min`;
+                        }
+                      }
+                    })()}
+                  </div>
                   <div className="text-sm text-muted-foreground">Duration</div>
                 </div>
               </div>
@@ -617,6 +659,248 @@ function GameDetails() {
             })()}
           />
         )}
+
+        {/* Planned Route - for running, hiking, cycling */}
+        {(() => {
+          const isRouteSport = ['running', 'hiking', 'cycling'].includes(game.sport.toLowerCase());
+          const hasRoute = !!game.plannedRoute;
+          
+          console.log('🗺️ [GameDetails] Route check:', {
+            sport: game.sport,
+            isRouteSport,
+            hasRoute,
+            plannedRoute: game.plannedRoute,
+            routeType: typeof game.plannedRoute,
+            routeKeys: game.plannedRoute ? Object.keys(game.plannedRoute) : []
+          });
+          
+          if (!isRouteSport) return null;
+          
+          return hasRoute ? (
+            <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Navigation className="w-5 h-5" />
+                Planned Route
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {game.plannedRoute.name && (
+                  <div>
+                    <h4 className="font-medium mb-1">{game.plannedRoute.name}</h4>
+                    {game.plannedRoute.description && (
+                      <p className="text-sm text-muted-foreground">{game.plannedRoute.description}</p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Show distance - handle multiple formats */}
+                {(game.plannedRoute.distance || game.plannedRoute.distance_meters || game.plannedRoute.distance_km) && (
+                  <div className="flex items-center gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">
+                        {(() => {
+                          if (game.plannedRoute.distance) return game.plannedRoute.distance;
+                          if (game.plannedRoute.distance_meters) return `${(game.plannedRoute.distance_meters / 1000).toFixed(2)} km`;
+                          if (game.plannedRoute.distance_km) return `${game.plannedRoute.distance_km} km`;
+                          return 'N/A';
+                        })()}
+                      </span>
+                      <span className="text-muted-foreground ml-1">distance</span>
+                    </div>
+                    {(game.plannedRoute.elevation || game.plannedRoute.elevation_gain) && (
+                      <div>
+                        <span className="font-medium">
+                          {(() => {
+                            if (game.plannedRoute.elevation) return game.plannedRoute.elevation;
+                            if (game.plannedRoute.elevation_gain) return `${game.plannedRoute.elevation_gain}m`;
+                            return 'N/A';
+                          })()}
+                        </span>
+                        <span className="text-muted-foreground ml-1">elevation</span>
+                      </div>
+                    )}
+                    {(game.plannedRoute.duration || game.plannedRoute.estimated_duration) && (
+                      <div>
+                        <span className="font-medium">
+                          {game.plannedRoute.duration || game.plannedRoute.estimated_duration}
+                        </span>
+                        <span className="text-muted-foreground ml-1">estimated time</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Show route path/coordinates using Google Maps Static API */}
+                {(() => {
+                  // Try different path structures
+                  const path = game.plannedRoute.path || game.plannedRoute.coordinates || game.plannedRoute.waypoints;
+                  
+                  if (path && Array.isArray(path) && path.length > 0) {
+                    // Normalize coordinate format helper
+                    const getLat = (p: any): number | null => {
+                      if (!p) return null;
+                      if (typeof p === 'number') return p;
+                      if (p.lat !== undefined) return p.lat;
+                      if (p.latitude !== undefined) return p.latitude;
+                      if (Array.isArray(p)) return p[1];
+                      return null;
+                    };
+                    
+                    const getLng = (p: any): number | null => {
+                      if (!p) return null;
+                      if (typeof p === 'number') return p;
+                      if (p.lng !== undefined) return p.lng;
+                      if (p.lon !== undefined) return p.lon;
+                      if (p.longitude !== undefined) return p.longitude;
+                      if (Array.isArray(p)) return p[0];
+                      return null;
+                    };
+                    
+                    // Filter out invalid coordinates
+                    const validPath = path
+                      .map(p => ({ lat: getLat(p), lng: getLng(p) }))
+                      .filter(p => p.lat !== null && p.lng !== null) as Array<{ lat: number; lng: number }>;
+                    
+                    if (validPath.length < 2) {
+                      return (
+                        <div className="text-sm text-muted-foreground">
+                          Route path requires at least 2 valid coordinates.
+                        </div>
+                      );
+                    }
+                    
+                    // Calculate total distance
+                    const calculateDistance = (p1: { lat: number; lng: number }, p2: { lat: number; lng: number }): number => {
+                      const R = 6371; // Earth's radius in km
+                      const lat1 = p1.lat * Math.PI / 180;
+                      const lat2 = p2.lat * Math.PI / 180;
+                      const dLat = lat2 - lat1;
+                      const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+                      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                      return R * c;
+                    };
+                    
+                    let totalDistance = 0;
+                    for (let i = 0; i < validPath.length - 1; i++) {
+                      totalDistance += calculateDistance(validPath[i], validPath[i + 1]);
+                    }
+                    
+                    // Build Google Maps Static API URL with path
+                    const apiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+                    const pathStr = validPath.map(p => `${p.lat},${p.lng}`).join('|');
+                    
+                    // Calculate center and zoom for the map
+                    const lats = validPath.map(p => p.lat);
+                    const lngs = validPath.map(p => p.lng);
+                    const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+                    const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+                    const latDiff = Math.max(...lats) - Math.min(...lats);
+                    const lngDiff = Math.max(...lngs) - Math.min(...lngs);
+                    const maxDiff = Math.max(latDiff, lngDiff);
+                    // Calculate zoom level (rough approximation)
+                    let zoom = 13;
+                    if (maxDiff > 0.1) zoom = 10;
+                    else if (maxDiff > 0.05) zoom = 11;
+                    else if (maxDiff > 0.02) zoom = 12;
+                    else if (maxDiff > 0.01) zoom = 13;
+                    else if (maxDiff > 0.005) zoom = 14;
+                    else zoom = 15;
+                    
+                    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=roadmap&path=weight:5|color:0x0000ff|${pathStr}&markers=color:green|label:S|${validPath[0].lat},${validPath[0].lng}&markers=color:red|label:E|${validPath[validPath.length - 1].lat},${validPath[validPath.length - 1].lng}&key=${apiKey}`;
+                    
+                    return (
+                      <>
+                        {/* Show calculated distance if not already shown */}
+                        {totalDistance > 0 && !game.plannedRoute.distance && !game.plannedRoute.distance_meters && !game.plannedRoute.distance_km && (
+                          <div className="flex items-center gap-4 text-sm mb-4">
+                            <div>
+                              <span className="font-medium">{totalDistance.toFixed(2)} km</span>
+                              <span className="text-muted-foreground ml-1">distance</span>
+                            </div>
+                          </div>
+                        )}
+                        <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                          <a 
+                            href={`https://www.google.com/maps/dir/${pathStr.replace(/\|/g, '/')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full h-full"
+                          >
+                            <img
+                              src={staticMapUrl}
+                              alt="Route map"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error('Failed to load static map, falling back to interactive map');
+                                // Fallback to interactive iframe
+                                const first = validPath[0];
+                                const last = validPath[validPath.length - 1];
+                                const waypoints = validPath.slice(1, -1);
+                                const waypointStr = waypoints.length > 0 
+                                  ? `&waypoints=${waypoints.map(p => `${p.lat},${p.lng}`).join('|')}`
+                                  : '';
+                                const iframeSrc = `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${first.lat},${first.lng}&destination=${last.lat},${last.lng}${waypointStr}&zoom=${zoom}`;
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                const container = (e.target as HTMLElement).parentElement;
+                                if (container) {
+                                  container.innerHTML = `<iframe src="${iframeSrc}" width="100%" height="100%" style="border:0" allowfullscreen loading="lazy"></iframe>`;
+                                }
+                              }}
+                            />
+                          </a>
+                        </div>
+                      </>
+                    );
+                  }
+                  
+                  // Fallback: Try polyline if available
+                  if (game.plannedRoute.polyline) {
+                    const apiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+                    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=roadmap&path=weight:5|color:0x0000ff|enc:${encodeURIComponent(game.plannedRoute.polyline)}&key=${apiKey}`;
+                    
+                    return (
+                      <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                        <img
+                          src={staticMapUrl}
+                          alt="Route map"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
+                
+                {/* Fallback message if no route data available */}
+                {!game.plannedRoute.path && !game.plannedRoute.polyline && !game.plannedRoute.coordinates && !game.plannedRoute.waypoints && (
+                  <div className="text-sm text-muted-foreground">
+                    No route path available for display.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Navigation className="w-5 h-5" />
+                  Planned Route
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground">
+                  No route has been planned for this {game.sport} activity.
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Description */}
         <Card>

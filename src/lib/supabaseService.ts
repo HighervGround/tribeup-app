@@ -214,15 +214,10 @@ export class SupabaseService {
         return null;
       }
 
-      const authId = currentUser.id;
-      console.log('🔍 Authenticated user id:', authId);
-
-      // Read profile for the authenticated user
-      console.log('🔍 Reading profile row...');
+      // Query without filter - RLS policy (auth_user_id = auth.uid()) ensures we only get current user's row
       const { data, error } = await supabase
         .from('users')
-        .select('id,email,username,full_name,avatar_url,bio,location,preferred_sports,stats,onboarding_completed,created_at,updated_at')
-        .eq('id', authId)
+        .select('*')
         .maybeSingle();
 
       if (error) {
@@ -828,8 +823,9 @@ export class SupabaseService {
         current_players: 1, // Creator is automatically a participant
         description: gameData.description,
         image_url: gameData.imageUrl,
-        creator_id: currentUser.id
-        // Note: duration field doesn't exist in current database schema
+        creator_id: currentUser.id,
+        duration: gameData.duration || 60,
+        planned_route: (gameData as any).plannedRoute || null,
       }])
       .select()
       .single();
@@ -1095,10 +1091,10 @@ export class SupabaseService {
       if (userId) {
         console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
         
-        // Step 1: Get basic game data (fast)
+        // Step 1: Get basic game data (fast) - include planned_route and duration
         const { data: gameData, error: gameError } = await supabase
           .from('games')
-          .select('*')
+          .select('*, planned_route, duration')
           .eq('id', gameId)
           .single();
 
@@ -1145,10 +1141,10 @@ export class SupabaseService {
       } else {
         console.log('🔍 [getGameById] Fetching for anonymous user');
         
-        // For anonymous users: simple query without joins
+        // For anonymous users: simple query without joins - include planned_route and duration
         const { data: gameData, error: gameError } = await supabase
           .from('games')
-          .select('*')
+          .select('*, planned_route, duration')
           .eq('id', gameId)
           .single();
 
@@ -1307,45 +1303,38 @@ export class SupabaseService {
         console.error('🚨 You MUST run the RLS fix SQL in Supabase dashboard');
       }
       
-      // Fetch user details from users table (no timeout - optimized query)
+      // Fetch user details from users table
+      // Note: RLS might block this - we'll handle gracefully
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, full_name, username, avatar_url, email')
         .in('id', userIds);
       
-      console.log('👤 Users query result:', { users, error: usersError });
+      console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
 
-      if (usersError) {
-        console.error('❌ Error fetching user details:', usersError);
-        console.error('❌ This is likely due to RLS policies blocking access to user profiles');
-        console.error('❌ EXACT ERROR:', JSON.stringify(usersError, null, 2));
-        console.error('❌ Run this SQL in Supabase dashboard:');
-        console.error(`
-CREATE POLICY "Users can view basic profile info" ON public.users
-    FOR SELECT TO authenticated
-    USING (true);
-        `);
-        
-        // Fallback: return participants with basic info
-        return participants.map(participant => ({
-          id: participant.user_id,
-          name: `Unknown User (${participant.user_id.slice(0, 8)})`,
-          avatar: null,
-          isHost: false,
-          rating: 4.5
-        }));
+      // Handle case where RLS blocks or users don't exist
+      const usersMap = new Map();
+      if (users && !usersError) {
+        users.forEach(u => usersMap.set(u.id, u));
       }
 
-      console.log('🔍 Fetched user details:', users);
-
-      // Combine participant and user data
+      // Combine participant and user data - always return valid names
       return participants.map(participant => {
-        const user = users?.find(u => u.id === participant.user_id);
-        console.log('🔍 Processing participant:', participant.user_id, 'user:', user);
+        const user = usersMap.get(participant.user_id);
+        console.log('🔍 Processing participant:', participant.user_id, 'found user:', !!user);
+        
+        // Ensure name is never empty or undefined
+        let name = 'Player';
+        if (user) {
+          name = user.full_name || user.username || user.email?.split('@')[0] || 'Player';
+        } else {
+          // If RLS blocked or user not found, use a default but try to get partial info
+          name = `Player ${participant.user_id.slice(0, 6)}`;
+        }
         
         return {
           id: participant.user_id,
-          name: user?.full_name || user?.username || user?.email?.split('@')[0] || `Unknown User (${participant.user_id.slice(0, 8)})`,
+          name: name.trim() || 'Player', // Final fallback
           avatar: user?.avatar_url || null,
           isHost: false, // We'll determine this separately by checking if user is game creator
           rating: 4.5 // Default rating - in real app this would come from a ratings table

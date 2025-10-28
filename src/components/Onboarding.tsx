@@ -126,7 +126,6 @@ function Onboarding({ onComplete }: OnboardingProps) {
         // Clear localStorage flag (no longer needed with proper DB tracking)
         localStorage.removeItem(`onboarding_completed_${authUser.id}`);
         console.log('✅ [Onboarding] Cleared localStorage onboarding flag');
-        }
         
         // Notify caller for any additional side-effects
         onComplete?.(payload);

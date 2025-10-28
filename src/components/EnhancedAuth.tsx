@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoginForm } from './login-form';
 import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { SupabaseService } from '../lib/supabaseService';
 import { toast } from 'sonner';
 
 function EnhancedAuth() {
   const navigate = useNavigate();
-  const { signIn, signUp } = useSimpleAuth();
+  const { signIn, signUp, user } = useSimpleAuth();
+
+  // Redirect if already authenticated (login is public route, AuthGate doesn't run here)
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleEmailAuth = async (email: string, password: string, isSignUp: boolean) => {
     try {
@@ -20,7 +26,7 @@ function EnhancedAuth() {
         toast.success('Check your email for confirmation link!');
       } else {
         await signIn(email, password);
-        // Navigation will be handled by AuthProvider
+        // User will be set by SimpleAuthProvider, useEffect above will redirect
       }
     } catch (error: any) {
       console.error('Email auth error:', error);

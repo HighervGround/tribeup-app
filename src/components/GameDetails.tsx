@@ -801,16 +801,16 @@ function GameDetails() {
                     const latDiff = Math.max(...lats) - Math.min(...lats);
                     const lngDiff = Math.max(...lngs) - Math.min(...lngs);
                     const maxDiff = Math.max(latDiff, lngDiff);
-                    // Calculate zoom level (rough approximation)
-                    let zoom = 13;
-                    if (maxDiff > 0.1) zoom = 10;
-                    else if (maxDiff > 0.05) zoom = 11;
-                    else if (maxDiff > 0.02) zoom = 12;
-                    else if (maxDiff > 0.01) zoom = 13;
-                    else if (maxDiff > 0.005) zoom = 14;
-                    else zoom = 15;
+                    // Calculate zoom level (zoomed in more - higher zoom values)
+                    let zoom = 16; // Default to higher zoom
+                    if (maxDiff > 0.1) zoom = 12;
+                    else if (maxDiff > 0.05) zoom = 13;
+                    else if (maxDiff > 0.02) zoom = 14;
+                    else if (maxDiff > 0.01) zoom = 15;
+                    else if (maxDiff > 0.005) zoom = 16;
+                    else zoom = 17; // Very zoomed in for small routes
                     
-                    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=roadmap&path=weight:5|color:0x0000ff|${pathStr}&markers=color:green|label:S|${validPath[0].lat},${validPath[0].lng}&markers=color:red|label:E|${validPath[validPath.length - 1].lat},${validPath[validPath.length - 1].lng}&key=${apiKey}`;
+                    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=roadmap&zoom=${zoom}&path=weight:5|color:0x0000ff|${pathStr}&markers=color:green|label:S|${validPath[0].lat},${validPath[0].lng}&markers=color:red|label:E|${validPath[validPath.length - 1].lat},${validPath[validPath.length - 1].lng}&key=${apiKey}`;
                     
                     return (
                       <>
@@ -825,7 +825,24 @@ function GameDetails() {
                         )}
                         <div className="aspect-video bg-muted rounded-lg overflow-hidden">
                           <a 
-                            href={`https://www.google.com/maps/dir/${pathStr.replace(/\|/g, '/')}`}
+                            href={(() => {
+                              // Determine travel mode based on sport
+                              const sportLower = game.sport.toLowerCase();
+                              let mode = 'walking'; // default
+                              if (sportLower === 'cycling') {
+                                mode = 'bicycling';
+                              } else if (sportLower === 'running' || sportLower === 'hiking' || sportLower === 'walking') {
+                                mode = 'walking';
+                              }
+                              // Use Google Maps directions URL with correct travel mode
+                              const first = validPath[0];
+                              const last = validPath[validPath.length - 1];
+                              const waypoints = validPath.slice(1, -1);
+                              const waypointStr = waypoints.length > 0 
+                                ? `/${waypoints.map(p => `${p.lat},${p.lng}`).join('/')}`
+                                : '';
+                              return `https://www.google.com/maps/dir/${first.lat},${first.lng}${waypointStr}/${last.lat},${last.lng}/data=!3m1!4b1!4m2!4m1!3e2?mode=${mode}`;
+                            })()}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block w-full h-full"

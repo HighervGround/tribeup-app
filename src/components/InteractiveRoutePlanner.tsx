@@ -50,7 +50,13 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
 
       mapInstanceRef.current = map;
       directionsServiceRef.current = new google.maps.DirectionsService();
-      directionsRendererRef.current = new google.maps.DirectionsRenderer({ map, suppressMarkers: true });
+      // Suppress default markers and info windows to avoid car icon and route info box
+      directionsRendererRef.current = new google.maps.DirectionsRenderer({ 
+        map, 
+        suppressMarkers: true,
+        suppressInfoWindows: true, // This hides the route info box with car icon
+        preserveViewport: true
+      });
       setMapLoaded(true);
 
       // Click handler to add waypoints - use refs to avoid stale closures
@@ -227,7 +233,18 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
         stopover: true
       }));
 
-      const mode = sport.toLowerCase() === 'cycling' ? google.maps.TravelMode.BICYCLING : google.maps.TravelMode.WALKING;
+      // Ensure we use the correct travel mode - not DRIVING
+      let mode: google.maps.TravelMode;
+      const sportLower = sport.toLowerCase();
+      if (sportLower === 'cycling') {
+        mode = google.maps.TravelMode.BICYCLING;
+      } else if (sportLower === 'running' || sportLower === 'hiking' || sportLower === 'walking') {
+        mode = google.maps.TravelMode.WALKING;
+      } else {
+        // Default to WALKING, never DRIVING
+        mode = google.maps.TravelMode.WALKING;
+        console.warn(`⚠️ Unknown sport "${sport}", defaulting to WALKING mode`);
+      }
 
       service.route({
         origin,
@@ -320,9 +337,17 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
         // Decode polyline to get path
         const path = decodePolyline(encodedPolyline);
 
+        // Format distance in both miles and km
+        const distanceKm = (totalDistanceMeters / 1000).toFixed(2);
+        const distanceMiles = (totalDistanceMeters / 1609.34).toFixed(2);
+        const distanceDisplay = `${distanceMiles} mi (${distanceKm} km)`;
+
         const routeData = {
           path: path,
-          distance: `${(totalDistanceMeters / 1000).toFixed(2)} km`,
+          distance: distanceDisplay,
+          distance_km: parseFloat(distanceKm),
+          distance_miles: parseFloat(distanceMiles),
+          distance_meters: totalDistanceMeters,
           name: `${sport} loop`,
           polyline: encodedPolyline,
         };
@@ -330,7 +355,7 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
         console.log('💾 Saving route:', routeData);
         onRouteSave(routeData);
 
-        toast.success(`Route saved! Distance: ${(totalDistanceMeters / 1000).toFixed(2)} km`);
+        toast.success(`Route saved! ${distanceDisplay}`);
       } else {
         throw new Error('No routes returned');
       }
@@ -385,16 +410,25 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
             }
           });
 
+          // Format distance in both miles and km (fallback uses meters)
+          const totalDistanceMeters = totalDistance;
+          const distanceKm = (totalDistanceMeters / 1000).toFixed(2);
+          const distanceMiles = (totalDistanceMeters / 1609.34).toFixed(2);
+          const distanceDisplay = `${distanceMiles} mi (${distanceKm} km)`;
+
           const routeData = {
             path: uniquePath,
-            distance: `${(totalDistance / 1000).toFixed(2)} km`,
+            distance: distanceDisplay,
+            distance_km: parseFloat(distanceKm),
+            distance_miles: parseFloat(distanceMiles),
+            distance_meters: totalDistanceMeters,
             name: `${sport} loop`,
             polyline: result.routes[0].overview_polyline?.points,
           };
 
           console.log('💾 Saving route (fallback):', routeData);
           onRouteSave(routeData);
-          toast.success(`Route saved! Distance: ${(totalDistance / 1000).toFixed(2)} km`);
+          toast.success(`Route saved! ${distanceDisplay}`);
         } else {
           console.error('❌ Route calculation failed:', status);
           if (status === 'REQUEST_DENIED') {

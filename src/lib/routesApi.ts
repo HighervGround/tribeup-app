@@ -72,7 +72,9 @@ export async function computeRoute(
   const routeModeMap: Record<string, 'DRIVE' | 'BICYCLE' | 'WALK' | 'TWO_WHEELER'> = {
     cycling: 'BICYCLE',
     running: 'WALK',
+    hiking: 'WALK',
     walking: 'WALK',
+    // Only use DRIVE if explicitly requested - never for running/cycling/hiking
     driving: 'DRIVE',
   };
 

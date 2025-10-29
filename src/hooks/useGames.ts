@@ -179,10 +179,12 @@ export function useGameParticipants(gameId: string) {
       return participants;
     },
     enabled: !!gameId,
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 0, // Always refetch when gameId changes
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch when component mounts
     meta: {
       errorMessage: 'Failed to load game participants'
     }

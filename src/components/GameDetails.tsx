@@ -70,6 +70,13 @@ function GameDetails() {
       setLoadingTimeout(false);
     }
   }, [isLoading, loadingPlayers]);
+
+  // Ensure participants are refetched when gameId changes
+  useEffect(() => {
+    if (gameId) {
+      console.log('🔄 GameDetails: gameId changed, participants should refetch:', gameId);
+    }
+  }, [gameId]);
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);

@@ -29,12 +29,13 @@ export function ShareGameModal({ game, isOpen, onClose }: ShareGameModalProps) {
   
   if (!isOpen) return null;
 
-  const shareUrl = `${window.location.origin}/public/game/${game.id}`;
+  const publicRsvpUrl = `${window.location.origin}/public/game/${game.id}`;
+  const gameDetailsUrl = `${window.location.origin}/game/${game.id}`;
   const shareText = `Join me for ${game.sport} at ${game.location} on ${game.date}!`;
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(publicRsvpUrl);
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
@@ -49,7 +50,7 @@ export function ShareGameModal({ game, isOpen, onClose }: ShareGameModalProps) {
         await navigator.share({
           title: `Join ${game.title}`,
           text: shareText,
-          url: shareUrl
+          url: gameDetailsUrl
         });
       } catch (error) {
         // User cancelled share
@@ -71,7 +72,7 @@ I'm organizing a ${game.sport} game and would love for you to join:
 💰 ${game.cost || 'Free'}
 👥 ${game.currentPlayers}/${game.maxPlayers} players
 
-${game.description ? game.description + '\n\n' : ''}RSVP here: ${shareUrl}
+${game.description ? game.description + '\n\n' : ''}View game details: ${gameDetailsUrl}
 
 Hope to see you there!
     `.trim());
@@ -80,12 +81,12 @@ Hope to see you there!
   };
 
   const handleSMSShare = () => {
-    const message = encodeURIComponent(`${shareText} RSVP: ${shareUrl}`);
+    const message = encodeURIComponent(`${shareText} View details: ${gameDetailsUrl}`);
     window.open(`sms:?body=${message}`);
   };
 
   const handleWhatsAppShare = () => {
-    const message = encodeURIComponent(`${shareText} RSVP: ${shareUrl}`);
+    const message = encodeURIComponent(`${shareText} View details: ${gameDetailsUrl}`);
     window.open(`https://wa.me/?text=${message}`);
   };
 
@@ -133,7 +134,7 @@ Hope to see you there!
             </label>
             <div className="flex gap-2">
               <Input
-                value={shareUrl}
+                value={publicRsvpUrl}
                 readOnly
                 className="flex-1"
               />

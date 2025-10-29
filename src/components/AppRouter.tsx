@@ -28,6 +28,7 @@ const FeedbackPage = lazy(() => import('./FeedbackPage'));
 
 const Onboarding = lazy(() => import('./Onboarding'));
 const NavigationTest = lazy(() => import('./NavigationTest'));
+const PublicGamePage = lazy(() => import('./PublicGamePage'));
 const Auth = lazy(() => import('./Auth'));
 
 // Simple loading component
@@ -56,6 +57,7 @@ export function AppRouter() {
               {/* Public Routes */}
               <Route path="/login" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding onComplete={() => {}} />} />
+              <Route path="/public/game/:gameId" element={<PublicGamePage />} />
               
               {/* Protected Routes - require authentication and onboarding */}
               <Route path="/*" element={

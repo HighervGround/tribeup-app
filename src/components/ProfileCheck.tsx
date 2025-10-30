@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSimpleAuth } from '../providers/SimpleAuthProvider';
+import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/appStore';
 import { LoadingSpinner } from './ui/loading-spinner';
 
@@ -57,10 +58,35 @@ export function ProfileCheck({ children = null }: ProfileCheckProps) {
         return;
       }
 
-      // After waiting, if still no profile, redirect to onboarding
-      console.log('ProfileCheck: No profile found after waiting, redirecting to onboarding');
-      setChecking(false);
-      navigate('/onboarding', { replace: true });
+      // After waiting, if still no profile, only redirect if onboarding is explicitly false
+      (async () => {
+        let cancelled = false;
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('onboarding_completed')
+            .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
+            .maybeSingle();
+
+          if (cancelled) return;
+
+          if (!error && data && data.onboarding_completed === false) {
+            console.log('ProfileCheck: onboarding_completed=false, redirecting to onboarding');
+            setChecking(false);
+            navigate('/onboarding', { replace: true });
+            return;
+          }
+
+          console.log('ProfileCheck: No explicit onboarding=false, allowing access');
+          setChecking(false);
+        } catch (e) {
+          if (cancelled) return;
+          console.log('ProfileCheck: Error checking onboarding, allowing access');
+          setChecking(false);
+        }
+
+        return () => { cancelled = true; };
+      })();
     };
 
     // Check immediately, then every 500ms until resolved

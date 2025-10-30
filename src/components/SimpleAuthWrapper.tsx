@@ -143,14 +143,39 @@ export function SimpleAuthWrapper({ children, requireAuth = true }: SimpleAuthWr
             return;
           }
 
+          // If user exists but appUser isn't hydrated yet, only redirect
+          // when onboarding_completed is explicitly false. Otherwise allow.
           if (user && !appUser) {
-            // User exists but no profile - redirect to onboarding
-            console.log('SimpleAuthWrapper: User but no profile, redirecting to onboarding');
-            navigate('/onboarding', { replace: true });
-            return;
+            let cancelled = false;
+            (async () => {
+              try {
+                const { data, error } = await supabase
+                  .from('users')
+                  .select('onboarding_completed')
+                  .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
+                  .maybeSingle();
+
+                if (cancelled) return;
+
+                if (!error && data && data.onboarding_completed === false) {
+                  console.log('SimpleAuthWrapper: onboarding_completed=false, redirecting to onboarding');
+                  navigate('/onboarding', { replace: true });
+                  return;
+                }
+
+                console.log('SimpleAuthWrapper: No explicit onboarding=false, allowing access');
+                setReady(true);
+              } catch (e) {
+                if (cancelled) return;
+                console.log('SimpleAuthWrapper: Error checking onboarding, allowing access');
+                setReady(true);
+              }
+            })();
+
+            return () => { cancelled = true; };
           }
 
-          // User and profile exist - allow access
+          // User and profile exist (or already hydrated) - allow access
           console.log('SimpleAuthWrapper: User and profile exist, allowing access');
           setReady(true);
         } else {

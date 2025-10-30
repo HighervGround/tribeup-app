@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { SupabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 
 export interface OnboardingStatus {
   needsOnboarding: boolean;
@@ -38,23 +38,21 @@ export function useOnboardingCheck(): OnboardingStatus {
         setIsLoading(true);
         setError(null);
 
-        // Check if user has a complete profile
-        const profile = await SupabaseService.getUserProfile(user.id);
-        
-        if (!profile) {
-          console.log('🔍 No profile found - user needs onboarding');
-          setNeedsOnboarding(true);
-          setIsLoading(false);
-          return;
+        // Read the flag directly from public.users via RLS (current user only)
+        const { data, error } = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .maybeSingle();
+
+        if (error) {
+          throw error;
         }
 
-        // Check if user has completed onboarding using the database field
-        const hasCompletedOnboarding = (profile as any).onboarding_completed === true;
+        const hasCompletedOnboarding = data?.onboarding_completed === true;
 
         console.log('🔍 Onboarding check results:', {
           userId: user.id,
-          hasProfile: !!profile,
-          onboarding_completed: (profile as any).onboarding_completed,
+          onboarding_completed: data?.onboarding_completed,
           needsOnboarding: !hasCompletedOnboarding
         });
 

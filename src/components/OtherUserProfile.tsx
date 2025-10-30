@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
 import { AchievementGrid } from './AchievementBadge';
+import { initialsFrom } from '@/lib/initials';
 
 
 
@@ -146,11 +147,15 @@ function OtherUserProfile() {
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  {user.avatar && user.avatar.startsWith('http') ? (
-                    <AvatarImage src={user.avatar} alt={user.name} />
+                  {user.avatar ? (
+                    <AvatarImage
+                      src={user.avatar}
+                      alt={user.name}
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                    />
                   ) : null}
                   <AvatarFallback className="text-2xl">
-                    {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                    {initialsFrom(user.name)}
                   </AvatarFallback>
                 </Avatar>
                 {(user as any).isVerified && (

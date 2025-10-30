@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -22,7 +22,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { usePublicGame, usePublicRSVPs, useCreatePublicRSVP, useQuickRSVP } from '../hooks/usePublicGame';
+import { usePublicGame, usePublicRSVPs } from '../hooks/usePublicGame';
+import { supabase } from '../lib/supabase';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
@@ -30,11 +31,11 @@ export default function PublicGamePage() {
   // Use React Query hooks for data fetching
   const { data: game, isLoading: gameLoading, error: gameError } = usePublicGame(gameId || '');
   const { data: publicRsvps = [], isLoading: rsvpsLoading } = usePublicRSVPs(gameId || '');
-  const createRsvpMutation = useCreatePublicRSVP();
-  const quickRsvpMutation = useQuickRSVP();
-  
   const loading = gameLoading || rsvpsLoading;
-  const submitting = createRsvpMutation.isPending || quickRsvpMutation.isPending;
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [capacity, setCapacity] = useState<any | null>(null);
+  const [lastResult, setLastResult] = useState<any | null>(null);
   
   const [rsvpForm, setRsvpForm] = useState({
     name: '',
@@ -53,51 +54,71 @@ export default function PublicGamePage() {
   const handleRsvpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gameId) return;
-    
-    createRsvpMutation.mutate({ gameId, rsvpData: rsvpForm }, {
-      onSuccess: () => {
-        setRsvpSuccess(true);
-        // Reset form
-        setRsvpForm({ 
-          name: '', 
-          email: '', 
-          phone: '',
-          message: '',
-          attending: true
-        });
-      }
-    });
+
+    await handleRSVP(e);
   };
 
   const handleRSVP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gameId) return;
-
     if (!rsvpForm.name.trim() || !rsvpForm.email.trim()) {
       toast.error('Name and email are required');
       return;
     }
 
-    createRsvpMutation.mutate(
-      {
-        gameId,
-        rsvpData: {
+    try {
+      setSubmitError(null);
+      setSubmitting(true);
+
+      const { data, error } = await supabase.functions.invoke('rsvp_public', {
+        body: {
+          game_id: gameId,
           name: rsvpForm.name.trim(),
           email: rsvpForm.email.trim(),
-          phone: rsvpForm.phone.trim() || undefined,
-          message: rsvpForm.message || '',
-          attending: true,
+          phone: rsvpForm.phone?.trim() || undefined,
+          message: rsvpForm.message || undefined,
         },
-      },
-      {
-        onSuccess: () => {
-          setHasRsvped(true);
-          setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
-          setRsvpForm({ name: '', email: '', phone: '', message: '', attending: true });
-        },
+      });
+
+      if (error) {
+        setSubmitError(error.message || 'Request failed');
+        toast.error('Failed to submit RSVP');
+        return;
       }
-    );
+
+      if (data?.error) {
+        setSubmitError(data.message || data.error);
+        toast.error(data.message || data.error);
+        return;
+      }
+
+      if (data?.success) {
+        setLastResult(data);
+        const nextCap = data.capacity_after ?? data.capacity_before ?? null;
+        if (nextCap) setCapacity(nextCap);
+
+        setHasRsvped(true);
+        setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
+        setRsvpForm({ name: '', email: '', phone: '', message: '', attending: true });
+        toast.success(data?.rsvp?.attending ? 'RSVP confirmed!' : 'Added to waitlist');
+      }
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Unexpected error');
+      toast.error('Failed to submit RSVP. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const capacityLine = useMemo(() => {
+    if (!capacity) return '';
+    const priv = capacity.private_confirmed_count ?? 0;
+    const pub = capacity.public_count ?? 0;
+    const total = capacity.total_attending ?? priv + pub;
+    const max = capacity.max_players ?? game?.maxPlayers ?? 0;
+    const avail = capacity.available_slots ?? Math.max(0, max - total);
+    return `Capacity: ${total}/${max} (${priv} private, ${pub} public) | ${avail} available`;
+  }, [capacity, game?.maxPlayers]);
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
@@ -126,6 +147,25 @@ export default function PublicGamePage() {
   const handleJoinApp = () => {
     navigate('/auth?redirect=' + encodeURIComponent(window.location.pathname));
   };
+
+  // Optional: initial capacity load from read-only view
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!gameId) return;
+      try {
+        const { data, error } = await supabase
+          .from('game_capacity')
+          .select('game_id,max_players,private_confirmed_count,public_count,total_attending,available_slots')
+          .eq('game_id', gameId)
+          .single();
+        if (!cancelled && !error && data) {
+          setCapacity(data);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [gameId]);
 
   if (loading) {
     return (
@@ -225,7 +265,15 @@ export default function PublicGamePage() {
                 <Users className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="font-medium">
-                    {publicRsvps.length + (game.currentPlayers || 0)}/{game.maxPlayers} players
+                    {capacity ? (
+                      <>
+                        {capacity.total_attending}/{capacity.max_players} players
+                      </>
+                    ) : (
+                      <>
+                        {publicRsvps.length + (game.currentPlayers || 0)}/{game.maxPlayers} players
+                      </>
+                    )}
                   </p>
                   <p className="text-sm text-muted-foreground">Capacity</p>
                 </div>
@@ -260,6 +308,9 @@ export default function PublicGamePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {capacityLine && (
+                <div className="mb-3 text-sm text-muted-foreground">{capacityLine}</div>
+              )}
               <form onSubmit={handleRSVP} className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">
@@ -303,6 +354,9 @@ export default function PublicGamePage() {
                   {submitting ? 'Confirming...' : 'Confirm RSVP'}
                 </Button>
               </form>
+              {submitError && (
+                <div className="mt-2 text-sm text-destructive">{submitError}</div>
+              )}
               
               <p className="text-xs text-muted-foreground mt-4">
                 By RSVPing, you'll receive email updates about this game. 
@@ -316,6 +370,16 @@ export default function PublicGamePage() {
             <AlertDescription>
               <strong>You're all set!</strong> Your RSVP has been confirmed. 
               You'll receive email updates about this game.
+              {lastResult?.rsvp && (
+                <div className="mt-2 text-sm">
+                  Status: <strong>{lastResult.rsvp.status}</strong>{lastResult.rsvp.attending ? ' (confirmed)' : ' (waitlisted)'}
+                </div>
+              )}
+              {lastResult?.capacity_after && (
+                <div className="mt-1 text-sm text-muted-foreground">
+                  Updated: {lastResult.capacity_after.total_attending}/{lastResult.capacity_after.max_players} total, available: {lastResult.capacity_after.available_slots}
+                </div>
+              )}
               {userRsvp && (
                 <div className="mt-2 text-sm">
                   Registered as: <strong>{userRsvp.name}</strong> ({userRsvp.email})
@@ -337,11 +401,11 @@ export default function PublicGamePage() {
                   <div key={rsvp.id} className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-primary">
-                        {rsvp.name.charAt(0).toUpperCase()}
+                        {(rsvp.name_initial || '?').charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium">{rsvp.name}</p>
+                      <p className="font-medium">Guest</p>
                       <p className="text-sm text-muted-foreground">
                         RSVPed {new Date(rsvp.created_at).toLocaleDateString()}
                       </p>

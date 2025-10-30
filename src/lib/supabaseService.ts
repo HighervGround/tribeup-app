@@ -1037,38 +1037,29 @@ export class SupabaseService {
   // Public RSVP methods
   static async getPublicRSVPs(gameId: string): Promise<any[]> {
     const { data, error } = await supabase
-      .from('public_rsvps')
-      .select('*')
+      .from('public_rsvps_public')
+      .select('game_id,name_initial,created_at')
       .eq('game_id', gameId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
     return data || [];
   }
 
-  static async createPublicRSVP(gameId: string, rsvpData: { name: string; email: string; phone?: string }): Promise<void> {
-    // Check if email already RSVPed for this game
-    const { data: existing } = await supabase
-      .from('public_rsvps')
-      .select('id')
-      .eq('game_id', gameId)
-      .eq('email', rsvpData.email)
-      .single();
-
-    if (existing) {
-      throw new Error('This email has already RSVPed for this game');
-    }
-
-    const { error } = await supabase
-      .from('public_rsvps')
-      .insert({
+  static async createPublicRSVP(gameId: string, rsvpData: { name: string; email: string; phone?: string; message?: string }): Promise<any> {
+    // Delegate to Edge Function to handle validation/capacity/duplicates
+    const { data, error } = await supabase.functions.invoke('rsvp_public', {
+      body: {
         game_id: gameId,
         name: rsvpData.name,
         email: rsvpData.email,
-        phone: rsvpData.phone
-      });
-
+        phone: rsvpData.phone || undefined,
+        message: rsvpData.message || undefined,
+      },
+    });
     if (error) throw error;
+    if (data?.error) throw new Error(data?.message || data?.error);
+    return data;
   }
 
   static async getGameById(gameId: string): Promise<any> {

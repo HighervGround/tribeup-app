@@ -22,7 +22,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { SupabaseService } from '../lib/supabaseService';
 import { usePublicGame, usePublicRSVPs, useCreatePublicRSVP, useQuickRSVP } from '../hooks/usePublicGame';
 
 export default function PublicGamePage() {
@@ -72,37 +71,32 @@ export default function PublicGamePage() {
 
   const handleRSVP = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!gameId) return;
+
     if (!rsvpForm.name.trim() || !rsvpForm.email.trim()) {
       toast.error('Name and email are required');
       return;
     }
 
-    try {
-      setSubmitting(true);
-      
-      await SupabaseService.createPublicRSVP(gameId!, {
-        name: rsvpForm.name.trim(),
-        email: rsvpForm.email.trim(),
-        phone: rsvpForm.phone.trim() || undefined
-      });
-      
-      setHasRsvped(true);
-      setRsvpForm({ name: '', email: '', phone: '' });
-      toast.success('RSVP confirmed! You\'ll receive updates via email.');
-      
-      // Reload RSVPs
-      if (gameId) {
-        const updatedRsvps = await SupabaseService.getPublicRSVPs(gameId);
-        setPublicRsvps(updatedRsvps);
+    createRsvpMutation.mutate(
+      {
+        gameId,
+        rsvpData: {
+          name: rsvpForm.name.trim(),
+          email: rsvpForm.email.trim(),
+          phone: rsvpForm.phone.trim() || undefined,
+          message: rsvpForm.message || '',
+          attending: true,
+        },
+      },
+      {
+        onSuccess: () => {
+          setHasRsvped(true);
+          setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
+          setRsvpForm({ name: '', email: '', phone: '', message: '', attending: true });
+        },
       }
-      
-    } catch (error) {
-      console.error('Error submitting RSVP:', error);
-      toast.error('Failed to submit RSVP. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    );
   };
 
   const handleShare = async () => {

@@ -568,8 +568,8 @@ export class SupabaseService {
       let usersMap = new Map();
       if (creatorIds.length > 0) {
         const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select('id, full_name, username, email, avatar_url')
+          .from('user_public_profile')
+          .select('id, display_name, avatar_url')
           .in('id', creatorIds);
           
         if (usersError) {
@@ -602,7 +602,7 @@ export class SupabaseService {
         console.log(`🎯 Game "${game.title}" creator mapping:`, {
           creator_id: game.creator_id,
           creator_found: !!creator,
-          creator_name: creator?.full_name || 'Not loaded'
+          creator_name: creator?.display_name || 'Not loaded'
         });
         
         return transformGameFromDB(enhancedGame, isJoined);
@@ -1282,7 +1282,7 @@ export class SupabaseService {
         return [];
       }
 
-      // Then fetch user details for each participant
+      // Then fetch user details for each participant (via safe public view)
       const userIds = participants.map(p => p.user_id);
       
       // Debug: Show what user IDs we're trying to fetch
@@ -1303,11 +1303,10 @@ export class SupabaseService {
         console.error('🚨 You MUST run the RLS fix SQL in Supabase dashboard');
       }
       
-      // Fetch user details from users table
-      // Note: RLS might block this - we'll handle gracefully
+      // Fetch user details from public.user_public_profile view to avoid RLS blocks
       const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, full_name, username, avatar_url, email')
+        .from('user_public_profile')
+        .select('id, display_name, avatar_url')
         .in('id', userIds);
       
       console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
@@ -1326,7 +1325,7 @@ export class SupabaseService {
         // Ensure name is never empty or undefined
         let name = 'Player';
         if (user) {
-          name = user.full_name || user.username || user.email?.split('@')[0] || 'Player';
+          name = user.display_name || 'Player';
         } else {
           // If RLS blocked or user not found, use a default but try to get partial info
           name = `Player ${participant.user_id.slice(0, 6)}`;

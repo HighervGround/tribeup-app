@@ -83,11 +83,12 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   };
 
   if (dbGame.creator) {
-    // We have creator data loaded
-    createdBy = dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`;
+    // We have creator data loaded (supports public view shape with display_name)
+    const displayName = dbGame.creator.display_name || dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`;
+    createdBy = displayName;
     creatorData = {
       id: dbGame.creator.id,
-      name: createdBy,
+      name: displayName,
       avatar: dbGame.creator.avatar_url || ''
     };
   } else if (dbGame.creator === null) {
@@ -152,6 +153,7 @@ export const transformUserFromDB = (dbUser: Database['public']['Tables']['users'
   bio: dbUser.bio || '',
   location: dbUser.location || '',
   role: dbUser.role || 'user',
+  onboarding_completed: dbUser.onboarding_completed === true,
   preferences: {
     theme: 'auto' as const,
     highContrast: false,

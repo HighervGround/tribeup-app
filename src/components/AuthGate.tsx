@@ -70,7 +70,8 @@ export default function AuthGate({ children }: AuthGateProps) {
         console.log('🔐 [AuthGate] Checking onboarding status...');
         const { data: userRow, error: selErr } = await supabase
           .from('users')
-          .select('onboarding_completed')
+          .select('onboarding_completed,id,auth_user_id')
+          .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
           .maybeSingle();
 
         if (selErr) {
@@ -86,7 +87,8 @@ export default function AuthGate({ children }: AuthGateProps) {
           userRow 
         });
 
-        if (!onboardingDone) {
+        // Only redirect when we have an explicit false; if row missing, don't force onboarding here
+        if (userRow && !onboardingDone) {
           // Only redirect if we're not already on onboarding page
           if (location.pathname !== '/onboarding') {
             console.log('🔐 [AuthGate] Onboarding not completed, redirecting to onboarding');

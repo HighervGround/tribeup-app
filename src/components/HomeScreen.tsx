@@ -22,7 +22,7 @@ function HomeScreen() {
   const [forceTimeout, setForceTimeout] = useState(false);
   
   // Location services for distance calculations
-  const { currentLocation, permission, requestLocation, getFormattedDistanceTo } = useLocation();
+  const { currentLocation, permission, requestLocation, getFormattedDistanceTo, getDistanceTo } = useLocation();
   // Real-time updates for all games
   useAllGamesRealtime();
   
@@ -55,15 +55,17 @@ function HomeScreen() {
     
     // Games available today
     const gamesToday = games.filter(game => {
-      const gameDate = new Date(game.date);
-      return gameDate.toDateString() === today.toDateString();
+      // Parse YYYY-MM-DD in local timezone consistently
+      const [year, month, day] = game.date.split('-').map(Number);
+      const gameDate = new Date(year, month - 1, day);
+      return gameDate.getTime() === today.getTime();
     }).length;
     
     // Games nearby (within 10km)
     const gamesNearby = currentLocation ? games.filter(game => {
       if (!game.latitude || !game.longitude) return false;
-      const distance = getFormattedDistanceTo({ latitude: game.latitude, longitude: game.longitude });
-      return distance && parseFloat(distance) <= 10; // Within 10km
+      const distanceKm = getDistanceTo({ latitude: game.latitude, longitude: game.longitude }, 'km');
+      return distanceKm !== null && distanceKm <= 10; // Within 10km
     }).length : 0;
     
     // Games user has created

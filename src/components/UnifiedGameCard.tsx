@@ -158,7 +158,7 @@ export function UnifiedGameCard({
                     <Users className="w-4 h-4" />
                     <span>{getPlayerCount()}</span>
                   </div>
-                  {game.publicRsvpCount && game.publicRsvpCount > 0 && (
+                  {Number(game.publicRsvpCount || 0) > 0 && (
                     <Badge variant="secondary" className="text-xs px-2 py-0.5">
                       +{game.publicRsvpCount} public
                     </Badge>
@@ -243,7 +243,7 @@ export function UnifiedGameCard({
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-muted-foreground" />
           <span>{getPlayerCount()}</span>
-          {game.publicRsvpCount && game.publicRsvpCount > 0 && (
+          {Number(game.publicRsvpCount || 0) > 0 && (
             <Badge variant="secondary" className="text-xs px-2 py-0.5">
               +{game.publicRsvpCount} public
             </Badge>

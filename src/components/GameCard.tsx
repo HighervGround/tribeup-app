@@ -159,7 +159,7 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
                 <Users className="w-4 h-4" />
                 <span>{game.participants}/{game.maxParticipants}</span>
               </div>
-              {game.publicRsvpCount && game.publicRsvpCount > 0 && (
+              {Number(game.publicRsvpCount || 0) > 0 && (
                 <Badge variant="secondary" className="text-xs px-2 py-0.5">
                   +{game.publicRsvpCount} public
                 </Badge>

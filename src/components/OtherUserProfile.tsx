@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
 import { AchievementGrid } from './AchievementBadge';
 import { initialsFrom } from '@/lib/initials';
+import { supabase } from '../lib/supabase';
 
 
 
@@ -42,6 +43,20 @@ function OtherUserProfile() {
     }
   }, [userId, queryClient]);
   
+  // Debug: Verify session and client on component mount
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔍 [OtherUserProfile] Component mount check:', {
+        userId,
+        hasSession: !!session,
+        sessionUserId: session?.user?.id,
+        hasClient: !!supabase,
+        hasAuth: !!supabase.auth
+      });
+    })();
+  }, [userId]);
+
   // Use React Query hooks for data fetching
   const { data: user, isLoading: loading, error } = useUserProfile(userId || '');
   const { data: userStats, isLoading: statsLoading } = useUserStats(userId || '');
@@ -62,13 +77,38 @@ function OtherUserProfile() {
 
   // Show error or user not found
   if (error || !user) {
-    console.error('❌ OtherUserProfile error:', { error, user, userId });
+    console.error('❌ [OtherUserProfile] Error or user not found:', { 
+      error, 
+      errorCode: error instanceof Error ? 'unknown' : (error as any)?.code,
+      errorMessage: error instanceof Error ? error.message : (error as any)?.message,
+      user, 
+      userId 
+    });
+    
+    // Distinguish between auth errors and not found
+    const isAuthError = error && (
+      (error as any)?.code === 'PGRST301' || // Permission denied
+      (error as any)?.code === '42501' ||    // Insufficient privilege
+      (error as any)?.message?.includes('permission') ||
+      (error as any)?.message?.includes('RLS') ||
+      (error as any)?.message?.includes('JWT')
+    );
+    
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl mb-4">User not found</h1>
-          <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist or has been removed.</p>
+          <h1 className="text-2xl mb-4">{isAuthError ? 'Authentication Error' : 'User not found'}</h1>
+          <p className="text-muted-foreground mb-4">
+            {isAuthError 
+              ? 'There was an authentication issue loading this profile. Please try logging in again.'
+              : 'The user you\'re looking for doesn\'t exist or has been removed.'}
+          </p>
           <p className="text-xs text-muted-foreground mb-4">UserId: {userId}</p>
+          {isAuthError && (
+            <p className="text-xs text-red-500 mb-4">
+              Error code: {(error as any)?.code || 'unknown'}
+            </p>
+          )}
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </div>

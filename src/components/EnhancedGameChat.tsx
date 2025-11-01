@@ -49,10 +49,17 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       try {
         setIsLoading(true);
         
-        // Step 1: Fetch messages without user join (to avoid 403 on users table)
+        // Fetch messages with author_profile relationship from user_public_profile view
         const { data: messagesData, error } = await supabase
           .from('chat_messages')
-          .select('id, game_id, user_id, message, created_at')
+          .select(`
+            id,
+            game_id,
+            user_id,
+            message,
+            created_at,
+            author_profile(id, display_name, username, avatar_url)
+          `)
           .eq('game_id', gameId)
           .order('created_at', { ascending: true });
 
@@ -71,28 +78,9 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           return;
         }
 
-        // Step 2: Get unique user IDs and fetch from user_public_profile view
-        const userIds = [...new Set(messagesData.map((msg: any) => msg.user_id).filter(Boolean))];
-        console.log(`🔍 [EnhancedGameChat] Fetching ${userIds.length} unique users from user_public_profile`);
-
-        let usersMap = new Map();
-        if (userIds.length > 0) {
-          const { data: usersData, error: usersError } = await supabase
-            .from('user_public_profile')
-            .select('id, display_name, avatar_url, username')
-            .in('id', userIds);
-
-          if (usersError) {
-            console.error('❌ [EnhancedGameChat] Error fetching users:', usersError);
-          } else if (usersData) {
-            usersData.forEach((u: any) => usersMap.set(u.id, u));
-            console.log(`✅ [EnhancedGameChat] Loaded ${usersData.length} user profiles`);
-          }
-        }
-
-        // Step 3: Transform messages with user data from view
+        // Transform messages with author_profile from the relationship
         const transformedMessages: ChatMessage[] = messagesData.map((msg: any) => {
-          const userProfile = usersMap.get(msg.user_id);
+          const userProfile = msg.author_profile || null;
           return {
             id: msg.id,
             game_id: msg.game_id,
@@ -135,27 +123,33 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       }, async (payload: any) => {
         console.log('💬 New chat message from database:', payload);
         
-        // Fetch the message without user join, then fetch user from view
-        const { data: messageData, error } = await supabase
+        // Fetch message with author_profile relationship from user_public_profile view
+        const { data: fullMessage, error: fetchError } = await supabase
           .from('chat_messages')
-          .select('id, game_id, user_id, message, created_at')
+          .select(`
+            id,
+            game_id,
+            user_id,
+            message,
+            created_at,
+            author_profile(id, display_name, username, avatar_url)
+          `)
           .eq('id', payload.new.id)
           .single();
 
-        if (!error && messageData && messageData.user_id) {
-          // Fetch user profile from user_public_profile view
-          const { data: userProfile } = await supabase
-            .from('user_public_profile')
-            .select('id, display_name, avatar_url, username')
-            .eq('id', messageData.user_id)
-            .maybeSingle();
+        if (fetchError || !fullMessage) {
+          console.error('❌ Error fetching full message with author:', fetchError);
+          return;
+        }
 
+        if (fullMessage.user_id) {
+          const userProfile = fullMessage.author_profile || null;
           const newMsg: ChatMessage = {
-            id: messageData.id,
-            game_id: messageData.game_id,
-            user_id: messageData.user_id,
-            message: messageData.message,
-            created_at: messageData.created_at,
+            id: fullMessage.id,
+            game_id: fullMessage.game_id,
+            user_id: fullMessage.user_id,
+            message: fullMessage.message,
+            created_at: fullMessage.created_at,
             user: {
               name: userProfile?.display_name || userProfile?.username || 'Player',
               avatar: userProfile?.avatar_url || ''
@@ -202,7 +196,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
     setIsSending(true);
     
     try {
-      // Save message to database (without user join to avoid 403)
+      // Save message to database with author_profile relationship
       const { data: savedMessage, error: saveError } = await supabase
         .from('chat_messages')
         .insert({
@@ -210,7 +204,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           user_id: user.id,
           message: newMessage.trim()
         })
-        .select('id, game_id, user_id, message, created_at')
+        .select('id, game_id, user_id, message, created_at, author_profile(display_name, username, avatar_url)')
         .single();
 
       if (saveError) {
@@ -221,7 +215,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       console.log('✅ Message saved to database:', savedMessage);
 
       // Transform and add to local state immediately for sender
-      // Use current user's data since we know it's their message
+      // Use author_profile from the query result
+      const authorProfile = savedMessage.author_profile || null;
       const newMsg: ChatMessage = {
         id: savedMessage.id,
         game_id: savedMessage.game_id,
@@ -229,8 +224,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         message: savedMessage.message,
         created_at: savedMessage.created_at,
         user: {
-          name: user.name || 'You',
-          avatar: user.avatar || ''
+          name: authorProfile?.display_name || authorProfile?.username || user.name || 'You',
+          avatar: authorProfile?.avatar_url || user.avatar || ''
         }
       };
 

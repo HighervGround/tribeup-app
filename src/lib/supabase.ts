@@ -78,6 +78,8 @@ export type { Database } from './database.types';
 // Helper functions for data transformation
 export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any => {
   // Defensive fallback for creator display
+  // Support both creator_profile (from relationship) and creator (legacy)
+  const creatorProfile = dbGame.creator_profile || dbGame.creator;
   let createdBy = 'Loading user...';
   let creatorData = {
     id: dbGame.creator_id,
@@ -85,17 +87,17 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     avatar: ''
   };
 
-  if (dbGame.creator) {
+  if (creatorProfile) {
     // We have creator data loaded (from user_public_profile view with display_name)
-    const displayName = dbGame.creator.display_name || dbGame.creator.username || `User ${dbGame.creator.id.slice(0, 8)}`;
+    const displayName = creatorProfile.display_name || creatorProfile.username || `User ${creatorProfile.id?.slice(0, 8) || 'Unknown'}`;
     createdBy = displayName;
     creatorData = {
-      id: dbGame.creator.id,
+      id: creatorProfile.id || dbGame.creator_id,
       name: displayName,
-      avatar: dbGame.creator.avatar_url || ''
+      avatar: creatorProfile.avatar_url || ''
     };
-    console.log(`✅ [transformGameFromDB] Creator loaded: ${displayName} (${dbGame.creator.id.slice(0, 8)})`);
-  } else if (dbGame.creator === null || dbGame.creator === undefined) {
+    console.log(`✅ [transformGameFromDB] Creator loaded: ${displayName} (${creatorProfile.id?.slice(0, 8) || 'Unknown'})`);
+  } else if (creatorProfile === null || creatorProfile === undefined) {
     // Creator not found in user_public_profile view
     // Use a more user-friendly fallback instead of showing UUID
     createdBy = 'Host';
@@ -104,9 +106,9 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
       name: createdBy,
       avatar: ''
     };
-    console.warn(`⚠️ [transformGameFromDB] Creator ${dbGame.creator_id?.slice(0, 8)} not found in user_public_profile view`);
+    console.warn(`⚠️ [transformGameFromDB] Creator ${dbGame.creator_id?.slice(0, 8) || 'Unknown'} not found in user_public_profile view`);
   }
-  // If dbGame.creator is undefined, we're still loading - show "Loading user..."
+  // If creatorProfile is undefined, we're still loading - show "Loading user..."
 
   return {
     id: dbGame.id,
@@ -136,6 +138,12 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     createdBy,
     creatorId: dbGame.creator_id,
     creatorData,
+    // Also create host property for UnifiedGameCard compatibility
+    host: creatorData ? {
+      id: creatorData.id,
+      name: creatorData.name,
+      avatar: creatorData.avatar
+    } : undefined,
     createdAt: dbGame.created_at,
     // planned_route is JSONB, so it's already an object - no need to parse
     plannedRoute: (dbGame as any).planned_route || undefined,

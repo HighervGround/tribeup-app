@@ -79,8 +79,10 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         }
 
         // Transform messages with author_profile from the relationship
+        // Use display_name first, then username, then 'Player' as fallback
         const transformedMessages: ChatMessage[] = messagesData.map((msg: any) => {
-          const userProfile = msg.author_profile || null;
+          const authorProfile = msg.author_profile || null;
+          const authorName = authorProfile?.display_name || authorProfile?.username || 'Player';
           return {
             id: msg.id,
             game_id: msg.game_id,
@@ -88,8 +90,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
             message: msg.message,
             created_at: msg.created_at,
             user: {
-              name: userProfile?.display_name || userProfile?.username || 'Player',
-              avatar: userProfile?.avatar_url || ''
+              name: authorName,
+              avatar: authorProfile?.avatar_url || ''
             }
           };
         });
@@ -143,7 +145,9 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         }
 
         if (fullMessage.user_id) {
-          const userProfile = fullMessage.author_profile || null;
+          const authorProfile = fullMessage.author_profile || null;
+          // Use display_name first, then username, then 'Player' as fallback
+          const authorName = authorProfile?.display_name || authorProfile?.username || 'Player';
           const newMsg: ChatMessage = {
             id: fullMessage.id,
             game_id: fullMessage.game_id,
@@ -151,8 +155,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
             message: fullMessage.message,
             created_at: fullMessage.created_at,
             user: {
-              name: userProfile?.display_name || userProfile?.username || 'Player',
-              avatar: userProfile?.avatar_url || ''
+              name: authorName,
+              avatar: authorProfile?.avatar_url || ''
             }
           };
           
@@ -215,8 +219,9 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       console.log('✅ Message saved to database:', savedMessage);
 
       // Transform and add to local state immediately for sender
-      // Use author_profile from the query result
+      // Use author_profile from the query result with display_name first, then username fallback
       const authorProfile = savedMessage.author_profile || null;
+      const authorName = authorProfile?.display_name || authorProfile?.username || user.name || 'You';
       const newMsg: ChatMessage = {
         id: savedMessage.id,
         game_id: savedMessage.game_id,
@@ -224,7 +229,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         message: savedMessage.message,
         created_at: savedMessage.created_at,
         user: {
-          name: authorProfile?.display_name || authorProfile?.username || user.name || 'You',
+          name: authorName,
           avatar: authorProfile?.avatar_url || user.avatar || ''
         }
       };

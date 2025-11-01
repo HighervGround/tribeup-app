@@ -9,8 +9,7 @@ SELECT
   cm.created_at,
   up.display_name,
   up.username,
-  up.avatar_url,
-  up.full_name
+  up.avatar_url
 FROM chat_messages cm
 LEFT JOIN user_public_profile up ON cm.user_id = up.id;
 

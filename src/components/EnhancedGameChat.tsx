@@ -195,24 +195,43 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
   }, [messages, scrollToBottom]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !user || isSending) return;
+    if (!newMessage.trim() || isSending) return;
 
     setIsSending(true);
     
     try {
-      // Save message to database with author_profile relationship
+      // Prepare insert payload
+      const insertPayload = {
+        game_id: gameId,
+        message: newMessage.trim()
+      };
+
+      // Log exact POST payload for debugging
+      console.log('📤 [Chat] POST /rest/v1/chat_messages');
+      console.log('📦 [Chat] Payload:', JSON.stringify(insertPayload, null, 2));
+      console.log('🔗 [Chat] gameId:', gameId);
+      console.log('💬 [Chat] message:', newMessage.trim());
+
+      // Save message to database
+      // Note: user_id is automatically set by database trigger from auth.uid()
+      // Required fields: game_id, message
       const { data: savedMessage, error: saveError } = await supabase
         .from('chat_messages')
-        .insert({
-          game_id: gameId,
-          user_id: user.id,
-          message: newMessage.trim()
-        })
+        .insert(insertPayload)
         .select('id, game_id, user_id, message, created_at, author_profile(display_name, username, avatar_url)')
         .single();
 
       if (saveError) {
-        console.error('❌ Error saving message to database:', saveError);
+        console.error('❌ [Chat] Error saving message to database:', saveError);
+        console.error('❌ [Chat] Error details:', {
+          code: saveError.code,
+          message: saveError.message,
+          details: saveError.details,
+          hint: saveError.hint,
+          status: (saveError as any).status,
+          statusText: (saveError as any).statusText
+        });
+        console.error('❌ [Chat] Failed payload was:', JSON.stringify(insertPayload, null, 2));
         throw saveError;
       }
 
@@ -221,7 +240,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       // Transform and add to local state immediately for sender
       // Use author_profile from the query result with display_name first, then username fallback
       const authorProfile = savedMessage.author_profile || null;
-      const authorName = authorProfile?.display_name || authorProfile?.username || user.name || 'You';
+      const authorName = authorProfile?.display_name || authorProfile?.username || user?.name || 'You';
       const newMsg: ChatMessage = {
         id: savedMessage.id,
         game_id: savedMessage.game_id,
@@ -230,7 +249,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         created_at: savedMessage.created_at,
         user: {
           name: authorName,
-          avatar: authorProfile?.avatar_url || user.avatar || ''
+          avatar: authorProfile?.avatar_url || user?.avatar || ''
         }
       };
 

@@ -203,45 +203,27 @@ export class SupabaseService {
 
   static async getUserProfile(userId: string): Promise<User | null> {
     try {
-      console.log('🔍 Checking auth session...');
-      const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser();
-      if (userErr) {
-        console.error('❌ Auth error:', userErr);
+      console.log('🔍 [getUserProfile] Fetching profile for userId:', userId);
+      
+      // Verify authenticated session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('❌ [getUserProfile] No authenticated session:', sessionError);
         return null;
       }
-      if (!currentUser) {
-        console.log('ℹ️ No authenticated user - returning null');
-        return null;
-      }
 
-      // If userId matches current user, return own profile with full data
-      if (userId === currentUser.id || userId === currentUser.user_metadata?.id) {
-        // Query without filter - RLS policy (auth_user_id = auth.uid()) ensures we only get current user's row
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .maybeSingle();
-
-        if (error) {
-          console.error('❌ Read error:', error);
-          return null;
-        }
-
-        if (!data) {
-          console.log('ℹ️ No profile found - user needs onboarding');
-          return null;
-        }
-
-        console.log('✅ Profile data found:', data);
-        const transformedUser = transformUserFromDB(data);
-        console.log('🔍 Transformed user:', transformedUser);
-        return transformedUser;
-      }
-
-      // For other users, fetch from public profile view
+      // Use user_public_profile view for ALL profile reads (consistent with requirement)
+      // Note: This returns public fields only. If full profile data with private fields is needed,
+      // use a separate method that queries the users table with proper RLS.
       return await this.getOtherUserProfile(userId);
-    } catch (err) {
-      console.error('❌ getUserProfile failed:', err);
+    } catch (err: any) {
+      console.error('❌ [getUserProfile] Exception:', err);
+      
+      // Re-throw auth errors
+      if (err?.isAuthError) {
+        throw err;
+      }
+      
       return null;
     }
   }

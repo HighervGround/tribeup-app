@@ -252,9 +252,11 @@ function HomeScreen() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Cache Clear Button - only show in development or if there are stale queries */}
-      {(typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || !!error || forceTimeout)) && (
+      {/* Cache Clear Button - only show in development (never in production) */}
+      {typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.hostname.includes('localhost')) && (
         <CacheClearButton />
       )}
       

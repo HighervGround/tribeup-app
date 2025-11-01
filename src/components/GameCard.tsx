@@ -154,9 +154,16 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
 
           {/* Participants & Action */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Users className="w-4 h-4" />
-              <span>{game.participants}/{game.maxParticipants}</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                <span>{game.participants}/{game.maxParticipants}</span>
+              </div>
+              {game.publicRsvpCount && game.publicRsvpCount > 0 && (
+                <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                  +{game.publicRsvpCount} public
+                </Badge>
+              )}
             </div>
             
             {!compact && (

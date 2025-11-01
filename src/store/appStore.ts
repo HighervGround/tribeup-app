@@ -28,6 +28,7 @@ export interface Game {
   longitude?: number;
   currentPlayers: number;
   maxPlayers: number;
+  publicRsvpCount?: number; // Count of public (non-authenticated) RSVPs
   cost: string;
   description: string;
   imageUrl: string;

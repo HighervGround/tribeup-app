@@ -1002,7 +1002,14 @@ function GameDetails() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Players ({players.length}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle>Players ({players.length}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
+                {game.publicRsvpCount && game.publicRsvpCount > 0 && (
+                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                    +{game.publicRsvpCount} public RSVPs
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Online now:</span>
                 <RealtimeAvatarStack roomName={`game-${gameId}`} />

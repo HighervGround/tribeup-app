@@ -86,22 +86,25 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   };
 
   if (dbGame.creator) {
-    // We have creator data loaded (supports public view shape with display_name)
-    const displayName = dbGame.creator.display_name || dbGame.creator.full_name || dbGame.creator.username || dbGame.creator.email?.split('@')[0] || `User ${dbGame.creator.id.slice(0, 8)}`;
+    // We have creator data loaded (from user_public_profile view with display_name)
+    const displayName = dbGame.creator.display_name || dbGame.creator.username || `User ${dbGame.creator.id.slice(0, 8)}`;
     createdBy = displayName;
     creatorData = {
       id: dbGame.creator.id,
       name: displayName,
       avatar: dbGame.creator.avatar_url || ''
     };
-  } else if (dbGame.creator === null) {
-    // Explicitly null means user doesn't exist (only show after we've tried to load)
-    createdBy = `Unknown User (${dbGame.creator_id?.slice(0, 8) || 'No ID'})`;
+    console.log(`✅ [transformGameFromDB] Creator loaded: ${displayName} (${dbGame.creator.id.slice(0, 8)})`);
+  } else if (dbGame.creator === null || dbGame.creator === undefined) {
+    // Creator not found in user_public_profile view
+    // Use a more user-friendly fallback instead of showing UUID
+    createdBy = 'Host';
     creatorData = {
-      id: dbGame.creator_id,
+      id: dbGame.creator_id || '',
       name: createdBy,
       avatar: ''
     };
+    console.warn(`⚠️ [transformGameFromDB] Creator ${dbGame.creator_id?.slice(0, 8)} not found in user_public_profile view`);
   }
   // If dbGame.creator is undefined, we're still loading - show "Loading user..."
 

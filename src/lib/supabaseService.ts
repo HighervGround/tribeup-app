@@ -661,20 +661,37 @@ export class SupabaseService {
       
       let usersMap = new Map();
       if (creatorIds.length > 0) {
+        console.log(`🔍 [getGames] Fetching ${creatorIds.length} creators from user_public_profile:`, creatorIds);
         const { data: usersData, error: usersError } = await supabase
           .from('user_public_profile')
-          .select('id, display_name, avatar_url')
+          .select('id, display_name, avatar_url, username')
           .in('id', creatorIds);
           
         if (usersError) {
-          console.error('❌ Users query failed:', usersError);
+          console.error('❌ [getGames] Users query failed:', usersError);
+          console.error('❌ [getGames] Error details:', {
+            code: usersError.code,
+            message: usersError.message,
+            details: usersError.details
+          });
           // Continue with empty user map - will show loading state
         } else {
           // Build user map: user_id -> user data
-          usersData?.forEach(user => {
-            usersMap.set(user.id, user);
-          });
-          console.log(`✅ Step 2 completed: ${usersData?.length || 0} users fetched`);
+          if (usersData && usersData.length > 0) {
+            usersData.forEach(user => {
+              usersMap.set(user.id, user);
+            });
+            console.log(`✅ [getGames] Step 2 completed: ${usersData.length} users fetched`);
+          } else {
+            console.warn(`⚠️ [getGames] No creators found in user_public_profile for IDs:`, creatorIds);
+          }
+          
+          // Log which creators were found vs missing
+          const foundIds = new Set(usersData?.map(u => u.id) || []);
+          const missingIds = creatorIds.filter(id => !foundIds.has(id));
+          if (missingIds.length > 0) {
+            console.warn(`⚠️ [getGames] Missing creators in view:`, missingIds);
+          }
         }
       }
       
@@ -778,17 +795,35 @@ export class SupabaseService {
   }
 
   static async getMyGames(userId: string): Promise<Game[]> {
-    const { data, error } = await supabase
+    // Fetch games without FK join (to avoid 403 on users table)
+    const { data: gamesData, error } = await supabase
       .from('games')
-      .select(`
-        *,
-        creator:users!games_creator_id_fkey(full_name, username)
-      `)
+      .select('*')
       .eq('creator_id', userId)
       .gte('date', new Date().toISOString().split('T')[0])
       .order('date', { ascending: true });
 
     if (error) throw error;
+
+    // Fetch creator info from user_public_profile view
+    let data = gamesData || [];
+    if (data.length > 0) {
+      const creatorIds = [...new Set(data.map(g => g.creator_id).filter(Boolean))];
+      if (creatorIds.length > 0) {
+        const { data: creators } = await supabase
+          .from('user_public_profile')
+          .select('id, display_name, avatar_url, username')
+          .in('id', creatorIds);
+
+        const creatorsMap = new Map(creators?.map(c => [c.id, c]) || []);
+
+        // Add creator data to games
+        data = data.map(game => ({
+          ...game,
+          creator: creatorsMap.get(game.creator_id) || null
+        }));
+      }
+    }
 
     return data.map(game => transformGameFromDB(game, true));
   }
@@ -1241,11 +1276,21 @@ export class SupabaseService {
         // Get creator info separately - use user_public_profile view
         let creatorInfo = null;
         if (gameData.creator_id) {
-          const { data: creator } = await supabase
+          console.log(`🔍 [getGameById] Fetching creator from user_public_profile:`, gameData.creator_id);
+          const { data: creator, error: creatorError } = await supabase
             .from('user_public_profile')
             .select('id, display_name, avatar_url, username')
             .eq('id', gameData.creator_id)
             .maybeSingle();
+            
+          if (creatorError) {
+            console.error(`❌ [getGameById] Creator query failed for ${gameData.creator_id}:`, creatorError);
+          } else if (!creator) {
+            console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in user_public_profile view`);
+          } else {
+            console.log(`✅ [getGameById] Creator found:`, { id: creator.id, name: creator.display_name });
+          }
+          
           creatorInfo = creator;
         }
         
@@ -2113,16 +2158,34 @@ export class SupabaseService {
   }
 
   static async getGameWaitlist(gameId: string): Promise<any[]> {
-    const { data, error } = await supabase
+    // Fetch waitlist without FK join (to avoid 403 on users table)
+    const { data: waitlistData, error } = await supabase
       .from('game_waitlist')
-      .select(`
-        *,
-        user:users!game_waitlist_user_id_fkey(id, full_name, username, avatar_url)
-      `)
+      .select('*')
       .eq('game_id', gameId)
       .order('position', { ascending: true });
 
     if (error) throw error;
+
+    if (!waitlistData || waitlistData.length === 0) {
+      return [];
+    }
+
+    // Fetch user info from user_public_profile view
+    const userIds = [...new Set(waitlistData.map(w => w.user_id).filter(Boolean))];
+    let usersMap = new Map();
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('user_public_profile')
+        .select('id, display_name, avatar_url, username')
+        .in('id', userIds);
+      users?.forEach(u => usersMap.set(u.id, u));
+    }
+
+    const data = waitlistData.map(entry => ({
+      ...entry,
+      user: usersMap.get(entry.user_id) || null
+    }));
 
     return (data || []).map(entry => ({
       id: entry.id,
@@ -2131,10 +2194,10 @@ export class SupabaseService {
       status: entry.status,
       expiresAt: entry.expires_at,
       user: {
-        id: entry.user.id,
-        name: entry.user.full_name || entry.user.username,
-        username: entry.user.username,
-        avatarUrl: entry.user.avatar_url
+        id: entry.user?.id || entry.user_id,
+        name: entry.user?.display_name || entry.user?.username || 'Player',
+        username: entry.user?.username || '',
+        avatarUrl: entry.user?.avatar_url || ''
       }
     }));
   }
@@ -2203,13 +2266,10 @@ export class SupabaseService {
   }
 
   static async getRecurringTemplates(userId?: string): Promise<any[]> {
+    // Fetch templates without FK join (to avoid 403 on users table)
     let query = supabase
       .from('recurring_game_templates')
-      .select(`
-        *,
-        creator:users!recurring_game_templates_creator_id_fkey(id, full_name, username, avatar_url),
-        _count:recurring_game_instances(count)
-      `)
+      .select('*, _count:recurring_game_instances(count)')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
@@ -2217,8 +2277,28 @@ export class SupabaseService {
       query = query.eq('creator_id', userId);
     }
 
-    const { data, error } = await query;
+    const { data: templatesData, error } = await query;
     if (error) throw error;
+
+    if (!templatesData || templatesData.length === 0) {
+      return [];
+    }
+
+    // Fetch creator info from user_public_profile view
+    const creatorIds = [...new Set(templatesData.map(t => t.creator_id).filter(Boolean))];
+    let creatorsMap = new Map();
+    if (creatorIds.length > 0) {
+      const { data: creators } = await supabase
+        .from('user_public_profile')
+        .select('id, display_name, avatar_url, username')
+        .in('id', creatorIds);
+      creators?.forEach(c => creatorsMap.set(c.id, c));
+    }
+
+    const data = templatesData.map(template => ({
+      ...template,
+      creator: creatorsMap.get(template.creator_id) || null
+    }));
 
     return (data || []).map(template => ({
       id: template.id,
@@ -2235,10 +2315,10 @@ export class SupabaseService {
       isActive: template.is_active,
       createdAt: template.created_at,
       creator: {
-        id: template.creator.id,
-        name: template.creator.full_name || template.creator.username,
-        username: template.creator.username,
-        avatarUrl: template.creator.avatar_url
+        id: template.creator?.id || template.creator_id,
+        name: template.creator?.display_name || template.creator?.username || 'Host',
+        username: template.creator?.username || '',
+        avatarUrl: template.creator?.avatar_url || ''
       },
       instanceCount: template._count?.[0]?.count || 0
     }));
@@ -2344,12 +2424,10 @@ export class SupabaseService {
 
   static async getGameReviews(gameId: string): Promise<any[]> {
     try {
-      const { data, error } = await supabase
+      // Fetch reviews without FK join (to avoid 403 on users table)
+      const { data: reviewsData, error } = await supabase
         .from('game_reviews')
-        .select(`
-          *,
-          reviewer:users!game_reviews_reviewer_id_fkey(id, full_name, username, avatar_url)
-        `)
+        .select('*')
         .eq('game_id', gameId)
         .order('created_at', { ascending: false });
 
@@ -2357,6 +2435,26 @@ export class SupabaseService {
         console.error('Error fetching game reviews:', error);
         return [];
       }
+
+      if (!reviewsData || reviewsData.length === 0) {
+        return [];
+      }
+
+      // Fetch reviewer info from user_public_profile view
+      const reviewerIds = [...new Set(reviewsData.map(r => r.reviewer_id).filter(Boolean))];
+      let reviewersMap = new Map();
+      if (reviewerIds.length > 0) {
+        const { data: reviewers } = await supabase
+          .from('user_public_profile')
+          .select('id, display_name, avatar_url, username')
+          .in('id', reviewerIds);
+        reviewers?.forEach(r => reviewersMap.set(r.id, r));
+      }
+
+      const data = reviewsData.map(review => ({
+        ...review,
+        reviewer: reviewersMap.get(review.reviewer_id) || null
+      }));
 
       return data || [];
     } catch (error) {
@@ -2423,22 +2521,45 @@ export class SupabaseService {
   }
 
   static async getPlayerRatings(gameId: string, playerId?: string): Promise<any[]> {
+    // Fetch ratings without FK join (to avoid 403 on users table)
     let query = supabase
       .from('player_ratings')
-      .select(`
-        *,
-        rater:users!player_ratings_rater_id_fkey(id, full_name, username, avatar_url),
-        rated_player:users!player_ratings_rated_player_id_fkey(id, full_name, username, avatar_url)
-      `)
+      .select('*')
       .eq('game_id', gameId);
 
     if (playerId) {
       query = query.eq('rated_player_id', playerId);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data: ratingsData, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
+
+    if (!ratingsData || ratingsData.length === 0) {
+      return [];
+    }
+
+    // Fetch user info from user_public_profile view for both rater and rated_player
+    const userIds = [
+      ...new Set([
+        ...ratingsData.map(r => r.rater_id).filter(Boolean),
+        ...ratingsData.map(r => r.rated_player_id).filter(Boolean)
+      ])
+    ];
+    let usersMap = new Map();
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('user_public_profile')
+        .select('id, display_name, avatar_url, username')
+        .in('id', userIds);
+      users?.forEach(u => usersMap.set(u.id, u));
+    }
+
+    const data = ratingsData.map(rating => ({
+      ...rating,
+      rater: usersMap.get(rating.rater_id) || null,
+      rated_player: usersMap.get(rating.rated_player_id) || null
+    }));
 
     return (data || []).map(rating => ({
       id: rating.id,
@@ -2448,16 +2569,16 @@ export class SupabaseService {
       feedbackText: rating.feedback_text,
       createdAt: rating.created_at,
       rater: {
-        id: rating.rater.id,
-        name: rating.rater.full_name || rating.rater.username,
-        username: rating.rater.username,
-        avatarUrl: rating.rater.avatar_url
+        id: rating.rater?.id || rating.rater_id,
+        name: rating.rater?.display_name || rating.rater?.username || 'Player',
+        username: rating.rater?.username || '',
+        avatarUrl: rating.rater?.avatar_url || ''
       },
       ratedPlayer: {
-        id: rating.rated_player.id,
-        name: rating.rated_player.full_name || rating.rated_player.username,
-        username: rating.rated_player.username,
-        avatarUrl: rating.rated_player.avatar_url
+        id: rating.rated_player?.id || rating.rated_player_id,
+        name: rating.rated_player?.display_name || rating.rated_player?.username || 'Player',
+        username: rating.rated_player?.username || '',
+        avatarUrl: rating.rated_player?.avatar_url || ''
       }
     }));
   }

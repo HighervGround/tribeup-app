@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
 import { useUpdateUserProfile } from '../hooks/useUserProfile';
 import { useAppStore } from '../store/appStore';
+import { supabase } from '../lib/supabase';
 
 interface ProfileFormData {
   fullName: string;
@@ -28,7 +29,7 @@ const availableSports = [
 
 function EditProfile() {
   const navigate = useNavigate();
-  const { user, setUser } = useAppStore();
+  const { setUser } = useAppStore();
   const updateProfileMutation = useUpdateUserProfile();
   const loading = updateProfileMutation.isPending;
   const [formData, setFormData] = useState<ProfileFormData>({
@@ -44,39 +45,82 @@ function EditProfile() {
   const [selectedFile, setSelectedFile] = useState(null as File | null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [avatarError, setAvatarError] = useState(null as string | null);
+  const [authReady, setAuthReady] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const initialFormRef = React.useRef(null as ProfileFormData | null);
 
   const BIO_MAX = 200;
   const USERNAME_REGEX = /^[a-zA-Z0-9._-]{3,20}$/;
 
-  // Load current user data
+  // Wait for auth to be ready before loading profile data
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!user) {
-        navigate('/auth');
-        return;
-      }
-
+    const waitForAuth = async () => {
       try {
-        const userProfile = await SupabaseService.getUserProfile(user.id);
-        if (!userProfile) return;
+        // Ensure auth session is initialized before querying
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ [EditProfile] Auth session error:', sessionError);
+          toast.error('Authentication error. Please sign in again.');
+          navigate('/auth');
+          return;
+        }
+
+        if (!session || !session.user?.id) {
+          console.warn('⚠️ [EditProfile] No authenticated session found');
+          toast.error('Please sign in to edit your profile');
+          navigate('/auth');
+          return;
+        }
+
+        console.log('✅ [EditProfile] Auth ready, user ID:', session.user.id);
+        setAuthReady(true);
+
+        // Now that auth is ready, load profile data from public.users
+        // Use a single data source (public.users row), not session metadata
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, full_name, username, avatar_url, bio, location, preferred_sports')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userError) {
+          console.error('❌ [EditProfile] Error loading profile from users table:', userError);
+          toast.error('Failed to load profile data');
+          setLoadingProfile(false);
+          return;
+        }
+
+        if (!userData) {
+          console.warn('⚠️ [EditProfile] User profile not found in users table');
+          toast.error('Profile not found');
+          setLoadingProfile(false);
+          return;
+        }
+
+        // Transform database row to form data
         const loaded: ProfileFormData = {
-          fullName: userProfile.name || '',
-          username: userProfile.username || '',
-          bio: userProfile.bio || '',
-          location: userProfile.location || '',
-          avatarUrl: userProfile.avatar || '',
-          sportsPreferences: Array.isArray(userProfile.preferences?.sports) ? userProfile.preferences.sports : []
+          fullName: userData.full_name || '',
+          username: userData.username || '',
+          bio: userData.bio || '',
+          location: userData.location || '',
+          avatarUrl: userData.avatar_url || '',
+          sportsPreferences: Array.isArray(userData.preferred_sports) ? userData.preferred_sports : []
         };
+        
         setFormData(loaded);
         initialFormRef.current = loaded;
+        setLoadingProfile(false);
+        console.log('✅ [EditProfile] Profile data loaded from public.users');
       } catch (error) {
-        console.error('Error loading user profile:', error);
+        console.error('❌ [EditProfile] Exception loading profile:', error);
         toast.error('Failed to load profile data');
+        setLoadingProfile(false);
       }
     };
-    loadUserData();
-  }, [user, navigate]);
+
+    waitForAuth();
+  }, [navigate]);
 
   // Debounced username availability check while typing (top-level)
   useEffect(() => {
@@ -90,15 +134,25 @@ function EditProfile() {
       setUsernameError('3-20 chars. Letters, numbers, dot, underscore, or hyphen.');
       return;
     }
-    // If unchanged vs current store user, skip
-    if (user?.username && user.username.trim().toLowerCase() === uname.toLowerCase()) {
+    
+    // If unchanged vs loaded form data, skip
+    if (initialFormRef.current?.username && initialFormRef.current.username.trim().toLowerCase() === uname.toLowerCase()) {
       setUsernameError(null);
       return;
     }
+    
     setCheckingUsername(true);
     timer = setTimeout(async () => {
       try {
-        const available = await SupabaseService.isUsernameAvailable(uname, user?.id);
+        // Get current user ID from auth session (not store) to avoid timing issues
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
+        if (!currentUserId) {
+          setUsernameError('Please sign in to check username');
+          setCheckingUsername(false);
+          return;
+        }
+        const available = await SupabaseService.isUsernameAvailable(uname, currentUserId);
         setUsernameError(available ? null : 'Username is already taken');
       } catch {
         setUsernameError('Unable to validate username right now');
@@ -107,7 +161,7 @@ function EditProfile() {
       }
     }, 450);
     return () => clearTimeout(timer);
-  }, [formData.username, user]);
+  }, [formData.username]);
 
   const handleInputChange = (field: keyof ProfileFormData, value: string | string[]) => {
     setFormData(prev => ({
@@ -133,18 +187,28 @@ function EditProfile() {
   };
 
   const handleUsernameBlur = async () => {
-    if (!user) return;
+    // Get current user ID from auth session
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUserId = session?.user?.id;
+    if (!currentUserId) return;
+
     const uname = (formData.username || '').trim();
     if (!uname) return;
+    
     // client-side validation rules first
     if (!USERNAME_REGEX.test(uname)) {
       setUsernameError('3-20 chars. Letters, numbers, dot, underscore, or hyphen.');
       return;
     }
-    if (user.username && user.username.trim().toLowerCase() === uname.toLowerCase()) return;
+    
+    // If unchanged vs loaded form data, skip
+    if (initialFormRef.current?.username && initialFormRef.current.username.trim().toLowerCase() === uname.toLowerCase()) {
+      return;
+    }
+    
     try {
       setCheckingUsername(true);
-      const available = await SupabaseService.isUsernameAvailable(uname, user.id);
+      const available = await SupabaseService.isUsernameAvailable(uname, currentUserId);
       if (!available) setUsernameError('Username is already taken');
     } catch (e) {
       setUsernameError('Unable to validate username right now');
@@ -178,11 +242,17 @@ function EditProfile() {
   };
 
   const handleSave = async () => {
-    console.log('🔧 Starting profile save...', { user: user?.id, formData });
-    if (!user) {
-      console.error('❌ No user found for profile save');
+    // Ensure auth is still ready before saving
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user?.id) {
+      console.error('❌ [EditProfile] No authenticated session for save');
+      toast.error('Please sign in to save your profile');
+      navigate('/auth');
       return;
     }
+
+    const currentUserId = session.user.id;
+    console.log('🔧 Starting profile save...', { userId: currentUserId, formData });
 
     try {
       // Validate username availability before save
@@ -192,7 +262,7 @@ function EditProfile() {
           setUsernameError('3-20 chars. Letters, numbers, dot, underscore, or hyphen.');
           return;
         }
-        const available = await SupabaseService.isUsernameAvailable(uname, user.id);
+        const available = await SupabaseService.isUsernameAvailable(uname, currentUserId);
         if (!available) {
           setUsernameError('Username is already taken');
           return;
@@ -214,7 +284,7 @@ function EditProfile() {
 
       // Use React Query mutation for profile update
       updateProfileMutation.mutate({
-        userId: user.id,
+        userId: currentUserId,
         profileData: {
           full_name: formData.fullName,
           username: formData.username,
@@ -265,12 +335,13 @@ function EditProfile() {
 
   const isDirty = (initialFormRef.current && JSON.stringify(initialFormRef.current) !== JSON.stringify(formData)) || selectedFile !== null;
 
-  if (!user) {
+  // Show loading state while waiting for auth and profile data
+  if (!authReady || loadingProfile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl mb-4">Please sign in</h1>
-          <Button onClick={() => navigate('/auth')}>Sign In</Button>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
         </div>
       </div>
     );

@@ -8,7 +8,6 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
 import { formatTimeString, formatCost, formatEventHeader } from '../lib/dateUtils';
-import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { SimpleCalendarButton } from './SimpleCalendarButton';
 
 interface Game {
@@ -163,10 +162,6 @@ export function UnifiedGameCard({
                       +{game.publicRsvpCount} public
                     </Badge>
                   )}
-                  <div className="flex items-center gap-1">
-                    <RealtimeAvatarStack roomName={`game-${game.id}`} />
-                    <span className="text-xs text-muted-foreground">online</span>
-                  </div>
                 </div>
                 
                 <div className="flex gap-2">
@@ -248,10 +243,6 @@ export function UnifiedGameCard({
               +{game.publicRsvpCount} public
             </Badge>
           )}
-          <div className="flex items-center gap-1 ml-2">
-            <RealtimeAvatarStack roomName={`game-${game.id}`} />
-            <span className="text-xs text-muted-foreground">online</span>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />

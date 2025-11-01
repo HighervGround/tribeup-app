@@ -40,7 +40,6 @@ import { useDeepLinks } from '../hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
-import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
 import { supabase } from '../lib/supabase';
@@ -1009,10 +1008,6 @@ function GameDetails() {
                     +{game.publicRsvpCount} public RSVPs
                   </Badge>
                 )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Online now:</span>
-                <RealtimeAvatarStack roomName={`game-${gameId}`} />
               </div>
             </div>
           </CardHeader>

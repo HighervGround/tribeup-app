@@ -1004,7 +1004,7 @@ function GameDetails() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CardTitle>Players ({players.length}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
-                {game.publicRsvpCount && game.publicRsvpCount > 0 && (
+                {Number(game.publicRsvpCount || 0) > 0 && (
                   <Badge variant="secondary" className="text-xs px-2 py-0.5">
                     +{game.publicRsvpCount} public RSVPs
                   </Badge>

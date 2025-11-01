@@ -131,6 +131,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     cost: dbGame.cost,
     maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
     currentPlayers: Number(dbGame.current_players ?? dbGame.currentPlayers ?? 0),
+    publicRsvpCount: Number(dbGame.public_rsvp_count ?? 0),
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',
     sportColor: getSportColor(dbGame.sport),

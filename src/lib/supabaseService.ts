@@ -212,10 +212,62 @@ export class SupabaseService {
         return null;
       }
 
-      // Use user_public_profile view for ALL profile reads (consistent with requirement)
-      // Note: This returns public fields only. If full profile data with private fields is needed,
-      // use a separate method that queries the users table with proper RLS.
-      return await this.getOtherUserProfile(userId);
+      // Check if this is the current user's own profile (to access private fields)
+      const currentUserId = session.user.id;
+      if (userId === currentUserId) {
+        // For own profile, read from public.users with id filter for private fields
+        console.log('🔍 [getUserProfile] Fetching own profile from users table');
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name, username, avatar_url, bio, location')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.error('❌ [getUserProfile] Error fetching own profile:', error);
+          throw error;
+        }
+
+        if (!data) {
+          console.log('ℹ️ [getUserProfile] Own profile not found');
+          return null;
+        }
+
+        // Transform to User format
+        const user: User = {
+          id: data.id,
+          name: data.full_name || data.username || 'User',
+          username: data.username || '',
+          email: '', // Get from auth metadata if needed
+          avatar: data.avatar_url || '',
+          bio: data.bio || '',
+          location: data.location || '',
+          role: 'user' as const,
+          preferences: {
+            theme: 'auto' as const,
+            highContrast: false,
+            largeText: false,
+            reducedMotion: false,
+            colorBlindFriendly: false,
+            notifications: {
+              push: true,
+              email: false,
+              gameReminders: true,
+            },
+            privacy: {
+              locationSharing: true,
+              profileVisibility: 'public' as const,
+            },
+            sports: [],
+          },
+        };
+
+        console.log('✅ [getUserProfile] Own profile found');
+        return user;
+      } else {
+        // For other users, use user_public_profile view
+        return await this.getOtherUserProfile(userId);
+      }
     } catch (err: any) {
       console.error('❌ [getUserProfile] Exception:', err);
       
@@ -636,13 +688,14 @@ export class SupabaseService {
       const userId = user?.id;
       console.log(`🔍 Getting games for user: ${userId || 'anonymous'}`);
       
-      // Step 1: Fetch games with basic data and participation info
+      // Fetch games with creator_profile relationship from user_public_profile view
       const queryStart = performance.now();
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
           *,
-          game_participants(user_id)
+          game_participants(user_id),
+          creator_profile(id, display_name, username, avatar_url)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -653,67 +706,25 @@ export class SupabaseService {
         return [];
       }
       
-      console.log(`📊 Step 1 completed: ${gamesData?.length || 0} games fetched`);
-      
-      // Step 2: Get all unique creator IDs and fetch their user profiles
-      const creatorIds = [...new Set(gamesData?.map(game => game.creator_id).filter(Boolean) || [])];
-      console.log(`🔍 Step 2: Fetching ${creatorIds.length} unique creators`);
-      
-      let usersMap = new Map();
-      if (creatorIds.length > 0) {
-        console.log(`🔍 [getGames] Fetching ${creatorIds.length} creators from user_public_profile:`, creatorIds);
-        const { data: usersData, error: usersError } = await supabase
-          .from('user_public_profile')
-          .select('id, display_name, avatar_url, username')
-          .in('id', creatorIds);
-          
-        if (usersError) {
-          console.error('❌ [getGames] Users query failed:', usersError);
-          console.error('❌ [getGames] Error details:', {
-            code: usersError.code,
-            message: usersError.message,
-            details: usersError.details
-          });
-          // Continue with empty user map - will show loading state
-        } else {
-          // Build user map: user_id -> user data
-          if (usersData && usersData.length > 0) {
-            usersData.forEach(user => {
-              usersMap.set(user.id, user);
-            });
-            console.log(`✅ [getGames] Step 2 completed: ${usersData.length} users fetched`);
-          } else {
-            console.warn(`⚠️ [getGames] No creators found in user_public_profile for IDs:`, creatorIds);
-          }
-          
-          // Log which creators were found vs missing
-          const foundIds = new Set(usersData?.map(u => u.id) || []);
-          const missingIds = creatorIds.filter(id => !foundIds.has(id));
-          if (missingIds.length > 0) {
-            console.warn(`⚠️ [getGames] Missing creators in view:`, missingIds);
-          }
-        }
-      }
-      
       const queryTime = performance.now() - queryStart;
-      console.log(`📊 Total query time: ${queryTime.toFixed(2)}ms`);
+      console.log(`📊 Query time: ${queryTime.toFixed(2)}ms, fetched ${gamesData?.length || 0} games`);
       
-      // Step 3: Transform games with proper user mapping
+      // Transform games with creator_profile from the relationship
       const games = (gamesData || []).map((game: any) => {
         const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
-        const creator = usersMap.get(game.creator_id);
+        const creator = game.creator_profile || null;
         
         // Enhanced game object with proper creator data
         const enhancedGame = {
           ...game,
-          creator: creator || null, // Will be null if user not found
+          creator: creator,
           game_participants: game.game_participants
         };
         
-        console.log(`🎯 Game "${game.title}" creator mapping:`, {
+        console.log(`🎯 Game "${game.title}" creator:`, {
           creator_id: game.creator_id,
           creator_found: !!creator,
-          creator_name: creator?.display_name || 'Not loaded'
+          creator_name: creator?.display_name || 'Not found'
         });
         
         return transformGameFromDB(enhancedGame, isJoined);
@@ -795,35 +806,24 @@ export class SupabaseService {
   }
 
   static async getMyGames(userId: string): Promise<Game[]> {
-    // Fetch games without FK join (to avoid 403 on users table)
+    // Fetch games with creator_profile relationship from user_public_profile view
     const { data: gamesData, error } = await supabase
       .from('games')
-      .select('*')
+      .select(`
+        *,
+        creator_profile(id, display_name, username, avatar_url)
+      `)
       .eq('creator_id', userId)
       .gte('date', new Date().toISOString().split('T')[0])
       .order('date', { ascending: true });
 
     if (error) throw error;
 
-    // Fetch creator info from user_public_profile view
-    let data = gamesData || [];
-    if (data.length > 0) {
-      const creatorIds = [...new Set(data.map(g => g.creator_id).filter(Boolean))];
-      if (creatorIds.length > 0) {
-        const { data: creators } = await supabase
-          .from('user_public_profile')
-          .select('id, display_name, avatar_url, username')
-          .in('id', creatorIds);
-
-        const creatorsMap = new Map(creators?.map(c => [c.id, c]) || []);
-
-        // Add creator data to games
-        data = data.map(game => ({
-          ...game,
-          creator: creatorsMap.get(game.creator_id) || null
-        }));
-      }
-    }
+    // Transform games with creator_profile from the relationship
+    const data = (gamesData || []).map((game: any) => ({
+      ...game,
+      creator: game.creator_profile || null
+    }));
 
     return data.map(game => transformGameFromDB(game, true));
   }
@@ -836,8 +836,21 @@ export class SupabaseService {
 
       let query = supabase
         .from('games')
-        .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
-;
+        .select(`
+          id,
+          title,
+          sport,
+          date,
+          time,
+          location,
+          cost,
+          max_players,
+          current_players,
+          description,
+          image_url,
+          creator_id,
+          creator_profile(id, display_name, username, avatar_url)
+        `);
 
       // Default to future games only unless specific date range is provided
       if (!latitude && !longitude) {
@@ -856,10 +869,16 @@ export class SupabaseService {
       if (!userId) {
         const { data: gamesData, error } = await query.order('date', { ascending: true }).limit(50);
         if (error) throw error;
-        return (gamesData || []).map((game: any) => transformGameFromDB(game, false));
+        return (gamesData || []).map((game: any) => {
+          const gameWithCreator = {
+            ...game,
+            creator: game.creator_profile || null
+          };
+          return transformGameFromDB(gameWithCreator, false);
+        });
       }
 
-      // For authenticated users, use optimized join query
+      // For authenticated users, include participants
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
@@ -872,12 +891,16 @@ export class SupabaseService {
 
       return (gamesWithParticipants || []).map((game: any) => {
         const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        const gameWithCreator = {
+          ...game,
+          creator: game.creator_profile || null
+        };
         console.log(`🎯 Game ${game.id} isJoined check:`, {
           userId,
-          participants: game.game_participants?.map(p => p.user_id),
+          participants: game.game_participants?.map((p: any) => p.user_id),
           isJoined
         });
-        return transformGameFromDB(game, isJoined);
+        return transformGameFromDB(gameWithCreator, isJoined);
       });
     } catch (error) {
       console.error('[SupabaseService.getNearbyGames] Error:', error);
@@ -1211,10 +1234,15 @@ export class SupabaseService {
       if (userId) {
         console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
         
-        // Step 1: Get basic game data (fast) - include planned_route and duration
+        // Step 1: Get basic game data with creator_profile relationship from user_public_profile view
         const { data: gameData, error: gameError } = await supabase
           .from('games')
-          .select('*, planned_route, duration')
+          .select(`
+            *,
+            planned_route,
+            duration,
+            creator_profile(id, display_name, username, avatar_url)
+          `)
           .eq('id', gameId)
           .single();
 
@@ -1233,21 +1261,10 @@ export class SupabaseService {
           
         const isJoined = !!participantData;
         
-        // Step 3: Get creator info (separate fast query)
-        let creatorInfo = null;
-        if (gameData.creator_id) {
-          const { data: creator } = await supabase
-            .from('users')
-            .select('id, full_name, username, avatar_url')
-            .eq('id', gameData.creator_id)
-            .maybeSingle();
-          creatorInfo = creator;
-        }
-        
-        // Combine results
+        // Creator info is already included via creator_profile relationship
         const result = transformGameFromDB({
           ...gameData,
-          creator: creatorInfo
+          creator: gameData.creator_profile || null
         }, isJoined);
         
         const duration = performance.now() - startTime;
@@ -1261,10 +1278,15 @@ export class SupabaseService {
       } else {
         console.log('🔍 [getGameById] Fetching for anonymous user');
         
-        // For anonymous users: simple query without joins - include planned_route and duration
+        // For anonymous users: query with creator_profile relationship from user_public_profile view
         const { data: gameData, error: gameError } = await supabase
           .from('games')
-          .select('*, planned_route, duration')
+          .select(`
+            *,
+            planned_route,
+            duration,
+            creator_profile(id, display_name, username, avatar_url)
+          `)
           .eq('id', gameId)
           .single();
 
@@ -1273,30 +1295,15 @@ export class SupabaseService {
           throw gameError;
         }
         
-        // Get creator info separately - use user_public_profile view
-        let creatorInfo = null;
-        if (gameData.creator_id) {
-          console.log(`🔍 [getGameById] Fetching creator from user_public_profile:`, gameData.creator_id);
-          const { data: creator, error: creatorError } = await supabase
-            .from('user_public_profile')
-            .select('id, display_name, avatar_url, username')
-            .eq('id', gameData.creator_id)
-            .maybeSingle();
-            
-          if (creatorError) {
-            console.error(`❌ [getGameById] Creator query failed for ${gameData.creator_id}:`, creatorError);
-          } else if (!creator) {
-            console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in user_public_profile view`);
-          } else {
-            console.log(`✅ [getGameById] Creator found:`, { id: creator.id, name: creator.display_name });
-          }
-          
-          creatorInfo = creator;
+        if (gameData.creator_id && !gameData.creator_profile) {
+          console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in user_public_profile view`);
+        } else if (gameData.creator_profile) {
+          console.log(`✅ [getGameById] Creator found:`, { id: gameData.creator_profile.id, name: gameData.creator_profile.display_name });
         }
         
         const result = transformGameFromDB({
           ...gameData,
-          creator: creatorInfo
+          creator: gameData.creator_profile || null
         }, false);
         
         const duration = performance.now() - startTime;

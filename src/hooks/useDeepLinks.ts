@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAppStore } from '../store/appStore';
 
 interface DeepLink {
   path: string;
@@ -20,6 +21,7 @@ export function useDeepLinks() {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
+  const { user } = useAppStore();
 
   // Generate app URLs for sharing
   const generateGameUrl = useCallback((gameId: string, options?: { 
@@ -145,8 +147,16 @@ export function useDeepLinks() {
   }, [navigate]);
 
   const navigateToUser = useCallback((userId: string, state?: any) => {
-    navigate(`/user/${userId}`, { state });
-  }, [navigate]);
+    // Route normalization: if user taps their own card, redirect to own profile route
+    // Use current user ID from store (synchronous check)
+    const currentUserId = user?.id;
+    
+    if (userId && userId === currentUserId) {
+      navigate('/profile/me', { state });
+    } else {
+      navigate(`/user/${userId}`, { state });
+    }
+  }, [navigate, user?.id]);
 
   // Handle incoming deep links (when app is opened via URL)
   const handleIncomingDeepLink = useCallback(() => {

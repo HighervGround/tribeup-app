@@ -1444,9 +1444,10 @@ export class SupabaseService {
       }
       
       // Fetch user details from public.user_public_profile view to avoid RLS blocks
+      // Select all needed fields for proper name fallback
       const { data: users, error: usersError } = await supabase
         .from('user_public_profile')
-        .select('id, display_name, avatar_url')
+        .select('id, display_name, username, avatar_url, full_name')
         .in('id', userIds);
       
       console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
@@ -1458,14 +1459,16 @@ export class SupabaseService {
       }
 
       // Combine participant and user data - always return valid names
+      // Use user_public_profile view data (usersMap contains data from user_public_profile)
       return participants.map(participant => {
         const user = usersMap.get(participant.user_id);
         console.log('🔍 Processing participant:', participant.user_id, 'found user:', !!user);
         
         // Ensure name is never empty or undefined
+        // Use display_name first, then username, then full_name, then fallback
         let name = 'Player';
         if (user) {
-          name = user.display_name || 'Player';
+          name = user.display_name || user.username || user.full_name || 'Player';
         } else {
           // If RLS blocked or user not found, use a default but try to get partial info
           name = `Player ${participant.user_id.slice(0, 6)}`;

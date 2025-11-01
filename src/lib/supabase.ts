@@ -88,8 +88,8 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   };
 
   if (creatorProfile) {
-    // Use display_name first, then username, then 'Host' as fallback
-    const hostName = creatorProfile.display_name || creatorProfile.username || 'Host';
+    // Compute display_name: full_name || username || 'Host'
+    const hostName = creatorProfile.full_name?.trim() || creatorProfile.username?.trim() || 'Host';
     createdBy = hostName;
     creatorData = {
       id: creatorProfile.id || dbGame.creator_id,
@@ -98,7 +98,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     };
     console.log(`✅ [transformGameFromDB] Creator loaded: ${hostName} (${creatorProfile.id?.slice(0, 8) || 'Unknown'})`);
   } else if (creatorProfile === null || creatorProfile === undefined) {
-    // Creator not found in user_public_profile view
+    // Creator not found in users table
     // Use a more user-friendly fallback instead of showing UUID
     createdBy = 'Host';
     creatorData = {
@@ -106,7 +106,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
       name: createdBy,
       avatar: ''
     };
-    console.warn(`⚠️ [transformGameFromDB] Creator ${dbGame.creator_id?.slice(0, 8) || 'Unknown'} not found in user_public_profile view`);
+    console.warn(`⚠️ [transformGameFromDB] Creator ${dbGame.creator_id?.slice(0, 8) || 'Unknown'} not found in users table`);
   }
   // If creatorProfile is undefined, we're still loading - show "Loading user..."
 

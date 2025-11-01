@@ -70,8 +70,8 @@ export default function AuthGate({ children }: AuthGateProps) {
         console.log('🔐 [AuthGate] Checking onboarding status...');
         const { data: userRow, error: selErr } = await supabase
           .from('users')
-          .select('onboarding_completed,id,auth_user_id')
-          .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
+          .select('onboarding_completed,id')
+          .eq('id', user.id)
           .maybeSingle();
 
         if (selErr) {

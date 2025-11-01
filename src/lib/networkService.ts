@@ -147,8 +147,8 @@ class NetworkService {
   // Health check for network connectivity
   async checkConnectivity(): Promise<boolean> {
     try {
-      // Use user_public_profile view or a lightweight table instead of probing users without id filter
-      const { error } = await supabase.from('user_public_profile').select('id').limit(1);
+      // Use a lightweight query to check connectivity
+      const { error } = await supabase.from('games').select('id').limit(1);
       return !error;
     } catch {
       return false;

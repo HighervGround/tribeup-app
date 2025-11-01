@@ -63,10 +63,10 @@ export class SupabaseService {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error || !user) throw error ?? new Error('No user after sign-in');
 
-      // Create or ensure your user row exists using auth_user_id
+      // Create or ensure your user row exists
       const { data: profileData, error: upsertError } = await supabase.from('users').upsert(
         {
-          auth_user_id: user.id,
+          id: user.id,
           email: user.email ?? null,
           full_name: userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'New User',
           username: userData.username || `${userData.firstName || 'user'}_${userData.lastName || 'name'}`.toLowerCase().replace(/\s+/g, '_'),
@@ -78,7 +78,7 @@ export class SupabaseService {
                 .filter((s: any): s is string => typeof s === 'string' && s.trim().length > 0))
             : []
         },
-        { onConflict: 'auth_user_id' }
+        { onConflict: 'id' }
       );
 
       if (upsertError) {
@@ -105,7 +105,7 @@ export class SupabaseService {
       const { data, error: updateError } = await supabase
         .from('users')
         .update({ onboarding_completed: true })
-        .eq('auth_user_id', user.id)
+        .eq('id', user.id)
         .select();
 
       if (updateError) {
@@ -265,7 +265,7 @@ export class SupabaseService {
         console.log('✅ [getUserProfile] Own profile found');
         return user;
       } else {
-        // For other users, use user_public_profile view
+        // For other users, fetch from users table
         return await this.getOtherUserProfile(userId);
       }
     } catch (err: any) {
@@ -300,10 +300,10 @@ export class SupabaseService {
 
       console.log('🔍 [getOtherUserProfile] Fetching profile for userId:', userId);
 
-      // Use user_public_profile view only (no fallbacks to users table)
+      // Use users table directly
       const { data, error } = await supabase
-        .from('user_public_profile')
-        .select('id, display_name, avatar_url, username, bio, location')
+        .from('users')
+        .select('id, full_name, avatar_url, username, bio, location')
         .eq('id', userId)
         .maybeSingle();
 
@@ -342,10 +342,11 @@ export class SupabaseService {
         return null;
       }
 
-      // Transform view data to User format
+      // Transform data to User format with computed display_name
+      const displayName = data.full_name?.trim() || data.username?.trim() || 'Player';
       const user: User = {
         id: data.id,
-        name: data.display_name || data.username || 'Unknown',
+        name: displayName,
         username: data.username || '',
         email: '', // Not available in public view
         avatar: data.avatar_url || '',
@@ -688,13 +689,13 @@ export class SupabaseService {
       const userId = user?.id;
       console.log(`🔍 Getting games for user: ${userId || 'anonymous'}`);
       
-      // Fetch games with creator_profile relationship from user_public_profile view
+      // Fetch games with creator_profile relationship from users table
       // Use games_with_counts view for optimized current_players count
       const queryStart = performance.now();
       const { data: gamesData, error: gamesError } = await supabase
         .from('games_with_counts')
         .select(`
-          id, title, location, date, time, max_players, current_players, creator_id, creator_profile(id, display_name, username, avatar_url),
+          id, title, location, date, time, max_players, current_players, creator_id, creator_profile(id, full_name, username, avatar_url),
           game_participants(user_id)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
@@ -806,13 +807,13 @@ export class SupabaseService {
   }
 
   static async getMyGames(userId: string): Promise<Game[]> {
-    // Fetch games with creator_profile relationship from user_public_profile view
+    // Fetch games with creator_profile relationship from users table
     // Use games_with_counts view for optimized current_players count
     const { data: gamesData, error } = await supabase
       .from('games_with_counts')
       .select(`
         *,
-        creator_profile(id, display_name, username, avatar_url)
+        creator_profile(id, full_name, username, avatar_url)
       `)
       .eq('creator_id', userId)
       .gte('date', new Date().toISOString().split('T')[0])
@@ -850,7 +851,7 @@ export class SupabaseService {
           description,
           image_url,
           creator_id,
-          creator_profile(id, display_name, username, avatar_url)
+          creator_profile(id, full_name, username, avatar_url)
         `);
 
       // Default to future games only unless specific date range is provided
@@ -1235,7 +1236,7 @@ export class SupabaseService {
       if (userId) {
         console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
         
-        // Step 1: Get basic game data with creator_profile relationship from user_public_profile view
+        // Step 1: Get basic game data with creator_profile relationship from users table
         // Use games_with_counts view for optimized current_players count
         const { data: gameData, error: gameError } = await supabase
           .from('games_with_counts')
@@ -1243,7 +1244,7 @@ export class SupabaseService {
             *,
             planned_route,
             duration,
-            creator_profile(id, display_name, username, avatar_url)
+            creator_profile(id, full_name, username, avatar_url)
           `)
           .eq('id', gameId)
           .single();
@@ -1280,7 +1281,7 @@ export class SupabaseService {
       } else {
         console.log('🔍 [getGameById] Fetching for anonymous user');
         
-        // For anonymous users: query with creator_profile relationship from user_public_profile view
+        // For anonymous users: query with creator_profile relationship from users table
         // Use games_with_counts view for optimized current_players count
         const { data: gameData, error: gameError } = await supabase
           .from('games_with_counts')
@@ -1288,7 +1289,7 @@ export class SupabaseService {
             *,
             planned_route,
             duration,
-            creator_profile(id, display_name, username, avatar_url)
+            creator_profile(id, full_name, username, avatar_url)
           `)
           .eq('id', gameId)
           .single();
@@ -1299,9 +1300,10 @@ export class SupabaseService {
         }
         
         if (gameData.creator_id && !gameData.creator_profile) {
-          console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in user_public_profile view`);
+          console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in users table`);
         } else if (gameData.creator_profile) {
-          console.log(`✅ [getGameById] Creator found:`, { id: gameData.creator_profile.id, name: gameData.creator_profile.display_name });
+          const displayName = gameData.creator_profile.full_name?.trim() || gameData.creator_profile.username?.trim() || 'Host';
+          console.log(`✅ [getGameById] Creator found:`, { id: gameData.creator_profile.id, name: displayName });
         }
         
         const result = transformGameFromDB({
@@ -1443,11 +1445,10 @@ export class SupabaseService {
         console.error('🚨 You MUST run the RLS fix SQL in Supabase dashboard');
       }
       
-      // Fetch user details from public.user_public_profile view to avoid RLS blocks
-      // Select all needed fields for proper name fallback
+      // Fetch user details from users table
       const { data: users, error: usersError } = await supabase
-        .from('user_public_profile')
-        .select('id, display_name, username, avatar_url, full_name')
+        .from('users')
+        .select('id, full_name, username, avatar_url')
         .in('id', userIds);
       
       console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
@@ -1459,16 +1460,14 @@ export class SupabaseService {
       }
 
       // Combine participant and user data - always return valid names
-      // Use user_public_profile view data (usersMap contains data from user_public_profile)
       return participants.map(participant => {
         const user = usersMap.get(participant.user_id);
         console.log('🔍 Processing participant:', participant.user_id, 'found user:', !!user);
         
-        // Ensure name is never empty or undefined
-        // Use display_name first, then username, then full_name, then fallback
+        // Compute display_name: full_name || username || 'Player'
         let name = 'Player';
         if (user) {
-          name = user.display_name || user.username || user.full_name || 'Player';
+          name = user.full_name?.trim() || user.username?.trim() || 'Player';
         } else {
           // If RLS blocked or user not found, use a default but try to get partial info
           name = `Player ${participant.user_id.slice(0, 6)}`;
@@ -2187,13 +2186,13 @@ export class SupabaseService {
       return [];
     }
 
-    // Fetch user info from user_public_profile view
+    // Fetch user info from users table
     const userIds = [...new Set(waitlistData.map(w => w.user_id).filter(Boolean))];
     let usersMap = new Map();
     if (userIds.length > 0) {
       const { data: users } = await supabase
-        .from('user_public_profile')
-        .select('id, display_name, avatar_url, username')
+        .from('users')
+        .select('id, full_name, avatar_url, username')
         .in('id', userIds);
       users?.forEach(u => usersMap.set(u.id, u));
     }
@@ -2211,7 +2210,7 @@ export class SupabaseService {
       expiresAt: entry.expires_at,
       user: {
         id: entry.user?.id || entry.user_id,
-        name: entry.user?.display_name || entry.user?.username || 'Player',
+        name: entry.user?.full_name?.trim() || entry.user?.username?.trim() || 'Player',
         username: entry.user?.username || '',
         avatarUrl: entry.user?.avatar_url || ''
       }
@@ -2300,13 +2299,13 @@ export class SupabaseService {
       return [];
     }
 
-    // Fetch creator info from user_public_profile view
+    // Fetch creator info from users table
     const creatorIds = [...new Set(templatesData.map(t => t.creator_id).filter(Boolean))];
     let creatorsMap = new Map();
     if (creatorIds.length > 0) {
       const { data: creators } = await supabase
-        .from('user_public_profile')
-        .select('id, display_name, avatar_url, username')
+        .from('users')
+        .select('id, full_name, avatar_url, username')
         .in('id', creatorIds);
       creators?.forEach(c => creatorsMap.set(c.id, c));
     }
@@ -2332,7 +2331,7 @@ export class SupabaseService {
       createdAt: template.created_at,
       creator: {
         id: template.creator?.id || template.creator_id,
-        name: template.creator?.display_name || template.creator?.username || 'Host',
+        name: template.creator?.full_name?.trim() || template.creator?.username?.trim() || 'Host',
         username: template.creator?.username || '',
         avatarUrl: template.creator?.avatar_url || ''
       },
@@ -2456,13 +2455,13 @@ export class SupabaseService {
         return [];
       }
 
-      // Fetch reviewer info from user_public_profile view
+      // Fetch reviewer info from users table
       const reviewerIds = [...new Set(reviewsData.map(r => r.reviewer_id).filter(Boolean))];
       let reviewersMap = new Map();
       if (reviewerIds.length > 0) {
         const { data: reviewers } = await supabase
-          .from('user_public_profile')
-          .select('id, display_name, avatar_url, username')
+          .from('users')
+          .select('id, full_name, avatar_url, username')
           .in('id', reviewerIds);
         reviewers?.forEach(r => reviewersMap.set(r.id, r));
       }
@@ -2555,7 +2554,7 @@ export class SupabaseService {
       return [];
     }
 
-    // Fetch user info from user_public_profile view for both rater and rated_player
+    // Fetch user info from users table for both rater and rated_player
     const userIds = [
       ...new Set([
         ...ratingsData.map(r => r.rater_id).filter(Boolean),
@@ -2565,8 +2564,8 @@ export class SupabaseService {
     let usersMap = new Map();
     if (userIds.length > 0) {
       const { data: users } = await supabase
-        .from('user_public_profile')
-        .select('id, display_name, avatar_url, username')
+        .from('users')
+        .select('id, full_name, avatar_url, username')
         .in('id', userIds);
       users?.forEach(u => usersMap.set(u.id, u));
     }
@@ -2586,13 +2585,13 @@ export class SupabaseService {
       createdAt: rating.created_at,
       rater: {
         id: rating.rater?.id || rating.rater_id,
-        name: rating.rater?.display_name || rating.rater?.username || 'Player',
+        name: rating.rater?.full_name?.trim() || rating.rater?.username?.trim() || 'Player',
         username: rating.rater?.username || '',
         avatarUrl: rating.rater?.avatar_url || ''
       },
       ratedPlayer: {
         id: rating.rated_player?.id || rating.rated_player_id,
-        name: rating.rated_player?.display_name || rating.rated_player?.username || 'Player',
+        name: rating.rated_player?.full_name?.trim() || rating.rated_player?.username?.trim() || 'Player',
         username: rating.rated_player?.username || '',
         avatarUrl: rating.rated_player?.avatar_url || ''
       }

@@ -253,29 +253,76 @@ export class SupabaseService {
         return null;
       }
 
-      // Fetch from public profile view
-      const { data, error } = await supabase
+      console.log('🔍 Fetching other user profile for:', userId);
+      console.log('🔍 UserId type check:', typeof userId, 'Length:', userId?.length);
+
+      // Try public profile view first
+      let data: any = null;
+      let error: any = null;
+
+      // Attempt 1: Query user_public_profile view (try both id and auth_user_id if view supports it)
+      const { data: viewData, error: viewError } = await supabase
         .from('user_public_profile')
         .select('id, display_name, avatar_url, username, bio, location')
         .eq('id', userId)
         .maybeSingle();
+      
+      console.log('🔍 View query result:', { viewData: !!viewData, viewError });
 
-      if (error) {
+      if (!viewError && viewData) {
+        data = viewData;
+        console.log('✅ Found via user_public_profile view');
+      } else {
+        // Attempt 2: Query users table directly (RLS should allow SELECT for authenticated users)
+        console.log('⚠️ View query failed, trying users table directly:', viewError);
+        
+        // Try matching by id first
+        let usersData: any = null;
+        let usersError: any = null;
+        
+        const { data: byIdData, error: byIdError } = await supabase
+          .from('users')
+          .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
+          .eq('id', userId)
+          .maybeSingle();
+          
+        if (!byIdError && byIdData) {
+          usersData = byIdData;
+        } else {
+          // If not found by id, try auth_user_id
+          const { data: byAuthIdData, error: byAuthIdError } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
+            .eq('auth_user_id', userId)
+            .maybeSingle();
+            
+          if (!byAuthIdError && byAuthIdData) {
+            usersData = byAuthIdData;
+          } else {
+            usersError = byAuthIdError || byIdError;
+          }
+        }
+
+        if (!usersError && usersData) {
+          data = usersData;
+          console.log('✅ Found via users table');
+        } else {
+          error = usersError || viewError;
+          console.error('❌ Both queries failed:', { viewError, usersError });
+        }
+      }
+
+      if (error || !data) {
         console.error('❌ Public profile read error:', error);
         return null;
       }
 
-      if (!data) {
-        console.log('ℹ️ User profile not found');
-        return null;
-      }
-
-      // Transform public profile data to User format
+      // Transform to User format (handle both view and table formats)
       const user: User = {
         id: data.id,
-        name: data.display_name || data.username || 'Unknown',
+        name: data.display_name || data.full_name || data.username || 'Unknown',
         username: data.username || '',
-        email: '', // Not available in public view
+        email: '', // Not available in public view/for other users
         avatar: data.avatar_url || '',
         bio: data.bio || '',
         location: data.location || '',

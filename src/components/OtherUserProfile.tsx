@@ -62,11 +62,13 @@ function OtherUserProfile() {
 
   // Show error or user not found
   if (error || !user) {
+    console.error('❌ OtherUserProfile error:', { error, user, userId });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl mb-4">User not found</h1>
           <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist or has been removed.</p>
+          <p className="text-xs text-muted-foreground mb-4">UserId: {userId}</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </div>

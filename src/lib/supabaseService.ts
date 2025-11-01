@@ -266,113 +266,54 @@ export class SupabaseService {
 
       console.log('🔍 [getOtherUserProfile] Fetching profile for userId:', userId);
 
-      // Strategy: Try multiple queries in parallel, use the first successful one
-      // Query 1: Try user_public_profile view by id (using .in() like getGameParticipants does)
-      const viewByIdPromise = supabase
-        .from('user_public_profile')
-        .select('id, display_name, avatar_url, username, bio, location')
-        .in('id', [userId])
-        .maybeSingle();
-
-      // Query 2: Try user_public_profile view by id (using .eq() as alternative)
-      const viewByIdEqPromise = supabase
+      // Use user_public_profile view only (no fallbacks to users table)
+      const { data, error } = await supabase
         .from('user_public_profile')
         .select('id, display_name, avatar_url, username, bio, location')
         .eq('id', userId)
         .maybeSingle();
 
-      // Query 3: Try users table by id
-      const usersByIdPromise = supabase
-        .from('users')
-        .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
-        .eq('id', userId)
-        .maybeSingle();
+      // Handle errors specifically
+      if (error) {
+        // Check for auth/permission errors (401/403 or specific codes)
+        const isAuthError = 
+          error.code === 'PGRST301' ||  // Permission denied
+          error.code === '42501' ||      // Insufficient privilege
+          error.status === 401 ||
+          error.status === 403 ||
+          error.message?.includes('permission') ||
+          error.message?.includes('RLS') ||
+          error.message?.includes('JWT');
 
-      // Query 4: Try users table by auth_user_id (if it exists)
-      const usersByAuthPromise = supabase
-        .from('users')
-        .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
-
-      // Wait for all queries
-      const [viewByIdResult, viewByIdEqResult, usersByIdResult, usersByAuthResult] = await Promise.allSettled([
-        viewByIdPromise,
-        viewByIdEqPromise,
-        usersByIdPromise,
-        usersByAuthPromise,
-      ]);
-
-      let data: any = null;
-      let source = 'none';
-
-      // Check view result (using .in() - same pattern as getGameParticipants)
-      if (viewByIdResult.status === 'fulfilled' && !viewByIdResult.value.error && viewByIdResult.value.data) {
-        data = viewByIdResult.value.data;
-        source = 'user_public_profile (id via .in())';
-        console.log('✅ Found via user_public_profile view (by id via .in())');
-      }
-      // Check view result (using .eq() as alternative)
-      else if (viewByIdEqResult.status === 'fulfilled' && !viewByIdEqResult.value.error && viewByIdEqResult.value.data) {
-        data = viewByIdEqResult.value.data;
-        source = 'user_public_profile (id via .eq())';
-        console.log('✅ Found via user_public_profile view (by id via .eq())');
-      }
-      // Check users table by id
-      else if (usersByIdResult.status === 'fulfilled' && !usersByIdResult.value.error && usersByIdResult.value.data) {
-        data = usersByIdResult.value.data;
-        source = 'users (id)';
-        console.log('✅ Found via users table (by id)');
-      }
-      // Check users table by auth_user_id
-      else if (usersByAuthResult.status === 'fulfilled' && !usersByAuthResult.value.error && usersByAuthResult.value.data) {
-        data = usersByAuthResult.value.data;
-        source = 'users (auth_user_id)';
-        console.log('✅ Found via users table (by auth_user_id)');
-      }
-      // All queries failed
-      else {
-        const errors = {
-          viewByIdError: viewByIdResult.status === 'fulfilled' ? viewByIdResult.value.error : viewByIdResult.reason,
-          viewByIdEqError: viewByIdEqResult.status === 'fulfilled' ? viewByIdEqResult.value.error : viewByIdEqResult.reason,
-          usersByIdError: usersByIdResult.status === 'fulfilled' ? usersByIdResult.value.error : usersByIdResult.reason,
-          usersByAuthError: usersByAuthResult.status === 'fulfilled' ? usersByAuthResult.value.error : usersByAuthResult.reason,
-        };
-        
-        // Check if any error is an auth/permission error
-        const hasAuthError = Object.values(errors).some((err: any) => 
-          err?.code === 'PGRST301' || 
-          err?.code === '42501' ||
-          err?.message?.includes('permission') ||
-          err?.message?.includes('RLS') ||
-          err?.message?.includes('JWT')
-        );
-        
-        console.error('❌ [getOtherUserProfile] All queries failed for userId:', userId);
-        console.error('❌ [getOtherUserProfile] Has auth error:', hasAuthError);
-        console.error('❌ [getOtherUserProfile] Error details:', JSON.stringify(errors, null, 2));
-        
-        // Log the exact query being attempted
-        console.error('❌ [getOtherUserProfile] Query attempted:', {
-          view: 'user_public_profile',
-          columns: ['id', 'display_name', 'avatar_url', 'username', 'bio', 'location'],
-          filter: `id = ${userId}`
+        console.error('❌ [getOtherUserProfile] Query error:', {
+          userId,
+          errorCode: error.code,
+          errorStatus: error.status,
+          errorMessage: error.message,
+          isAuthError
         });
-        
-        return null;
+
+        // Return null but we'll handle the error type in the component
+        // Store error info in a way that can be checked
+        throw {
+          ...error,
+          isAuthError,
+          isNotFound: false // Explicitly not a "not found" - it's an error
+        };
       }
 
+      // No error but no data = not found
       if (!data) {
-        console.error('❌ No data returned from any query');
+        console.log('ℹ️ [getOtherUserProfile] User not found (no data returned, no error)');
         return null;
       }
 
-      // Transform to User format (handle both view and table formats)
+      // Transform view data to User format
       const user: User = {
         id: data.id,
-        name: data.display_name || data.full_name || data.username || 'Unknown',
+        name: data.display_name || data.username || 'Unknown',
         username: data.username || '',
-        email: '', // Not available in public view/for other users
+        email: '', // Not available in public view
         avatar: data.avatar_url || '',
         bio: data.bio || '',
         location: data.location || '',
@@ -396,10 +337,17 @@ export class SupabaseService {
         },
       };
 
-      console.log('✅ [getOtherUserProfile] Profile found via', source, ':', { id: user.id, name: user.name });
+      console.log('✅ [getOtherUserProfile] Profile found:', { id: user.id, name: user.name });
       return user;
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ [getOtherUserProfile] Exception:', err);
+      
+      // Re-throw auth errors so they can be handled differently from "not found"
+      if (err?.isAuthError) {
+        throw err; // Let the component handle this as an auth error
+      }
+      
+      // For other errors, return null (treated as "not found" in component)
       return null;
     }
   }
@@ -1308,12 +1256,12 @@ export class SupabaseService {
           throw gameError;
         }
         
-        // Get creator info separately
+        // Get creator info separately - use user_public_profile view
         let creatorInfo = null;
         if (gameData.creator_id) {
           const { data: creator } = await supabase
-            .from('users')
-            .select('id, full_name, username, avatar_url')
+            .from('user_public_profile')
+            .select('id, display_name, avatar_url, username')
             .eq('id', gameData.creator_id)
             .maybeSingle();
           creatorInfo = creator;

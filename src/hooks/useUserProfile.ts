@@ -19,7 +19,16 @@ export function useUserProfile(userId: string) {
     queryKey: userKeys.profile(userId),
     queryFn: async () => {
       if (!userId) throw new Error('User ID is required');
-      return await SupabaseService.getUserProfile(userId);
+      try {
+        return await SupabaseService.getUserProfile(userId);
+      } catch (error: any) {
+        // Re-throw auth errors so they can be distinguished from "not found"
+        if (error?.isAuthError) {
+          throw error;
+        }
+        // For other errors, return null (will be treated as "not found")
+        return null;
+      }
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes

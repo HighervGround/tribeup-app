@@ -80,19 +80,28 @@ function OtherUserProfile() {
     console.error('❌ [OtherUserProfile] Error or user not found:', { 
       error, 
       errorCode: error instanceof Error ? 'unknown' : (error as any)?.code,
+      errorStatus: (error as any)?.status,
       errorMessage: error instanceof Error ? error.message : (error as any)?.message,
+      isAuthError: (error as any)?.isAuthError,
       user, 
       userId 
     });
     
     // Distinguish between auth errors and not found
+    // Check for auth error flag set by getOtherUserProfile, or error codes
     const isAuthError = error && (
+      (error as any)?.isAuthError === true ||
       (error as any)?.code === 'PGRST301' || // Permission denied
       (error as any)?.code === '42501' ||    // Insufficient privilege
+      (error as any)?.status === 401 ||
+      (error as any)?.status === 403 ||
       (error as any)?.message?.includes('permission') ||
       (error as any)?.message?.includes('RLS') ||
       (error as any)?.message?.includes('JWT')
     );
+    
+    // If error exists but isAuthError is false, and user is null, it's "not found"
+    const isNotFound = !error || (!isAuthError && !user);
     
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -101,12 +110,15 @@ function OtherUserProfile() {
           <p className="text-muted-foreground mb-4">
             {isAuthError 
               ? 'There was an authentication issue loading this profile. Please try logging in again.'
-              : 'The user you\'re looking for doesn\'t exist or has been removed.'}
+              : isNotFound
+              ? 'The user you\'re looking for doesn\'t exist or has been removed.'
+              : 'Unable to load profile. Please try again.'}
           </p>
           <p className="text-xs text-muted-foreground mb-4">UserId: {userId}</p>
           {isAuthError && (
             <p className="text-xs text-red-500 mb-4">
-              Error code: {(error as any)?.code || 'unknown'}
+              Error code: {(error as any)?.code || 'unknown'} 
+              {(error as any)?.status && ` (Status: ${(error as any)?.status})`}
             </p>
           )}
           <Button onClick={() => navigate('/')}>Go Home</Button>

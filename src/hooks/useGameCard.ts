@@ -11,6 +11,9 @@ interface Game {
   description: string;
   currentPlayers: number;
   maxPlayers: number;
+  publicRsvpCount?: number;
+  totalPlayers?: number;
+  availableSpots?: number;
   isJoined: boolean;
   cost?: string;
   category?: string;
@@ -69,16 +72,18 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   };
   
   /**
-   * Check if the game is full
+   * Check if the game is full (using total players including public RSVPs)
    */
   const currentPlayers = Number((game as any).current_players ?? game.currentPlayers ?? 0);
   const maxPlayers = Number((game as any).max_players ?? game.maxPlayers ?? 0);
-  const isFull = currentPlayers >= maxPlayers;
+  const publicRsvpCount = Number((game as any).public_rsvp_count ?? game.publicRsvpCount ?? 0);
+  const totalPlayers = Number((game as any).total_players ?? game.totalPlayers ?? (currentPlayers + publicRsvpCount));
+  const isFull = totalPlayers >= maxPlayers;
   
   /**
-   * Get formatted player count string
+   * Get formatted player count string (includes both authenticated and public RSVPs)
    */
-  const getPlayerCount = () => `${currentPlayers}/${maxPlayers} players`;
+  const getPlayerCount = () => `${totalPlayers}/${maxPlayers} players`;
   
   /**
    * Get join status indicator props

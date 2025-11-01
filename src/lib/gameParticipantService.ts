@@ -25,9 +25,9 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Must be logged in to join games' };
     }
     
-    // Use the helper function to avoid RLS issues
-    const { data, error } = await supabase.rpc('test_join', { 
-      game: gameId 
+    // Use the helper function to avoid RLS issues (schema-qualified)
+    const { data, error } = await supabase.rpc('public.test_join', { 
+      p_game_id: gameId 
     });
       
     if (error) {
@@ -41,7 +41,8 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: error.message };
     }
     
-    console.log('✅ Successfully joined game:', data);
+    console.log('✅ Successfully joined game. RPC response:', data);
+    console.log('🔄 Join complete, React Query should now refetch with status=joined');
     return { success: true };
     
   } catch (error) {
@@ -66,9 +67,9 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: 'Must be logged in to leave games' };
     }
     
-    // Use the helper function to avoid RLS issues
-    const { data, error } = await supabase.rpc('test_leave', { 
-      game: gameId 
+    // Use the helper function to avoid RLS issues (schema-qualified)
+    const { data, error } = await supabase.rpc('public.test_leave', { 
+      p_game_id: gameId 
     });
       
     if (error) {
@@ -81,7 +82,8 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: error.message };
     }
     
-    console.log('✅ Successfully left game:', data);
+    console.log('✅ Successfully left game. RPC response:', data);
+    console.log('🔄 Leave complete, React Query should now refetch with status=left');
     return { success: true };
     
   } catch (error) {

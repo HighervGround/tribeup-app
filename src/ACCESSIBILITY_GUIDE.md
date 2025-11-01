@@ -376,7 +376,7 @@ import { axe, toHaveNoViolations } from 'jest-axe';
 expect.extend(toHaveNoViolations);
 
 test('should not have accessibility violations', async () => {
-  const { container } = render(<GameCard game={mockGame} />);
+  const { container } = render(<UnifiedGameCard game={mockGame} variant="simple" />);
   const results = await axe(container);
   expect(results).toHaveNoViolations();
 });

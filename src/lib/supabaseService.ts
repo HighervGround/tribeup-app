@@ -841,7 +841,7 @@ export class SupabaseService {
       const userId = user?.id;
 
       let query = supabase
-        .from('games')
+        .from('games_with_counts')
         .select(`
           id,
           title,
@@ -853,6 +853,8 @@ export class SupabaseService {
           max_players,
           current_players,
           public_rsvp_count,
+          total_players,
+          available_spots,
           description,
           image_url,
           creator_id,
@@ -1726,7 +1728,7 @@ export class SupabaseService {
   static async getArchivedGames(userId?: string): Promise<Game[]> {
     try {
       let query = supabase
-        .from('games')
+        .from('games_with_counts')
         .select('*')
         .lt('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: false })
@@ -1735,7 +1737,7 @@ export class SupabaseService {
       if (userId) {
         // Get games where user was a participant or creator
         const { data: gamesData, error } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select(`
             *,
             game_participants(user_id, status)
@@ -1813,7 +1815,7 @@ export class SupabaseService {
         
         // Get games hosted by user
         const { data: hostedGames, error: hostedError } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select('id, sport')
           .eq('creator_id', userId);
           

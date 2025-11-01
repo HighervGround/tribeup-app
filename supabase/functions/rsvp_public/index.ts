@@ -13,59 +13,30 @@ serve(async (req) => {
 
     const ip = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown";
     const body = await req.json();
-    const { gameId, name, email, phone, message } = body || {};
+    const { game_id, name, email, phone, message } = body || {};
 
-    if (!gameId || !name || !email) {
+    if (!game_id || !name || !email) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 });
     }
 
     // Normalize inputs
     const normEmail = String(email).trim().toLowerCase();
     const normName = String(name).trim();
-    const normPhone = phone ? String(phone).trim() : null;
+    const normPhone = phone ? String(phone).trim().replace(/\D/g, '') : null;
     const normMessage = message ? String(message).trim() : null;
 
-    // Fetch game and capacity
-    const { data: game, error: gameErr } = await supabase
-      .from("games")
-      .select("id, max_players")
-      .eq("id", gameId)
+    // Fetch current stats from view
+    const { data: stats, error: statsErr } = await supabase
+      .from("game_rsvp_stats")
+      .select("*")
+      .eq("game_id", game_id)
       .maybeSingle();
-    if (gameErr || !game) {
+    if (statsErr || !stats) {
       return new Response(JSON.stringify({ error: "Game not found" }), { status: 404 });
     }
 
-    // Private confirmed participants
-    const { data: privateParts } = await supabase
-      .from("game_participants")
-      .select("user_id,status")
-      .eq("game_id", gameId);
-    const privateConfirmed = (privateParts || []).filter((p: any) => !("status" in p) || p.status === "joined").length;
-
-    // Public RSVPs confirmed
-    const { data: publicCountRow } = await supabase
-      .from("game_public_rsvp_count")
-      .select("public_count")
-      .eq("game_id", gameId)
-      .maybeSingle();
-    const publicCount = Number(publicCountRow?.public_count || 0);
-
-    const capacity = Number(game.max_players || 0);
-    const remaining = Math.max(0, capacity - privateConfirmed);
-
-    // Enforce unique email per game
-    const { data: existing } = await supabase
-      .from("public_rsvps")
-      .select("id")
-      .eq("game_id", gameId)
-      .eq("email", normEmail)
-      .maybeSingle();
-    if (existing) {
-      return new Response(JSON.stringify({ success: true, duplicate: true, snapshot: { capacity, privateConfirmed, publicCount, remaining } }), { status: 200 });
-    }
-
-    // Decide status: attending stays true but we gate by remaining
-    const canAccept = remaining > publicCount;
+    const capacityRemaining = Number(stats.capacity_remaining || 0);
+    const canAccept = capacityRemaining > 0;
 
     // Simple IP hash (not reversible) for rate limiting diagnostics
     const ipHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip));
@@ -83,7 +54,7 @@ serve(async (req) => {
 
     // Insert RSVP (attending true always; UI can treat over-capacity as waitlist)
     const { error: insertErr } = await supabase.from("public_rsvps").insert({
-      game_id: gameId,
+      game_id: game_id,
       name: normName,
       email: normEmail,
       phone: normPhone,
@@ -91,28 +62,36 @@ serve(async (req) => {
       attending: canAccept,
       ip_hash: ipHashHex,
     });
+    
+    // Handle duplicate (23505 = unique_violation)
     if (insertErr) {
+      if (insertErr.code === '23505' || insertErr.message?.includes('unique') || insertErr.message?.includes('duplicate')) {
+        // Refetch stats for duplicate case
+        const { data: dupStats } = await supabase
+          .from("game_rsvp_stats")
+          .select("*")
+          .eq("game_id", game_id)
+          .maybeSingle();
+        return new Response(
+          JSON.stringify({ ok: true, duplicate: true, stats: dupStats || stats }),
+          { status: 200 }
+        );
+      }
       return new Response(JSON.stringify({ error: insertErr.message }), { status: 400 });
     }
 
-    // Recompute public count after insert
-    const { data: newCountRow } = await supabase
-      .from("game_public_rsvp_count")
-      .select("public_count")
-      .eq("game_id", gameId)
+    // Refetch stats after successful insert
+    const { data: newStats } = await supabase
+      .from("game_rsvp_stats")
+      .select("*")
+      .eq("game_id", game_id)
       .maybeSingle();
-    const newPublic = Number(newCountRow?.public_count || 0);
 
     return new Response(
       JSON.stringify({
-        success: true,
-        waitlisted: !canAccept,
-        snapshot: {
-          capacity,
-          privateConfirmed,
-          publicCount: newPublic,
-          remaining: Math.max(0, capacity - privateConfirmed - newPublic),
-        },
+        ok: true,
+        duplicate: false,
+        stats: newStats || stats,
       }),
       { status: 200 },
     );

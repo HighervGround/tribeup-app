@@ -130,8 +130,11 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     longitude: dbGame.longitude,
     cost: dbGame.cost,
     maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
-    currentPlayers: Number(dbGame.current_players ?? dbGame.currentPlayers ?? 0),
-    publicRsvpCount: Number(dbGame.public_rsvp_count ?? 0),
+    // Live counts from games_with_counts view
+    currentPlayers: Number(dbGame.current_players ?? dbGame.currentPlayers ?? 0), // Authenticated participants (status='joined')
+    publicRsvpCount: Number(dbGame.public_rsvp_count ?? 0), // Anonymous RSVPs (attending=true)
+    totalPlayers: Number(dbGame.total_players ?? (dbGame.current_players ?? 0) + (dbGame.public_rsvp_count ?? 0)), // Total of both
+    availableSpots: Number(dbGame.available_spots ?? Math.max(0, (dbGame.max_players ?? 0) - ((dbGame.current_players ?? 0) + (dbGame.public_rsvp_count ?? 0)))), // Available capacity
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',
     sportColor: getSportColor(dbGame.sport),

@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { usePublicGame, usePublicRSVPs, publicGameKeys } from '../hooks/usePublicGame';
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { GameCapacityLine } from './ui/GameCapacity';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
@@ -122,14 +123,16 @@ export default function PublicGamePage() {
     }
   };
 
-  const capacityLine = useMemo(() => {
-    if (!capacity) return '';
-    const priv = capacity.private_rsvp_count ?? 0;
-    const pub = capacity.public_rsvp_count ?? 0;
-    const total = (priv + pub) ?? 0;
-    const max = capacity.capacity ?? game?.maxPlayers ?? 0;
-    const avail = capacity.capacity_remaining ?? Math.max(0, max - total);
-    return `Capacity: ${total}/${max} (${priv} private, ${pub} public) | ${avail} available`;
+  // Use live capacity from game_rsvp_stats view
+  const capacityData = useMemo(() => {
+    if (!capacity) return null;
+    return {
+      currentPlayers: capacity.private_rsvp_count ?? 0,
+      publicRsvpCount: capacity.public_rsvp_count ?? 0,
+      maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
+      totalPlayers: capacity.total_rsvps ?? 0,
+      availableSpots: capacity.capacity_remaining ?? 0
+    };
   }, [capacity, game?.maxPlayers]);
 
   const handleShare = async () => {
@@ -320,8 +323,16 @@ export default function PublicGamePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {capacityLine && (
-                <div className="mb-3 text-sm text-muted-foreground">{capacityLine}</div>
+              {capacityData && (
+                <div className="mb-3">
+                  <GameCapacityLine
+                    currentPlayers={capacityData.currentPlayers}
+                    maxPlayers={capacityData.maxPlayers}
+                    publicRsvpCount={capacityData.publicRsvpCount}
+                    totalPlayers={capacityData.totalPlayers}
+                    availableSpots={capacityData.availableSpots}
+                  />
+                </div>
               )}
               <form onSubmit={handleRSVP} className="space-y-4">
                 <div>

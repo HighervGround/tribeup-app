@@ -8,6 +8,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameCard } from '../hooks/useGameCard';
 import { formatTimeString, formatCost, formatEventHeader } from '../lib/dateUtils';
+import { GameCapacity } from './ui/GameCapacity';
 import { SimpleCalendarButton } from './SimpleCalendarButton';
 
 interface Game {
@@ -152,17 +153,13 @@ export function UnifiedGameCard({
               )}
               
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    <span>{getPlayerCount()}</span>
-                  </div>
-                  {Number(game.publicRsvpCount || 0) > 0 && (
-                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                      +{game.publicRsvpCount} public
-                    </Badge>
-                  )}
-                </div>
+                <GameCapacity
+                  currentPlayers={game.currentPlayers}
+                  maxPlayers={game.maxPlayers}
+                  publicRsvpCount={game.publicRsvpCount}
+                  totalPlayers={game.totalPlayers}
+                  availableSpots={game.availableSpots}
+                />
                 
                 <div className="flex gap-2">
                   {showJoinButton && (
@@ -171,9 +168,9 @@ export function UnifiedGameCard({
                       variant={getButtonVariant(game)}
                       onClick={handleJoinClick}
                       className="transition-all duration-200 flex-1"
-                      disabled={isLoading || (Number((game as any).current_players ?? game.currentPlayers ?? 0) >= Number((game as any).max_players ?? game.maxPlayers ?? 0) && !game.isJoined)}
+                      disabled={isLoading || ((game.totalPlayers ?? (game.currentPlayers + (game.publicRsvpCount || 0))) >= game.maxPlayers && !game.isJoined)}
                     >
-                      {Number((game as any).current_players ?? game.currentPlayers ?? 0) >= Number((game as any).max_players ?? game.maxPlayers ?? 0) && !game.isJoined ? 'Game Full' : getButtonText(game)}
+                      {(game.totalPlayers ?? (game.currentPlayers + (game.publicRsvpCount || 0))) >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
                     </Button>
                   )}
                   <SimpleCalendarButton 
@@ -235,15 +232,14 @@ export function UnifiedGameCard({
           <MapPin className="w-4 h-4 text-muted-foreground" />
           <span>{game.location}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-muted-foreground" />
-          <span>{getPlayerCount()}</span>
-          {Number(game.publicRsvpCount || 0) > 0 && (
-            <Badge variant="secondary" className="text-xs px-2 py-0.5">
-              +{game.publicRsvpCount} public
-            </Badge>
-          )}
-        </div>
+        <GameCapacity
+          currentPlayers={game.currentPlayers}
+          maxPlayers={game.maxPlayers}
+          publicRsvpCount={game.publicRsvpCount}
+          totalPlayers={game.totalPlayers}
+          availableSpots={game.availableSpots}
+          className="text-sm"
+        />
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />
           <span>{game.date} at {formatTimeString(game.time)}</span>

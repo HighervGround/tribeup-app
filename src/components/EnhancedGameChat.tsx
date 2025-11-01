@@ -53,7 +53,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         // This avoids N+1 queries by joining with user_public_profile
         const { data: messagesData, error } = await supabase
           .from('chat_messages_with_author')
-          .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url, full_name')
+          .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url')
           .eq('game_id', gameId)
           .order('created_at', { ascending: true });
 
@@ -73,8 +73,9 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         }
 
         // Transform messages - use display_name first, then username, then fallback
+        // Note: user_public_profile doesn't have full_name, only display_name and username
         const transformedMessages: ChatMessage[] = messagesData.map((msg: any) => {
-          const authorName = msg.display_name || msg.username || msg.full_name || 'Player';
+          const authorName = msg.display_name || msg.username || 'Player';
           return {
             id: msg.id,
             game_id: msg.game_id,
@@ -120,7 +121,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         // Fetch message with author info using chat_messages_with_author view
         const { data: fullMessage, error: fetchError } = await supabase
           .from('chat_messages_with_author')
-          .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url, full_name')
+          .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url')
           .eq('id', payload.new.id)
           .single();
 
@@ -130,8 +131,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         }
 
         if (fullMessage.user_id) {
-          // Use display_name first, then username, then full_name, then fallback
-          const authorName = fullMessage.display_name || fullMessage.username || fullMessage.full_name || 'Player';
+          // Use display_name first, then username, then fallback
+          const authorName = fullMessage.display_name || fullMessage.username || 'Player';
           const newMsg: ChatMessage = {
             id: fullMessage.id,
             game_id: fullMessage.game_id,
@@ -230,12 +231,12 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       if (savedMessage.user_id) {
         const { data: authorProfile, error: authorError } = await supabase
           .from('user_public_profile')
-          .select('display_name, username, avatar_url, full_name')
+          .select('display_name, username, avatar_url')
           .eq('id', savedMessage.user_id)
           .single();
         
         if (!authorError && authorProfile) {
-          authorName = authorProfile.display_name || authorProfile.username || authorProfile.full_name || user?.name || 'You';
+          authorName = authorProfile.display_name || authorProfile.username || user?.name || 'You';
           authorAvatar = authorProfile.avatar_url || user?.avatar || '';
         }
       }

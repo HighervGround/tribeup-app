@@ -695,7 +695,9 @@ export class SupabaseService {
       const { data: gamesData, error: gamesError } = await supabase
         .from('games_with_counts')
         .select(`
-          id, title, location, date, time, max_players, current_players, public_rsvp_count, creator_id, creator_profile(id, full_name, username, avatar_url),
+          id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
+          max_players, current_players, public_rsvp_count, creator_id, 
+          creator_profile(id, full_name, username, avatar_url),
           game_participants(user_id)
         `)
         .gte('date', new Date().toISOString().split('T')[0])

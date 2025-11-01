@@ -65,19 +65,19 @@ export function useSupabaseRealtime({
     if (payload.eventType === 'INSERT' && payload.table === 'chat_messages') {
       const newMessage = payload.new;
       
-      // Fetch author info from user_public_profile view
+      // Fetch author info from users table
       let authorName = `User ${newMessage.user_id?.slice(0, 8) || 'Guest'}`;
       let authorAvatar = '';
       
       if (newMessage.user_id) {
         const { data: authorProfile } = await supabase
-          .from('user_public_profile')
-          .select('display_name, username, avatar_url, full_name')
+          .from('users')
+          .select('full_name, username, avatar_url')
           .eq('id', newMessage.user_id)
           .single();
         
         if (authorProfile) {
-          authorName = authorProfile.display_name || authorProfile.username || authorProfile.full_name || authorName;
+          authorName = authorProfile.full_name?.trim() || authorProfile.username?.trim() || authorName;
           authorAvatar = authorProfile.avatar_url || '';
         }
       }

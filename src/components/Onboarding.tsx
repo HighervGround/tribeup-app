@@ -82,7 +82,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
         // First, upsert the profile with all the onboarding data
         const { error: upsertError } = await supabase.from('users').upsert(
           {
-            auth_user_id: authUser.id,
+            id: authUser.id,
             email: authUser.email ?? null,
             full_name: `${payload.firstName} ${payload.lastName}`.trim(),
             username: `${payload.firstName}_${payload.lastName}`.toLowerCase().replace(/\s+/g, '_'),
@@ -90,7 +90,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
             preferred_sports: payload.selectedSports ?? [],
             location: payload.locationPermission === 'granted' ? 'Location enabled' : null,
           },
-          { onConflict: 'auth_user_id' }
+          { onConflict: 'id' }
         );
 
         if (upsertError) {
@@ -105,7 +105,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
         const { error: updateError } = await supabase
           .from('users')
           .update({ onboarding_completed: true })
-          .eq('auth_user_id', authUser.id);
+          .eq('id', authUser.id);
 
         if (updateError) {
           console.error('❌ [Onboarding] Error completing onboarding:', updateError);

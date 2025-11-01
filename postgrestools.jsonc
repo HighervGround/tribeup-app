@@ -1,0 +1,35 @@
+{
+  // PostgresTools LSP configuration
+  // 
+  // ⚠️  LOCAL SUPABASE NOT DETECTED
+  // 
+  // Choose one of these options:
+  
+  // OPTION 1: Start local Supabase (recommended)
+  // Run: supabase start
+  // Then uncomment below and restart PostgresTools
+  // "db": {
+  //   "host": "localhost",
+  //   "port": 54322,
+  //   "database": "postgres",
+  //   "user": "postgres",
+  //   "password": "postgres"
+  // }
+  
+  // OPTION 2: Connect to remote Supabase
+  // Get connection details from: https://supabase.com/dashboard/project/<yourProjectId>/settings/database
+  // Click "Connection string" → "URI" tab
+  // Then uncomment and fill in your details:
+  "db": {
+    "host": "db.YOUR-PROJECT-REF.supabase.co",
+    "port": 5432,
+    "database": "postgres",
+    "user": "postgres",
+    "password": "YOUR-DB-PASSWORD"
+  }
+  
+  // OPTION 3: Work without database connection (limited features)
+  // Just comment out or remove the "db" section entirely
+  // You'll still get SQL syntax linting, but no schema validation or autocomplete
+}
+

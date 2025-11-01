@@ -223,20 +223,19 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
 
       console.log('✅ Message saved to database:', savedMessage);
 
-      // Fetch author info from user_public_profile view for the saved message
-      // Since we have user_id, query user_public_profile directly
+      // Fetch author info from users table for the saved message
       let authorName = user?.name || 'You';
       let authorAvatar = user?.avatar || '';
       
       if (savedMessage.user_id) {
         const { data: authorProfile, error: authorError } = await supabase
-          .from('user_public_profile')
-          .select('display_name, username, avatar_url')
+          .from('users')
+          .select('full_name, username, avatar_url')
           .eq('id', savedMessage.user_id)
           .single();
         
         if (!authorError && authorProfile) {
-          authorName = authorProfile.display_name || authorProfile.username || user?.name || 'You';
+          authorName = authorProfile.full_name?.trim() || authorProfile.username?.trim() || user?.name || 'You';
           authorAvatar = authorProfile.avatar_url || user?.avatar || '';
         }
       }

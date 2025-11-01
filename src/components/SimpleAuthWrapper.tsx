@@ -152,7 +152,7 @@ export function SimpleAuthWrapper({ children, requireAuth = true }: SimpleAuthWr
                 const { data, error } = await supabase
                   .from('users')
                   .select('onboarding_completed')
-                  .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
+                  .eq('id', user.id)
                   .maybeSingle();
 
                 if (cancelled) return;

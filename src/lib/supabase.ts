@@ -36,6 +36,9 @@ const createSupabaseClient = () => {
       flowType: 'pkce', // Use PKCE flow for better security and reliability
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       debug: false, // Set to true for debugging auth issues
+      // Note: The Supabase client automatically includes the JWT token from localStorage
+      // in the Authorization header for all requests. This ensures RLS policies receive
+      // the authenticated user context (auth.uid()).
     },
     db: {
       schema: 'public',

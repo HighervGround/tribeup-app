@@ -253,6 +253,17 @@ export class SupabaseService {
         return null;
       }
 
+      // Verify authenticated session before querying (required for RLS)
+      // The Supabase client automatically includes JWT from localStorage in Authorization header
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('❌ [getOtherUserProfile] No authenticated session:', sessionError);
+        console.error('❌ [getOtherUserProfile] Ensure user is logged in before fetching profiles');
+        return null;
+      }
+      console.log('✅ [getOtherUserProfile] Authenticated session confirmed, user:', session.user.id);
+      console.log('✅ [getOtherUserProfile] JWT will be automatically included in query headers');
+
       console.log('🔍 [getOtherUserProfile] Fetching profile for userId:', userId);
 
       // Strategy: Try multiple queries in parallel, use the first successful one
@@ -327,8 +338,27 @@ export class SupabaseService {
           usersByIdError: usersByIdResult.status === 'fulfilled' ? usersByIdResult.value.error : usersByIdResult.reason,
           usersByAuthError: usersByAuthResult.status === 'fulfilled' ? usersByAuthResult.value.error : usersByAuthResult.reason,
         };
-        console.error('❌ All queries failed for userId:', userId);
-        console.error('❌ Error details:', JSON.stringify(errors, null, 2));
+        
+        // Check if any error is an auth/permission error
+        const hasAuthError = Object.values(errors).some((err: any) => 
+          err?.code === 'PGRST301' || 
+          err?.code === '42501' ||
+          err?.message?.includes('permission') ||
+          err?.message?.includes('RLS') ||
+          err?.message?.includes('JWT')
+        );
+        
+        console.error('❌ [getOtherUserProfile] All queries failed for userId:', userId);
+        console.error('❌ [getOtherUserProfile] Has auth error:', hasAuthError);
+        console.error('❌ [getOtherUserProfile] Error details:', JSON.stringify(errors, null, 2));
+        
+        // Log the exact query being attempted
+        console.error('❌ [getOtherUserProfile] Query attempted:', {
+          view: 'user_public_profile',
+          columns: ['id', 'display_name', 'avatar_url', 'username', 'bio', 'location'],
+          filter: `id = ${userId}`
+        });
+        
         return null;
       }
 

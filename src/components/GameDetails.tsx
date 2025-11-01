@@ -43,6 +43,7 @@ import { PostGameRatingModal } from './PostGameRatingModal';
 import { RealtimeAvatarStack } from './realtime-avatar-stack';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '../lib/dateUtils';
 
 function GameDetails() {
@@ -1023,8 +1024,21 @@ function GameDetails() {
                       <div>
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => {
-                              console.log('🔍 Clicking on player:', player);
+                            onClick={async () => {
+                              console.log('🔍 [GameDetails] Clicking on player:', player);
+                              
+                              // Debug: Verify session and client before navigation
+                              const { data: { session } } = await supabase.auth.getSession();
+                              console.log('🔍 [GameDetails] Session check:', {
+                                hasSession: !!session,
+                                userId: session?.user?.id,
+                                targetPlayerId: player.id
+                              });
+                              console.log('🔍 [GameDetails] Client check:', {
+                                hasClient: !!supabase,
+                                hasAuth: !!supabase.auth
+                              });
+                              
                               navigateToUser(player.id);
                             }}
                             className="hover:text-primary transition-colors cursor-pointer font-medium"

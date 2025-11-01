@@ -22,12 +22,14 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { usePublicGame, usePublicRSVPs } from '../hooks/usePublicGame';
+import { usePublicGame, usePublicRSVPs, publicGameKeys } from '../hooks/usePublicGame';
 import { supabase } from '../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // Use React Query hooks for data fetching
   const { data: game, isLoading: gameLoading, error: gameError } = usePublicGame(gameId || '');
   const { data: publicRsvps = [], isLoading: rsvpsLoading } = usePublicRSVPs(gameId || '');
@@ -92,15 +94,25 @@ export default function PublicGamePage() {
         return;
       }
 
-      if (data?.success) {
+      if (data?.ok) {
         setLastResult(data);
-        const nextCap = data.capacity_after ?? data.capacity_before ?? null;
-        if (nextCap) setCapacity(nextCap);
+        if (data.stats) setCapacity(data.stats);
 
-        setHasRsvped(true);
-        setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
-        setRsvpForm({ name: '', email: '', phone: '', message: '', attending: true });
-        toast.success(data?.rsvp?.attending ? 'RSVP confirmed!' : 'Added to waitlist');
+        // Invalidate RSVPs list to refresh
+        if (gameId) {
+          queryClient.invalidateQueries({ queryKey: publicGameKeys.rsvps(gameId) });
+        }
+
+        if (data.duplicate) {
+          toast.info("You're already on the list!");
+          setHasRsvped(true);
+          setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
+        } else {
+          setHasRsvped(true);
+          setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
+          setRsvpForm({ name: '', email: '', phone: '', message: '', attending: true });
+          toast.success('RSVP confirmed!');
+        }
       }
     } catch (err: any) {
       setSubmitError(err?.message || 'Unexpected error');
@@ -112,11 +124,11 @@ export default function PublicGamePage() {
 
   const capacityLine = useMemo(() => {
     if (!capacity) return '';
-    const priv = capacity.private_confirmed_count ?? 0;
-    const pub = capacity.public_count ?? 0;
-    const total = capacity.total_attending ?? priv + pub;
-    const max = capacity.max_players ?? game?.maxPlayers ?? 0;
-    const avail = capacity.available_slots ?? Math.max(0, max - total);
+    const priv = capacity.private_rsvp_count ?? 0;
+    const pub = capacity.public_rsvp_count ?? 0;
+    const total = (priv + pub) ?? 0;
+    const max = capacity.capacity ?? game?.maxPlayers ?? 0;
+    const avail = capacity.capacity_remaining ?? Math.max(0, max - total);
     return `Capacity: ${total}/${max} (${priv} private, ${pub} public) | ${avail} available`;
   }, [capacity, game?.maxPlayers]);
 
@@ -148,15 +160,15 @@ export default function PublicGamePage() {
     navigate('/auth?redirect=' + encodeURIComponent(window.location.pathname));
   };
 
-  // Optional: initial capacity load from read-only view
+  // Initial stats load from read-only view
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!gameId) return;
       try {
         const { data, error } = await supabase
-          .from('game_capacity')
-          .select('game_id,max_players,private_confirmed_count,public_count,total_attending,available_slots')
+          .from('game_rsvp_stats')
+          .select('*')
           .eq('game_id', gameId)
           .single();
         if (!cancelled && !error && data) {
@@ -267,7 +279,7 @@ export default function PublicGamePage() {
                   <p className="font-medium">
                     {capacity ? (
                       <>
-                        {capacity.total_attending}/{capacity.max_players} players
+                        {(capacity.private_rsvp_count || 0) + (capacity.public_rsvp_count || 0)}/{capacity.capacity || game.maxPlayers} players
                       </>
                     ) : (
                       <>
@@ -370,14 +382,9 @@ export default function PublicGamePage() {
             <AlertDescription>
               <strong>You're all set!</strong> Your RSVP has been confirmed. 
               You'll receive email updates about this game.
-              {lastResult?.rsvp && (
-                <div className="mt-2 text-sm">
-                  Status: <strong>{lastResult.rsvp.status}</strong>{lastResult.rsvp.attending ? ' (confirmed)' : ' (waitlisted)'}
-                </div>
-              )}
-              {lastResult?.capacity_after && (
+              {lastResult?.stats && (
                 <div className="mt-1 text-sm text-muted-foreground">
-                  Updated: {lastResult.capacity_after.total_attending}/{lastResult.capacity_after.max_players} total, available: {lastResult.capacity_after.available_slots}
+                  Updated: {(lastResult.stats.private_rsvp_count || 0) + (lastResult.stats.public_rsvp_count || 0)}/{lastResult.stats.capacity} total, {lastResult.stats.capacity_remaining} available
                 </div>
               )}
               {userRsvp && (

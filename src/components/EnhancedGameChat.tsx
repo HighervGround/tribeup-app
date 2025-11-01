@@ -43,23 +43,17 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
     });
   }, []);
 
-  // Load existing messages from database
+  // Load existing messages from database using chat_messages_with_author view
   useEffect(() => {
     const loadMessages = async () => {
       try {
         setIsLoading(true);
         
-        // Fetch messages with author_profile relationship from user_public_profile view
+        // Use chat_messages_with_author view to get messages with author info in one query
+        // This avoids N+1 queries by joining with user_public_profile
         const { data: messagesData, error } = await supabase
-          .from('chat_messages')
-          .select(`
-            id,
-            game_id,
-            user_id,
-            message,
-            created_at,
-            author_profile(id, display_name, username, avatar_url)
-          `)
+          .from('chat_messages_with_author')
+          .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url, full_name')
           .eq('game_id', gameId)
           .order('created_at', { ascending: true });
 
@@ -78,11 +72,9 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           return;
         }
 
-        // Transform messages with author_profile from the relationship
-        // Use display_name first, then username, then 'Player' as fallback
+        // Transform messages - use display_name first, then username, then fallback
         const transformedMessages: ChatMessage[] = messagesData.map((msg: any) => {
-          const authorProfile = msg.author_profile || null;
-          const authorName = authorProfile?.display_name || authorProfile?.username || 'Player';
+          const authorName = msg.display_name || msg.username || msg.full_name || 'Player';
           return {
             id: msg.id,
             game_id: msg.game_id,
@@ -91,7 +83,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
             created_at: msg.created_at,
             user: {
               name: authorName,
-              avatar: authorProfile?.avatar_url || ''
+              avatar: msg.avatar_url || ''
             }
           };
         });
@@ -125,17 +117,10 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       }, async (payload: any) => {
         console.log('💬 New chat message from database:', payload);
         
-        // Fetch message with author_profile relationship from user_public_profile view
+        // Fetch message with author info using chat_messages_with_author view
         const { data: fullMessage, error: fetchError } = await supabase
-          .from('chat_messages')
-          .select(`
-            id,
-            game_id,
-            user_id,
-            message,
-            created_at,
-            author_profile(id, display_name, username, avatar_url)
-          `)
+          .from('chat_messages_with_author')
+          .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url, full_name')
           .eq('id', payload.new.id)
           .single();
 
@@ -145,9 +130,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         }
 
         if (fullMessage.user_id) {
-          const authorProfile = fullMessage.author_profile || null;
-          // Use display_name first, then username, then 'Player' as fallback
-          const authorName = authorProfile?.display_name || authorProfile?.username || 'Player';
+          // Use display_name first, then username, then full_name, then fallback
+          const authorName = fullMessage.display_name || fullMessage.username || fullMessage.full_name || 'Player';
           const newMsg: ChatMessage = {
             id: fullMessage.id,
             game_id: fullMessage.game_id,
@@ -156,7 +140,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
             created_at: fullMessage.created_at,
             user: {
               name: authorName,
-              avatar: authorProfile?.avatar_url || ''
+              avatar: fullMessage.avatar_url || ''
             }
           };
           
@@ -215,10 +199,11 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       // Save message to database
       // Note: user_id is automatically set by database trigger from auth.uid()
       // Required fields: game_id, message
+      // Do NOT request nested author fields in insert select - use view for that
       const { data: savedMessage, error: saveError } = await supabase
         .from('chat_messages')
         .insert(insertPayload)
-        .select('id, game_id, user_id, message, created_at, author_profile(display_name, username, avatar_url)')
+        .select('id, game_id, user_id, message, created_at')
         .single();
 
       if (saveError) {
@@ -237,10 +222,25 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
 
       console.log('✅ Message saved to database:', savedMessage);
 
+      // Fetch author info from user_public_profile view for the saved message
+      // Since we have user_id, query user_public_profile directly
+      let authorName = user?.name || 'You';
+      let authorAvatar = user?.avatar || '';
+      
+      if (savedMessage.user_id) {
+        const { data: authorProfile, error: authorError } = await supabase
+          .from('user_public_profile')
+          .select('display_name, username, avatar_url, full_name')
+          .eq('id', savedMessage.user_id)
+          .single();
+        
+        if (!authorError && authorProfile) {
+          authorName = authorProfile.display_name || authorProfile.username || authorProfile.full_name || user?.name || 'You';
+          authorAvatar = authorProfile.avatar_url || user?.avatar || '';
+        }
+      }
+
       // Transform and add to local state immediately for sender
-      // Use author_profile from the query result with display_name first, then username fallback
-      const authorProfile = savedMessage.author_profile || null;
-      const authorName = authorProfile?.display_name || authorProfile?.username || user?.name || 'You';
       const newMsg: ChatMessage = {
         id: savedMessage.id,
         game_id: savedMessage.game_id,
@@ -249,7 +249,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         created_at: savedMessage.created_at,
         user: {
           name: authorName,
-          avatar: authorProfile?.avatar_url || user?.avatar || ''
+          avatar: authorAvatar
         }
       };
 

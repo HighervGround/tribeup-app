@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { SupabaseService } from '../lib/supabaseService';
+import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/appStore';
 
 export interface RealtimeMessage {
@@ -58,23 +59,41 @@ export function useSupabaseRealtime({
     }
   }, []);
 
-  const handleChatMessage = useCallback((payload: any) => {
+  const handleChatMessage = useCallback(async (payload: any) => {
     console.log('Chat message received:', payload);
     
     if (payload.eventType === 'INSERT' && payload.table === 'chat_messages') {
       const newMessage = payload.new;
+      
+      // Fetch author info from user_public_profile view
+      let authorName = `User ${newMessage.user_id?.slice(0, 8) || 'Guest'}`;
+      let authorAvatar = '';
+      
+      if (newMessage.user_id) {
+        const { data: authorProfile } = await supabase
+          .from('user_public_profile')
+          .select('display_name, username, avatar_url, full_name')
+          .eq('id', newMessage.user_id)
+          .single();
+        
+        if (authorProfile) {
+          authorName = authorProfile.display_name || authorProfile.username || authorProfile.full_name || authorName;
+          authorAvatar = authorProfile.avatar_url || '';
+        }
+      }
+      
       setMessages(prev => [...prev, {
         id: newMessage.id,
         message: newMessage.message,
         createdAt: newMessage.created_at,
         user: {
           id: newMessage.user_id,
-          name: user?.name || user?.username || user?.email?.split('@')[0] || `User ${user?.id?.slice(0, 8) || 'Guest'}`,
-          avatar: user?.avatar || ''
+          name: authorName,
+          avatar: authorAvatar
         }
       }]);
     }
-  }, [user]);
+  }, []);
 
   const connect = useCallback(async () => {
     if (channelRef.current) {

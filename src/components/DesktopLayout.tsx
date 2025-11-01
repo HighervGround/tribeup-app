@@ -159,7 +159,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                   {user?.name || 'User'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {user?.email || 'user@example.com'}
+                  {user?.username ? `@${user.username}` : '@user'}
                 </p>
               </div>
             )}

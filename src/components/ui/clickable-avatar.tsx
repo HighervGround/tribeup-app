@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarImage, AvatarFallback } from './avatar';
 import { cn } from './utils';
+import { useAppStore } from '../../store/appStore';
 
 interface ClickableAvatarProps {
   userId?: string;
@@ -32,6 +33,7 @@ export function ClickableAvatar({
   disabled = false
 }: ClickableAvatarProps) {
   const navigate = useNavigate();
+  const { user } = useAppStore();
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -39,7 +41,13 @@ export function ClickableAvatar({
     if (onClick) {
       onClick();
     } else if (userId && !disabled) {
-      navigate(`/user/${userId}`);
+      // Route normalization: if user taps their own card, redirect to own profile route
+      const currentUserId = user?.id;
+      if (userId === currentUserId) {
+        navigate('/profile/me');
+      } else {
+        navigate(`/user/${userId}`);
+      }
     }
   };
 

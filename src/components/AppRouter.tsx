@@ -70,6 +70,7 @@ export function AppRouter() {
                 <Route path="search" element={<SearchDiscovery />} />
                 <Route path="create" element={<CreateGame />} />
                 <Route path="profile" element={<UserProfile />} />
+                <Route path="profile/me" element={<UserProfile />} />
                 <Route path="profile/edit" element={<EditProfile />} />
 
                 {/* Game Routes */}

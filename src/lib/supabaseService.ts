@@ -201,7 +201,7 @@ export class SupabaseService {
     }
   }
 
-  static async getUserProfile(_userId: string): Promise<User | null> {
+  static async getUserProfile(userId: string): Promise<User | null> {
     try {
       console.log('🔍 Checking auth session...');
       const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser();
@@ -214,28 +214,95 @@ export class SupabaseService {
         return null;
       }
 
-      // Query without filter - RLS policy (auth_user_id = auth.uid()) ensures we only get current user's row
+      // If userId matches current user, return own profile with full data
+      if (userId === currentUser.id || userId === currentUser.user_metadata?.id) {
+        // Query without filter - RLS policy (auth_user_id = auth.uid()) ensures we only get current user's row
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .maybeSingle();
+
+        if (error) {
+          console.error('❌ Read error:', error);
+          return null;
+        }
+
+        if (!data) {
+          console.log('ℹ️ No profile found - user needs onboarding');
+          return null;
+        }
+
+        console.log('✅ Profile data found:', data);
+        const transformedUser = transformUserFromDB(data);
+        console.log('🔍 Transformed user:', transformedUser);
+        return transformedUser;
+      }
+
+      // For other users, fetch from public profile view
+      return await this.getOtherUserProfile(userId);
+    } catch (err) {
+      console.error('❌ getUserProfile failed:', err);
+      return null;
+    }
+  }
+
+  static async getOtherUserProfile(userId: string): Promise<User | null> {
+    try {
+      if (!userId) {
+        console.log('ℹ️ No userId provided');
+        return null;
+      }
+
+      // Fetch from public profile view
       const { data, error } = await supabase
-        .from('users')
-        .select('*')
+        .from('user_public_profile')
+        .select('id, display_name, avatar_url, username, bio, location')
+        .eq('id', userId)
         .maybeSingle();
 
       if (error) {
-        console.error('❌ Read error:', error);
+        console.error('❌ Public profile read error:', error);
         return null;
       }
 
       if (!data) {
-        console.log('ℹ️ No profile found - user needs onboarding');
+        console.log('ℹ️ User profile not found');
         return null;
       }
 
-      console.log('✅ Profile data found:', data);
-      const transformedUser = transformUserFromDB(data);
-      console.log('🔍 Transformed user:', transformedUser);
-      return transformedUser;
+      // Transform public profile data to User format
+      const user: User = {
+        id: data.id,
+        name: data.display_name || data.username || 'Unknown',
+        username: data.username || '',
+        email: '', // Not available in public view
+        avatar: data.avatar_url || '',
+        bio: data.bio || '',
+        location: data.location || '',
+        role: 'user' as const,
+        preferences: {
+          theme: 'auto' as const,
+          highContrast: false,
+          largeText: false,
+          reducedMotion: false,
+          colorBlindFriendly: false,
+          notifications: {
+            push: true,
+            email: false,
+            gameReminders: true,
+          },
+          privacy: {
+            locationSharing: true,
+            profileVisibility: 'public' as const,
+          },
+          sports: [],
+        },
+      };
+
+      console.log('✅ Public profile data found:', user);
+      return user;
     } catch (err) {
-      console.error('❌ getUserProfile failed:', err);
+      console.error('❌ getOtherUserProfile failed:', err);
       return null;
     }
   }

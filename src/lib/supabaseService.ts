@@ -698,7 +698,7 @@ export class SupabaseService {
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
           max_players, current_players, public_rsvp_count, creator_id, 
           creator_profile(id, full_name, username, avatar_url),
-          game_participants(user_id)
+          game_participants(user_id, status)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -714,7 +714,9 @@ export class SupabaseService {
       
       // Transform games with creator_profile from the relationship
       const games = (gamesData || []).map((game: any) => {
-        const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        const isJoined = userId && game.game_participants?.some((p: any) => 
+          p.user_id === userId && p.status === 'joined'
+        ) || false;
         const creator = game.creator_profile || null;
         
         // Enhanced game object with proper creator data
@@ -887,7 +889,7 @@ export class SupabaseService {
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
-          game_participants(user_id)
+          game_participants(user_id, status)
         `)
         .order('date', { ascending: true })
         .limit(50);
@@ -895,7 +897,9 @@ export class SupabaseService {
       if (error) throw error;
 
       return (gamesWithParticipants || []).map((game: any) => {
-        const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        const isJoined = userId && game.game_participants?.some((p: any) => 
+          p.user_id === userId && p.status === 'joined'
+        ) || false;
         const gameWithCreator = {
           ...game,
           creator: game.creator_profile || null
@@ -1617,7 +1621,7 @@ export class SupabaseService {
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
-          game_participants(user_id)
+          game_participants(user_id, status)
         `)
         .order('date', { ascending: true })
         .limit(50);
@@ -1625,7 +1629,9 @@ export class SupabaseService {
       if (error) throw error;
 
       return (gamesWithParticipants || []).map((game: any) => {
-        const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+        const isJoined = game.game_participants?.some((p: any) => 
+          p.user_id === userId && p.status === 'joined'
+        ) || false;
         return transformGameFromDB(game, isJoined);
       });
     } catch (error) {
@@ -1680,7 +1686,7 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,current_players,public_rsvp_count,description,image_url,creator_id,
-            game_participants(user_id)
+            game_participants(user_id, status)
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1690,7 +1696,9 @@ export class SupabaseService {
         if (error) throw error;
 
         return (gamesWithParticipants || []).map((game: any) => {
-          const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+          const isJoined = game.game_participants?.some((p: any) => 
+            p.user_id === userId && p.status === 'joined'
+          ) || false;
           return transformGameFromDB(game, isJoined);
         });
       } else {
@@ -1730,7 +1738,7 @@ export class SupabaseService {
           .from('games')
           .select(`
             *,
-            game_participants(user_id)
+            game_participants(user_id, status)
           `)
           .lt('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: false })
@@ -1741,10 +1749,14 @@ export class SupabaseService {
         return (gamesData || [])
           .filter((game: any) => 
             game.creator_id === userId || 
-            game.game_participants?.some((p: any) => p.user_id === userId)
+            game.game_participants?.some((p: any) => 
+              p.user_id === userId && p.status === 'joined'
+            )
           )
           .map((game: any) => {
-            const isJoined = game.game_participants?.some((p: any) => p.user_id === userId) || false;
+            const isJoined = game.game_participants?.some((p: any) => 
+              p.user_id === userId && p.status === 'joined'
+            ) || false;
             return transformGameFromDB(game, isJoined);
           });
       } else {

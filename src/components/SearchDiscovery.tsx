@@ -8,6 +8,7 @@ import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react
 import { useAppStore } from '../store/appStore';
 import { useGames } from '../hooks/useGames';
 import { UnifiedGameCard } from './UnifiedGameCard';
+import { GameCardSkeleton } from './GameCardSkeleton';
 import { formatTimeString } from '../lib/dateUtils';
 
 
@@ -171,18 +172,25 @@ function SearchDiscovery() {
         </div>
 
         {/* Results List */}
-        <div className="space-y-4">
-          {filteredResults.map((game) => (
-            <UnifiedGameCard
-              key={game.id}
-              game={game}
-              variant="simple"
-              onSelect={() => handleGameSelect(game.id)}
-            />
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {loading ? (
+            // Show skeleton loading
+            Array.from({ length: 6 }).map((_, index) => (
+              <GameCardSkeleton key={index} />
+            ))
+          ) : (
+            filteredResults.map((game) => (
+              <UnifiedGameCard
+                key={game.id}
+                game={game}
+                variant="simple"
+                onSelect={() => handleGameSelect(game.id)}
+              />
+            ))
+          )}
         </div>
 
-        {filteredResults.length === 0 && (
+        {!loading && filteredResults.length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-muted-foreground" />

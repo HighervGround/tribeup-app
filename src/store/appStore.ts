@@ -26,9 +26,11 @@ export interface Game {
   location: string;
   latitude?: number;
   longitude?: number;
-  currentPlayers: number;
+  currentPlayers: number; // Authenticated participants (status='joined')
   maxPlayers: number;
-  publicRsvpCount?: number; // Count of public (non-authenticated) RSVPs
+  publicRsvpCount?: number; // Count of public (non-authenticated) RSVPs (attending=true)
+  totalPlayers?: number; // Total participants (currentPlayers + publicRsvpCount)
+  availableSpots?: number; // Available capacity (maxPlayers - totalPlayers)
   cost: string;
   description: string;
   imageUrl: string;

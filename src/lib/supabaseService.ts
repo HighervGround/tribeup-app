@@ -253,67 +253,87 @@ export class SupabaseService {
         return null;
       }
 
-      console.log('🔍 Fetching other user profile for:', userId);
-      console.log('🔍 UserId type check:', typeof userId, 'Length:', userId?.length);
+      console.log('🔍 [getOtherUserProfile] Fetching profile for userId:', userId);
 
-      // Try public profile view first
-      let data: any = null;
-      let error: any = null;
+      // Strategy: Try multiple queries in parallel, use the first successful one
+      // Query 1: Try user_public_profile view by id (using .in() like getGameParticipants does)
+      const viewByIdPromise = supabase
+        .from('user_public_profile')
+        .select('id, display_name, avatar_url, username, bio, location')
+        .in('id', [userId])
+        .maybeSingle();
 
-      // Attempt 1: Query user_public_profile view (try both id and auth_user_id if view supports it)
-      const { data: viewData, error: viewError } = await supabase
+      // Query 2: Try user_public_profile view by id (using .eq() as alternative)
+      const viewByIdEqPromise = supabase
         .from('user_public_profile')
         .select('id, display_name, avatar_url, username, bio, location')
         .eq('id', userId)
         .maybeSingle();
-      
-      console.log('🔍 View query result:', { viewData: !!viewData, viewError });
 
-      if (!viewError && viewData) {
-        data = viewData;
-        console.log('✅ Found via user_public_profile view');
-      } else {
-        // Attempt 2: Query users table directly (RLS should allow SELECT for authenticated users)
-        console.log('⚠️ View query failed, trying users table directly:', viewError);
-        
-        // Try matching by id first
-        let usersData: any = null;
-        let usersError: any = null;
-        
-        const { data: byIdData, error: byIdError } = await supabase
-          .from('users')
-          .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
-          .eq('id', userId)
-          .maybeSingle();
-          
-        if (!byIdError && byIdData) {
-          usersData = byIdData;
-        } else {
-          // If not found by id, try auth_user_id
-          const { data: byAuthIdData, error: byAuthIdError } = await supabase
-            .from('users')
-            .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
-            .eq('auth_user_id', userId)
-            .maybeSingle();
-            
-          if (!byAuthIdError && byAuthIdData) {
-            usersData = byAuthIdData;
-          } else {
-            usersError = byAuthIdError || byIdError;
-          }
-        }
+      // Query 3: Try users table by id
+      const usersByIdPromise = supabase
+        .from('users')
+        .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
+        .eq('id', userId)
+        .maybeSingle();
 
-        if (!usersError && usersData) {
-          data = usersData;
-          console.log('✅ Found via users table');
-        } else {
-          error = usersError || viewError;
-          console.error('❌ Both queries failed:', { viewError, usersError });
-        }
+      // Query 4: Try users table by auth_user_id (if it exists)
+      const usersByAuthPromise = supabase
+        .from('users')
+        .select('id, full_name, username, avatar_url, bio, location, auth_user_id')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+
+      // Wait for all queries
+      const [viewByIdResult, viewByIdEqResult, usersByIdResult, usersByAuthResult] = await Promise.allSettled([
+        viewByIdPromise,
+        viewByIdEqPromise,
+        usersByIdPromise,
+        usersByAuthPromise,
+      ]);
+
+      let data: any = null;
+      let source = 'none';
+
+      // Check view result (using .in() - same pattern as getGameParticipants)
+      if (viewByIdResult.status === 'fulfilled' && !viewByIdResult.value.error && viewByIdResult.value.data) {
+        data = viewByIdResult.value.data;
+        source = 'user_public_profile (id via .in())';
+        console.log('✅ Found via user_public_profile view (by id via .in())');
+      }
+      // Check view result (using .eq() as alternative)
+      else if (viewByIdEqResult.status === 'fulfilled' && !viewByIdEqResult.value.error && viewByIdEqResult.value.data) {
+        data = viewByIdEqResult.value.data;
+        source = 'user_public_profile (id via .eq())';
+        console.log('✅ Found via user_public_profile view (by id via .eq())');
+      }
+      // Check users table by id
+      else if (usersByIdResult.status === 'fulfilled' && !usersByIdResult.value.error && usersByIdResult.value.data) {
+        data = usersByIdResult.value.data;
+        source = 'users (id)';
+        console.log('✅ Found via users table (by id)');
+      }
+      // Check users table by auth_user_id
+      else if (usersByAuthResult.status === 'fulfilled' && !usersByAuthResult.value.error && usersByAuthResult.value.data) {
+        data = usersByAuthResult.value.data;
+        source = 'users (auth_user_id)';
+        console.log('✅ Found via users table (by auth_user_id)');
+      }
+      // All queries failed
+      else {
+        const errors = {
+          viewByIdError: viewByIdResult.status === 'fulfilled' ? viewByIdResult.value.error : viewByIdResult.reason,
+          viewByIdEqError: viewByIdEqResult.status === 'fulfilled' ? viewByIdEqResult.value.error : viewByIdEqResult.reason,
+          usersByIdError: usersByIdResult.status === 'fulfilled' ? usersByIdResult.value.error : usersByIdResult.reason,
+          usersByAuthError: usersByAuthResult.status === 'fulfilled' ? usersByAuthResult.value.error : usersByAuthResult.reason,
+        };
+        console.error('❌ All queries failed for userId:', userId);
+        console.error('❌ Error details:', JSON.stringify(errors, null, 2));
+        return null;
       }
 
-      if (error || !data) {
-        console.error('❌ Public profile read error:', error);
+      if (!data) {
+        console.error('❌ No data returned from any query');
         return null;
       }
 
@@ -346,10 +366,10 @@ export class SupabaseService {
         },
       };
 
-      console.log('✅ Public profile data found:', user);
+      console.log('✅ [getOtherUserProfile] Profile found via', source, ':', { id: user.id, name: user.name });
       return user;
     } catch (err) {
-      console.error('❌ getOtherUserProfile failed:', err);
+      console.error('❌ [getOtherUserProfile] Exception:', err);
       return null;
     }
   }

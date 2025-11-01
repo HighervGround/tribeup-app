@@ -1,12 +1,13 @@
 import { useCurrentUserImage } from '@/hooks/use-current-user-image'
 import { useCurrentUserName } from '@/hooks/use-current-user-name'
 import { supabase } from '@/lib/supabase'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export type RealtimeUser = {
   id: string
   name: string
   image: string
+  lastSeen?: string
 }
 
 export const useRealtimePresenceRoom = (roomName: string) => {
@@ -14,38 +15,132 @@ export const useRealtimePresenceRoom = (roomName: string) => {
   const currentUserName = useCurrentUserName()
 
   const [users, setUsers] = useState<Record<string, RealtimeUser>>({})
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const channelRef = useRef<any>(null)
 
   useEffect(() => {
-    const room = supabase.channel(roomName)
+    let isSubscribed = false
 
-    room
-      .on('presence', { event: 'sync' }, () => {
-        const newState = room.presenceState()
-
-        const newUsers = Object.fromEntries(
-          Object.entries(newState).map(([key, values]) => {
-            const userValues = values as Array<{ image: string; name: string }>;
-            return [
-              key,
-              { id: key, name: userValues[0]?.name || '', image: userValues[0]?.image || '' },
-            ];
-          })
-        ) as Record<string, RealtimeUser>
-        setUsers(newUsers)
-      })
-      .subscribe(async (status: string) => {
-        if (status !== 'SUBSCRIBED') {
+    const setupPresence = async () => {
+      try {
+        // Get authenticated user
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (userError || !user) {
+          console.warn('[Presence] No authenticated user; presence disabled for room:', roomName)
           return
         }
 
-        await room.track({
-          name: currentUserName,
-          image: currentUserImage,
-        })
-      })
+        console.log('[Presence] Setting up for room:', roomName, 'user:', user.id)
 
+        // Important: use user.id as presence key so multiple tabs collapse to one entry
+        const channel = supabase.channel(`room:${roomName}:presence`, {
+          config: {
+            presence: { key: user.id },
+          },
+        })
+
+        channelRef.current = channel
+
+        // Set auth BEFORE subscribing so private channel auth works
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          await supabase.realtime.setAuth(session.access_token)
+        }
+
+        // Handle presence sync
+        channel.on('presence', { event: 'sync' }, () => {
+          if (!isSubscribed) return
+          
+          const newState = channel.presenceState()
+          
+          // State is an object keyed by presence.key (user.id), values are arrays of metas
+          // Using Object.keys(state).length gives a deduped online count
+          const dedupedUsers = Object.keys(newState)
+          
+          console.log('[Presence] Online users in', roomName, ':', dedupedUsers.length)
+
+          const newUsers = Object.fromEntries(
+            Object.entries(newState).map(([userId, values]) => {
+              const userValues = values as Array<{ name: string; image: string; last_seen?: string }>;
+              return [
+                userId,
+                {
+                  id: userId,
+                  name: userValues[0]?.name || 'Anonymous',
+                  image: userValues[0]?.image || '',
+                  lastSeen: userValues[0]?.last_seen,
+                },
+              ];
+            })
+          ) as Record<string, RealtimeUser>
+          
+          setUsers(newUsers)
+        })
+
+        // Optional: handle join/leave events for fine-grained reactions
+        channel.on('presence', { event: 'join' }, () => {
+          console.log('[Presence] User joined room:', roomName)
+        })
+
+        channel.on('presence', { event: 'leave' }, () => {
+          console.log('[Presence] User left room:', roomName)
+        })
+
+        // Subscribe to the channel
+        const status = await channel.subscribe()
+        
+        if (status !== 'SUBSCRIBED') {
+          console.warn('[Presence] Channel not subscribed:', status)
+          return
+        }
+
+        isSubscribed = true
+        console.log('[Presence] Successfully subscribed to room:', roomName)
+
+        // Send initial presence metadata. Keep it small for performance.
+        await channel.track({
+          name: currentUserName || 'Anonymous',
+          image: currentUserImage || '',
+          last_seen: new Date().toISOString(),
+        })
+
+        // Optional: keep last_seen fresh every 30s
+        intervalRef.current = setInterval(() => {
+          if (isSubscribed && channelRef.current) {
+            channelRef.current.track({
+              name: currentUserName || 'Anonymous',
+              image: currentUserImage || '',
+              last_seen: new Date().toISOString(),
+            }).catch((err: any) => {
+              console.error('[Presence] Error updating last_seen:', err)
+            })
+          }
+        }, 30000)
+
+      } catch (error) {
+        console.error('[Presence] Setup error:', error)
+      }
+    }
+
+    setupPresence()
+
+    // Cleanup to avoid duplicate subscriptions
     return () => {
-      room.unsubscribe()
+      isSubscribed = false
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      
+      if (channelRef.current) {
+        console.log('[Presence] Cleaning up room:', roomName)
+        supabase.removeChannel(channelRef.current).catch((err) => {
+          console.error('[Presence] Error removing channel:', err)
+        })
+        channelRef.current = null
+      }
     }
   }, [roomName, currentUserName, currentUserImage])
 

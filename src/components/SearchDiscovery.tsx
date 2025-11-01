@@ -71,10 +71,15 @@ function SearchDiscovery() {
       maxPlayers: game.maxPlayers || game.maxParticipants || 0
     }))
     .filter(game => {
-      const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           game.sport.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           game.location.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesSport = selectedSport === 'all' || game.sport.toLowerCase() === selectedSport.toLowerCase();
+      // Robust search that includes description and handles null values
+      const q = searchQuery.toLowerCase().trim();
+      const fields = [game.title, game.sport, game.location, game.description];
+      const matchesSearch = !q || fields.some(f => f?.toLowerCase().trim().includes(q));
+      
+      // Robust sport filter with case-insensitive comparison
+      const matchesSport = selectedSport === 'all' || 
+                          game.sport?.toLowerCase().trim() === selectedSport.toLowerCase().trim();
+      
       return matchesSearch && matchesSport;
     });
 

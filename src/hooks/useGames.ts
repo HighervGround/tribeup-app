@@ -270,16 +270,31 @@ export function useJoinGame() {
         description: 'Please try again later',
       });
     },
-    onSuccess: (_, gameId) => {
+    onSuccess: async (_, gameId) => {
       console.log('✅ Successfully joined game:', gameId);
       
-      // Just invalidate - let React Query handle the refetch automatically
-      // This prevents race conditions between optimistic updates and refetches
-      queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
-      queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
-      queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+      // Log state before refetch
+      const gameBefore = queryClient.getQueryData(gameKeys.detail(gameId));
+      console.log('📊 Game state BEFORE refetch:', { 
+        isJoined: (gameBefore as any)?.isJoined, 
+        currentPlayers: (gameBefore as any)?.currentPlayers 
+      });
       
-      console.log('🔄 Invalidated queries for game:', gameId);
+      // Force immediate refetch to get fresh data from database
+      // This ensures triggers have completed and we get accurate state
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId), exact: true }),
+        queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId), exact: true }),
+        queryClient.refetchQueries({ queryKey: gameKeys.lists(), exact: true })
+      ]);
+      
+      // Log state after refetch
+      const gameAfter = queryClient.getQueryData(gameKeys.detail(gameId));
+      console.log('📊 Game state AFTER refetch:', { 
+        isJoined: (gameAfter as any)?.isJoined, 
+        currentPlayers: (gameAfter as any)?.currentPlayers 
+      });
+      console.log('🔄 Refetched all game queries with fresh data');
     },
   });
 }
@@ -361,16 +376,31 @@ export function useLeaveGame() {
         description: 'Please try again later',
       });
     },
-    onSuccess: (_, gameId) => {
+    onSuccess: async (_, gameId) => {
       console.log('✅ Successfully left game:', gameId);
       
-      // Just invalidate - let React Query handle the refetch automatically
-      // This prevents race conditions between optimistic updates and refetches
-      queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
-      queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
-      queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+      // Log state before refetch
+      const gameBefore = queryClient.getQueryData(gameKeys.detail(gameId));
+      console.log('📊 Game state BEFORE refetch:', { 
+        isJoined: (gameBefore as any)?.isJoined, 
+        currentPlayers: (gameBefore as any)?.currentPlayers 
+      });
       
-      console.log('🔄 Invalidated queries for game:', gameId);
+      // Force immediate refetch to get fresh data from database
+      // This ensures triggers have completed and we get accurate state
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId), exact: true }),
+        queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId), exact: true }),
+        queryClient.refetchQueries({ queryKey: gameKeys.lists(), exact: true })
+      ]);
+      
+      // Log state after refetch
+      const gameAfter = queryClient.getQueryData(gameKeys.detail(gameId));
+      console.log('📊 Game state AFTER refetch:', { 
+        isJoined: (gameAfter as any)?.isJoined, 
+        currentPlayers: (gameAfter as any)?.currentPlayers 
+      });
+      console.log('🔄 Refetched all game queries with fresh data');
     },
   });
 }

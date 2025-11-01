@@ -689,9 +689,10 @@ export class SupabaseService {
       console.log(`🔍 Getting games for user: ${userId || 'anonymous'}`);
       
       // Fetch games with creator_profile relationship from user_public_profile view
+      // Use games_with_counts view for optimized current_players count
       const queryStart = performance.now();
       const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
+        .from('games_with_counts')
         .select(`
           id, title, location, date, time, max_players, current_players, creator_id, creator_profile(id, display_name, username, avatar_url),
           game_participants(user_id)
@@ -756,7 +757,7 @@ export class SupabaseService {
       console.log('🔄 Falling back to simple anonymous query...');
       try {
         const { data: gamesData, error: fallbackError } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select('id, title, location, date, time, max_players, current_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
@@ -806,8 +807,9 @@ export class SupabaseService {
 
   static async getMyGames(userId: string): Promise<Game[]> {
     // Fetch games with creator_profile relationship from user_public_profile view
+    // Use games_with_counts view for optimized current_players count
     const { data: gamesData, error } = await supabase
-      .from('games')
+      .from('games_with_counts')
       .select(`
         *,
         creator_profile(id, display_name, username, avatar_url)
@@ -1234,8 +1236,9 @@ export class SupabaseService {
         console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
         
         // Step 1: Get basic game data with creator_profile relationship from user_public_profile view
+        // Use games_with_counts view for optimized current_players count
         const { data: gameData, error: gameError } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select(`
             *,
             planned_route,
@@ -1278,8 +1281,9 @@ export class SupabaseService {
         console.log('🔍 [getGameById] Fetching for anonymous user');
         
         // For anonymous users: query with creator_profile relationship from user_public_profile view
+        // Use games_with_counts view for optimized current_players count
         const { data: gameData, error: gameError } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select(`
             *,
             planned_route,
@@ -1576,8 +1580,9 @@ export class SupabaseService {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
 
+      // Use games_with_counts view for optimized current_players count
       let query = supabase
-        .from('games')
+        .from('games_with_counts')
         .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
 ;
 
@@ -1664,9 +1669,10 @@ export class SupabaseService {
       const userId = user?.id;
 
       // Optimized query with join for Pro tier
+      // Use games_with_counts view for optimized current_players count
       if (userId) {
         const { data: gamesWithParticipants, error } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id,
             game_participants(user_id)
@@ -1683,8 +1689,9 @@ export class SupabaseService {
           return transformGameFromDB(game, isJoined);
         });
       } else {
+        // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select('id,title,sport,date,time,location,cost,max_players,current_players,description,image_url,creator_id')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])

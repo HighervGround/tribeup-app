@@ -142,3 +142,4 @@ All code changes have been completed:
 
 The badges only appear when `publicRsvpCount > 0`, keeping the UI clean.
 
+

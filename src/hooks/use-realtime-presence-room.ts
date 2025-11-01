@@ -36,22 +36,19 @@ export const useRealtimePresenceRoom = (roomName: string) => {
         // Important: use user.id as presence key so multiple tabs collapse to one entry
         const channel = supabase.channel(`room:${roomName}:presence`, {
           config: {
-            presence: { key: user.id },
+            private: true,                  // ✅ important for auth-protected channels
+            presence: { key: user.id },     // ✅ dedupe by user
           },
         })
 
         channelRef.current = channel
 
-        // Set auth BEFORE subscribing so private channel auth works
+        // Set auth BEFORE subscribing
         const { data: { session } } = await supabase.auth.getSession()
-        if (session?.access_token) {
-          await supabase.realtime.setAuth(session.access_token)
-        }
+        await supabase.realtime.setAuth(session?.access_token || '') // ✅ always a string
 
-        // Handle presence sync
+        // Handle presence sync (do not gate with isSubscribed)
         channel.on('presence', { event: 'sync' }, () => {
-          if (!isSubscribed) return
-          
           const newState = channel.presenceState()
           
           // State is an object keyed by presence.key (user.id), values are arrays of metas
@@ -98,19 +95,17 @@ export const useRealtimePresenceRoom = (roomName: string) => {
         isSubscribed = true
         console.log('[Presence] Successfully subscribed to room:', roomName)
 
-        // Send initial presence metadata. Keep it small for performance.
+        // Track initial presence AFTER subscribed
         await channel.track({
           name: currentUserName || 'Anonymous',
           image: currentUserImage || '',
           last_seen: new Date().toISOString(),
         })
 
-        // Optional: keep last_seen fresh every 30s
+        // Refresh last_seen every 30s
         intervalRef.current = setInterval(() => {
-          if (isSubscribed && channelRef.current) {
+          if (channelRef.current) {
             channelRef.current.track({
-              name: currentUserName || 'Anonymous',
-              image: currentUserImage || '',
               last_seen: new Date().toISOString(),
             }).catch((err: any) => {
               console.error('[Presence] Error updating last_seen:', err)

@@ -693,9 +693,8 @@ export class SupabaseService {
       const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
-          *,
-          game_participants(user_id),
-          creator_profile(id, display_name, username, avatar_url)
+          id, title, location, date, time, max_players, current_players, creator_id, creator_profile(id, display_name, username, avatar_url),
+          game_participants(user_id)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -758,7 +757,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games')
-          .select('*')
+          .select('id, title, location, date, time, max_players, current_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);

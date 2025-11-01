@@ -1002,7 +1002,7 @@ function GameDetails() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Players ({players.length}/{game.maxPlayers})</CardTitle>
+              <CardTitle>Players ({players.length}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Online now:</span>
                 <RealtimeAvatarStack roomName={`game-${gameId}`} />

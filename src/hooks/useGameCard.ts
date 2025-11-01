@@ -71,12 +71,14 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   /**
    * Check if the game is full
    */
-  const isFull = game.currentPlayers >= game.maxPlayers;
+  const currentPlayers = Number((game as any).current_players ?? game.currentPlayers ?? 0);
+  const maxPlayers = Number((game as any).max_players ?? game.maxPlayers ?? 0);
+  const isFull = currentPlayers >= maxPlayers;
   
   /**
    * Get formatted player count string
    */
-  const getPlayerCount = () => `${game.currentPlayers}/${game.maxPlayers} players`;
+  const getPlayerCount = () => `${currentPlayers}/${maxPlayers} players`;
   
   /**
    * Get join status indicator props

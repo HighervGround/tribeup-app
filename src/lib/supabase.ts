@@ -88,15 +88,15 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
   };
 
   if (creatorProfile) {
-    // We have creator data loaded (from user_public_profile view with display_name)
-    const displayName = creatorProfile.display_name || creatorProfile.username || `User ${creatorProfile.id?.slice(0, 8) || 'Unknown'}`;
-    createdBy = displayName;
+    // Use display_name first, then username, then 'Host' as fallback
+    const hostName = creatorProfile.display_name || creatorProfile.username || 'Host';
+    createdBy = hostName;
     creatorData = {
       id: creatorProfile.id || dbGame.creator_id,
-      name: displayName,
+      name: hostName,
       avatar: creatorProfile.avatar_url || ''
     };
-    console.log(`✅ [transformGameFromDB] Creator loaded: ${displayName} (${creatorProfile.id?.slice(0, 8) || 'Unknown'})`);
+    console.log(`✅ [transformGameFromDB] Creator loaded: ${hostName} (${creatorProfile.id?.slice(0, 8) || 'Unknown'})`);
   } else if (creatorProfile === null || creatorProfile === undefined) {
     // Creator not found in user_public_profile view
     // Use a more user-friendly fallback instead of showing UUID
@@ -129,8 +129,8 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     latitude: dbGame.latitude,
     longitude: dbGame.longitude,
     cost: dbGame.cost,
-    maxPlayers: dbGame.max_players,
-    currentPlayers: dbGame.current_players,
+    maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
+    currentPlayers: Number(dbGame.current_players ?? dbGame.currentPlayers ?? 0),
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',
     sportColor: getSportColor(dbGame.sport),

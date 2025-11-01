@@ -279,11 +279,11 @@ export default function PublicGamePage() {
                   <p className="font-medium">
                     {capacity ? (
                       <>
-                        {(capacity.private_rsvp_count || 0) + (capacity.public_rsvp_count || 0)}/{capacity.capacity || game.maxPlayers} players
+                        {(capacity.private_rsvp_count || 0) + (capacity.public_rsvp_count || 0)}/{capacity.capacity || Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
                       </>
                     ) : (
                       <>
-                        {publicRsvps.length + (game.currentPlayers || 0)}/{game.maxPlayers} players
+                        {publicRsvps.length + Number((game as any).current_players ?? game.currentPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
                       </>
                     )}
                   </p>

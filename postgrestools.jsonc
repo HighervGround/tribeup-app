@@ -16,16 +16,13 @@
   //   "password": "postgres"
   // }
   
-  // OPTION 2: Connect to remote Supabase
-  // Get connection details from: https://supabase.com/dashboard/project/<yourProjectId>/settings/database
-  // Click "Connection string" → "URI" tab
-  // Then uncomment and fill in your details:
+  // ✅ Connected to local Supabase
   "db": {
-    "host": "db.YOUR-PROJECT-REF.supabase.co",
-    "port": 5432,
+    "host": "127.0.0.1",
+    "port": 54322,
     "database": "postgres",
     "user": "postgres",
-    "password": "YOUR-DB-PASSWORD"
+    "password": "postgres"
   }
   
   // OPTION 3: Work without database connection (limited features)

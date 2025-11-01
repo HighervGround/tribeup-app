@@ -25,8 +25,8 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Must be logged in to join games' };
     }
     
-    // Use the helper function to avoid RLS issues (schema-qualified)
-    const { data, error } = await supabase.rpc('public.test_join', { 
+    // Use the secure v1 join function
+    const { data, error } = await supabase.rpc('join_game_v1', { 
       p_game_id: gameId 
     });
       
@@ -67,8 +67,8 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: 'Must be logged in to leave games' };
     }
     
-    // Use the helper function to avoid RLS issues (schema-qualified)
-    const { data, error } = await supabase.rpc('public.test_leave', { 
+    // Use the secure v1 leave function
+    const { data, error } = await supabase.rpc('leave_game_v1', { 
       p_game_id: gameId 
     });
       

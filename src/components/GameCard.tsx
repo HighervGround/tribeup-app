@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
 import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
+import { GameCapacity } from './ui/GameCapacity';
 
 interface GameCardProps {
   game: {
@@ -22,6 +23,9 @@ interface GameCardProps {
     imageUrl: string;
     participants: number;
     maxParticipants: number;
+    publicRsvpCount?: number;
+    totalPlayers?: number;
+    availableSpots?: number;
     isJoined: boolean;
     isHosted: boolean;
     host: {
@@ -154,17 +158,13 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
 
           {/* Participants & Action */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>{game.participants}/{game.maxParticipants}</span>
-              </div>
-              {Number(game.publicRsvpCount || 0) > 0 && (
-                <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                  +{game.publicRsvpCount} public
-                </Badge>
-              )}
-            </div>
+            <GameCapacity
+              currentPlayers={game.participants}
+              maxPlayers={game.maxParticipants}
+              publicRsvpCount={game.publicRsvpCount}
+              totalPlayers={game.totalPlayers}
+              availableSpots={game.availableSpots}
+            />
             
             {!compact && (
               <Button 
@@ -172,9 +172,9 @@ export function GameCard({ game, compact = false, onSelect }: GameCardProps) {
                 variant={getButtonVariant(game)}
                 onClick={(e) => toggleJoin(game, e)}
                 className="transition-all duration-200"
-                disabled={isLoading || (game.participants >= game.maxParticipants && !game.isJoined)}
+                disabled={isLoading || ((game.totalPlayers ?? (game.participants + (game.publicRsvpCount || 0))) >= game.maxParticipants && !game.isJoined)}
               >
-                {game.participants >= game.maxParticipants && !game.isJoined ? 'Game Full' : getButtonText(game)}
+                {(game.totalPlayers ?? (game.participants + (game.publicRsvpCount || 0))) >= game.maxParticipants && !game.isJoined ? 'Game Full' : getButtonText(game)}
               </Button>
             )}
           </div>

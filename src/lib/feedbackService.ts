@@ -30,10 +30,10 @@ export class FeedbackService {
 
       // Get user profile for name
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('users')
         .select('full_name, username')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const userName = profile?.full_name || profile?.username || 'Anonymous';
 

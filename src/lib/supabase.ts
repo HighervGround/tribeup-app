@@ -132,8 +132,8 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
     // SINGLE SOURCE OF TRUTH: Only use pre-computed view fields from games_with_counts
     // View fields: total_players (current_players + public_rsvp_count), available_spots
-    totalPlayers: Number(dbGame.total_players ?? dbGame.capacity_used ?? 0),
-    availableSpots: Number(dbGame.available_spots ?? dbGame.capacity_available ?? Math.max(0, Number(dbGame.max_players ?? 0) - Number(dbGame.total_players ?? 0))),
+    totalPlayers: Number(dbGame.total_players ?? 0),
+    availableSpots: Number(dbGame.available_spots ?? Math.max(0, Number(dbGame.max_players ?? 0) - Number(dbGame.total_players ?? 0))),
     
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',

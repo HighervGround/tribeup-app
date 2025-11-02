@@ -10,8 +10,8 @@ interface Game {
   time: string;
   description: string;
   maxPlayers: number;
-  totalPlayers: number; // From capacity_used
-  availableSpots: number; // From capacity_available
+  totalPlayers: number; // From games_with_counts.total_players
+  availableSpots: number; // From games_with_counts.available_spots
   isJoined: boolean;
   cost?: string;
   category?: string;
@@ -72,17 +72,17 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   /**
    * SINGLE SOURCE OF TRUTH: Only use pre-computed view fields
    */
-  const totalPlayers = Number((game as any).capacity_used ?? game.totalPlayers ?? 0);
-  const maxPlayers = Number((game as any).max_players ?? game.maxPlayers ?? 0);
-  const availableSpots = Number((game as any).capacity_available ?? game.availableSpots ?? 0);
+  const totalPlayers = game.totalPlayers ?? 0;
+  const maxPlayers = game.maxPlayers ?? 0;
+  const availableSpots = game.availableSpots ?? 0;
   const isFull = totalPlayers >= maxPlayers;
   
   // Debug logging
   console.log('useGameCard data:', {
     game_id: game.id,
-    capacity_used: (game as any).capacity_used,
-    capacity_available: (game as any).capacity_available,
-    max_players: (game as any).max_players,
+    total_players: game.totalPlayers,
+    available_spots: game.availableSpots,
+    max_players: game.maxPlayers,
     totalPlayers,
     maxPlayers,
     availableSpots,

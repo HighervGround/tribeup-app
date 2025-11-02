@@ -1614,7 +1614,7 @@ export class SupabaseService {
       // Use games_with_counts view for optimized current_players count
       let query = supabase
         .from('games_with_counts')
-        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,capacity_used,capacity_available')
+        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,total_players,available_spots')
 ;
 
       // Default to future games only unless specific date range is provided
@@ -1708,7 +1708,7 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,
-            capacity_used,capacity_available
+            total_players,available_spots
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1739,7 +1739,7 @@ export class SupabaseService {
         // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
           .from('games_with_counts')
-          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,capacity_used,capacity_available')
+          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,total_players,available_spots')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })

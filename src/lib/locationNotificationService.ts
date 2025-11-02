@@ -183,7 +183,7 @@ export class LocationNotificationService {
       .from('games_with_counts')
       .select(`
         id, title, sport, date, time, location, latitude, longitude,
-        max_players, capacity_used, capacity_available
+        max_players, total_players, available_spots
       `)
       .gte('latitude', location.latitude - latOffset)
       .lte('latitude', location.latitude + latOffset)
@@ -221,7 +221,7 @@ export class LocationNotificationService {
         if (!venueTypes.includes(venueType)) continue;
       }
 
-      const playersNeeded = game.capacity_available || (game.max_players - (game.capacity_used || 0));
+      const playersNeeded = game.available_spots || (game.max_players - (game.total_players || 0));
       const gameDateTime = new Date(`${game.date}T${game.time}`);
 
       alerts.push({

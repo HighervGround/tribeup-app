@@ -268,7 +268,7 @@ function HomeScreen() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold">TribeUp</h1>
-                <p className="text-muted-foreground">Find your next game</p>
+                <p className="text-muted-foreground">Find your next activity</p>
               </div>
               <div className="flex gap-2">
                 <FeedbackButton variant="outline" size="default" />

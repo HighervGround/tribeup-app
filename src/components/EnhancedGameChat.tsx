@@ -298,7 +298,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Game Chat
+            Activity Chat
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -316,7 +316,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Game Chat
+            Activity Chat
             {messages.length > 0 && (
               <span className="text-sm font-normal text-muted-foreground">
                 ({messages.length} messages)

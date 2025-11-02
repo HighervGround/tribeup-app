@@ -26,15 +26,15 @@ interface NavRoute {
 }
 
 const routes: NavRoute[] = [
-  { path: '/', label: 'Home', icon: Home, description: 'Main dashboard and game feed' },
-  { path: '/search', label: 'Search', icon: Search, description: 'Discover and search games' },
-  { path: '/create', label: 'Create Game', icon: Plus, description: 'Create a new game' },
+  { path: '/', label: 'Home', icon: Home, description: 'Main dashboard and activity feed' },
+  { path: '/search', label: 'Search', icon: Search, description: 'Discover and search activities' },
+  { path: '/create', label: 'Create Activity', icon: Plus, description: 'Create a new activity' },
   { path: '/profile', label: 'Profile', icon: User, description: 'User profile and stats' },
   { path: '/settings', label: 'Settings', icon: Settings, description: 'App settings and preferences' },
   { path: '/settings/notifications', label: 'Notifications', icon: Bell, description: 'Push notification settings' },
   { path: '/settings/accessibility', label: 'Accessibility', icon: Accessibility, description: 'Accessibility options' },
-  { path: '/game/1', label: 'Game Details', icon: Gamepad2, description: 'Sample game details page' },
-  { path: '/chat/game/1', label: 'Game Chat', icon: MessageSquare, description: 'Game chat interface' },
+  { path: '/game/1', label: 'Activity Details', icon: Gamepad2, description: 'Sample activity details page' },
+  { path: '/chat/game/1', label: 'Activity Chat', icon: MessageSquare, description: 'Activity chat interface' },
   { path: '/chat/direct/user1', label: 'Direct Chat', icon: MessageSquare, description: 'Direct message interface' },
 ];
 

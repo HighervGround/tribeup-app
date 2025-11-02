@@ -9,13 +9,14 @@ interface ClickableAvatarProps {
   src?: string;
   alt?: string;
   fallback?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   onClick?: () => void;
   disabled?: boolean;
 }
 
 const sizeClasses = {
+  xs: 'size-5',
   sm: 'size-6',
   md: 'size-8', 
   lg: 'size-10',

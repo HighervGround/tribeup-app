@@ -146,7 +146,7 @@ export function UnifiedGameCard({
                     userId={game.host.id}
                     src={game.host.avatar}
                     alt={game.host.name}
-                    size="sm"
+                    size="xs"
                   />
                   <span className="text-muted-foreground">Hosted by {game.host.name}</span>
                 </div>
@@ -210,7 +210,7 @@ export function UnifiedGameCard({
                 userId={game.host.id}
                 src={game.host.avatar}
                 alt={game.host.name}
-                size="sm"
+                size="xs"
               />
               <span className="text-muted-foreground">Hosted by {game.host.name}</span>
             </div>

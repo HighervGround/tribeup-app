@@ -89,7 +89,7 @@ export class NotificationService {
           game_id: gameId,
           notification_type: 'game_reminder',
           scheduled_for: reminderTime.toISOString(),
-          title: 'Game Reminder',
+          title: 'Activity Reminder',
           body: `Don't forget about "${gameTitle}" tomorrow!`,
           data: { gameId, type: 'reminder' }
         });

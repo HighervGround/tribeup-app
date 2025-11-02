@@ -130,24 +130,24 @@ self.addEventListener('push', (event) => {
         break;
 
       case 'game_reminder':
-        notificationData.title = 'Game Starting Soon';
+        notificationData.title = 'Activity Starting Soon';
         notificationData.tag = `game-${notificationData.data.gameId}`;
         notificationData.actions = [
-          { action: 'view_game', title: 'View Game', icon: '/icons/game.png' },
+          { action: 'view_game', title: 'View Activity', icon: '/icons/game.png' },
           { action: 'get_directions', title: 'Get Directions', icon: '/icons/directions.png' }
         ];
         break;
 
       case 'join_request':
-        notificationData.title = 'Someone joined your game';
+        notificationData.title = 'Someone joined your activity';
         notificationData.tag = `join-${notificationData.data.gameId}`;
         notificationData.actions = [
-          { action: 'view_game', title: 'View Game', icon: '/icons/game.png' }
+          { action: 'view_game', title: 'View Activity', icon: '/icons/game.png' }
         ];
         break;
 
       case 'game_update':
-        notificationData.title = 'Game Updated';
+        notificationData.title = 'Activity Updated';
         notificationData.tag = `update-${notificationData.data.gameId}`;
         break;
     }

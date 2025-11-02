@@ -297,7 +297,7 @@ export default function PublicGamePage() {
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-medium mb-2">About this game</h3>
+                  <h3 className="font-medium mb-2">About this activity</h3>
                   <p className="text-muted-foreground">{game.description}</p>
                 </div>
               </>

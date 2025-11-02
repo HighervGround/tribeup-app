@@ -317,7 +317,7 @@ export default function PublicGamePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                RSVP for this Game
+                RSVP for this Activity
               </CardTitle>
             </CardHeader>
             <CardContent>

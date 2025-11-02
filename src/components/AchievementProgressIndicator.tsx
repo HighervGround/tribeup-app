@@ -163,7 +163,7 @@ export function GameProgressWidget({
     <div className="space-y-3">
       {nextParticipation && (
         <QuickProgress
-          label="Games Played"
+          label="Activities Played"
           current={gamesPlayed}
           target={nextParticipation.total}
           icon={<Trophy className="w-4 h-4" />}
@@ -173,7 +173,7 @@ export function GameProgressWidget({
       
       {nextHosting && (
         <QuickProgress
-          label="Games Hosted"
+          label="Activities Hosted"
           current={gamesHosted}
           target={nextHosting.total}
           icon={<Target className="w-4 h-4" />}

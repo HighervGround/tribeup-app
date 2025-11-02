@@ -96,7 +96,7 @@ Hope to see you there!
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Share2 className="w-5 h-5" />
-            Share Game
+            Share Activity
           </CardTitle>
         </CardHeader>
         
@@ -148,7 +148,7 @@ Hope to see you there!
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Anyone with this link can view game details and RSVP
+              Anyone with this link can view activity details and RSVP
             </p>
           </div>
 

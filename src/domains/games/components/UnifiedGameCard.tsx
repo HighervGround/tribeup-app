@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { ClickableAvatar } from './ui/clickable-avatar';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
+import { ClickableAvatar } from '@/shared/components/ui/clickable-avatar';
+import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
-import { useGameCard } from '../hooks/useGameCard';
-import { formatTimeString, formatCost, formatEventHeader } from '../lib/dateUtils';
-import { GameCapacity } from './ui/GameCapacity';
-import { SimpleCalendarButton } from './SimpleCalendarButton';
+import { useGameCard } from '@/domains/games/hooks/useGameCard';
+import { formatTimeString, formatCost, formatEventHeader } from '@/shared/utils/dateUtils';
+import { GameCapacity } from '@/shared/components/ui/GameCapacity';
+import { SimpleCalendarButton } from '@/shared/components/common/SimpleCalendarButton';
 
 interface Game {
   id: string;

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Alert, AlertDescription } from './ui/alert';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import { X, Mail, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 
 interface QuickJoinModalProps {
   isOpen: boolean;

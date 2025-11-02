@@ -1,15 +1,15 @@
-import { cn } from '../lib/utils'
-import { supabase } from '../lib/supabase'
-import { Button } from './ui/button'
+import { cn } from '@/shared/utils/utils'
+import { supabase } from '@/core/database/supabase'
+import { Button } from '@/shared/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from './ui/card'
-import { Input } from './ui/input'
-import { Label } from './ui/label'
+} from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
+import { Label } from '@/shared/components/ui/label'
 import { useState } from 'react'
 
 export function UpdatePasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {

@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { ClickableAvatar } from './ui/clickable-avatar';
-import { Separator } from './ui/separator';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
+import { ClickableAvatar } from '@/shared/components/ui/clickable-avatar';
+import { Separator } from '@/shared/components/ui/separator';
 import { GameChat } from './GameChat';
-import { Alert, AlertDescription } from './ui/alert';
-import { SimpleCalendarButton } from './SimpleCalendarButton';
-import { WeatherWidget } from './WeatherWidget';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
+import { SimpleCalendarButton } from '@/shared/components/common/SimpleCalendarButton';
+import { WeatherWidget } from '@/domains/weather/components/WeatherWidget';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -32,18 +32,18 @@ import {
   MoreVertical,
   RefreshCw,
 } from 'lucide-react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { useAppStore } from '../store/appStore';
-import { useGame, useGameParticipants } from '../hooks/useGames';
-import { useGameJoinToggle } from '../hooks/useGameJoinToggle';
-import { useDeepLinks } from '../hooks/useDeepLinks';
+import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
+import { useAppStore } from '@/store/appStore';
+import { useGame, useGameParticipants } from '@/domains/games/hooks/useGames';
+import { useGameJoinToggle } from '@/domains/games/hooks/useGameJoinToggle';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
 import { toast } from 'sonner';
-import { SupabaseService } from '../lib/supabaseService';
-import { supabase } from '../lib/supabase';
-import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '../lib/dateUtils';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { supabase } from '@/core/database/supabase';
+import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '@/shared/utils/dateUtils';
 
 function GameDetails() {
   const navigate = useNavigate();

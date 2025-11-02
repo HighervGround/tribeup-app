@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { loadGoogleMapsApi } from '../lib/googleMapsLoader';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { LoadingSpinner } from './ui/loading-spinner';
+import { loadGoogleMapsApi } from '@/domains/locations/services/googleMapsLoader';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 import { 
   MapPin, 
   Navigation, 
@@ -21,10 +21,10 @@ import {
   Filter,
   Settings
 } from 'lucide-react';
-import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '../hooks/useLocation';
-import { VenueService, Venue, VenueRecommendation, VenueFilter } from '../lib/venueService';
-import { WeatherService, WeatherData } from '../lib/weatherService';
-import { LocationNotificationService } from '../lib/locationNotificationService';
+import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '@/domains/locations/hooks/useLocation';
+import { VenueService, Venue, VenueRecommendation, VenueFilter } from '@/domains/locations/services/venueService';
+import { WeatherService, WeatherData } from '@/domains/locations/services/weatherService';
+import { LocationNotificationService } from '@/domains/locations/services/locationNotificationService';
 import { toast } from 'sonner';
 
 export interface MapGame {

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SupabaseService } from '../lib/supabaseService';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Badge } from '@/shared/components/ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
-import { useGames } from '../hooks/useGames';
+import { useAppStore } from '@/store/appStore';
+import { useGames } from '@/domains/games/hooks/useGames';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
-import { formatTimeString } from '../lib/dateUtils';
+import { formatTimeString } from '@/shared/utils/dateUtils';
 
 
 

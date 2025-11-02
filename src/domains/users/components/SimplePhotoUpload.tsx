@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
+import { Button } from '@/shared/components/ui/button';
+import { Card } from '@/shared/components/ui/card';
 import { Camera, Upload, X, Loader2 } from 'lucide-react';
-import { PhotoService } from '../lib/photoService';
+import { PhotoService } from '@/domains/users/services/photoService';
 
 interface SimplePhotoUploadProps {
   gameId: string;

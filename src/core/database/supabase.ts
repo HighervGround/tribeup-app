@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
-import { env } from './envUtils';
+import { env } from '@/core/config/envUtils';
 
 // Environment variables - these will need to be set in your .env file
 const supabaseUrl = env.SUPABASE_URL?.trim();

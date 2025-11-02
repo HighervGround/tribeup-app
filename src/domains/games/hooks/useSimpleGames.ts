@@ -3,7 +3,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { SimpleGameService } from '../lib/simpleGameService';
+import { SimpleGameService } from '@/domains/games/services/simpleGameService';
 
 export function useSimpleGames() {
   return useQuery({

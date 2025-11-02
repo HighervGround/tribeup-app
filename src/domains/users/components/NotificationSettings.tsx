@@ -1,11 +1,11 @@
 import React from 'react';
 // import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Switch } from './ui/switch';
-import { Badge } from './ui/badge';
-import { Alert, AlertDescription } from './ui/alert';
-import { LoadingSpinner } from './ui/loading-spinner';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Switch } from '@/shared/components/ui/switch';
+import { Badge } from '@/shared/components/ui/badge';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 import { 
   Bell, 
   BellOff, 
@@ -20,8 +20,8 @@ import {
   XCircle,
   RefreshCw
 } from 'lucide-react';
-import { usePushNotifications } from '../hooks/usePushNotifications';
-import { useNotifications } from '../hooks/useNotifications';
+import { usePushNotifications } from '@/domains/users/hooks/usePushNotifications';
+import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { toast } from 'sonner';
 
 function NotificationSettings() {

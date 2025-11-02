@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Users, DollarSign, Repeat, Save } from 'lucide-react';
-import { SupabaseService } from '../lib/supabaseService';
-import { useAppStore } from '../store/appStore';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useAppStore } from '@/store/appStore';
 
 interface CreateRecurringGameProps {
   onSuccess?: (templateId: string) => void;

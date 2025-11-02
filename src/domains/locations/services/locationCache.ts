@@ -1,5 +1,5 @@
-import { Game } from '../store/appStore';
-import { LocationCoordinates, calculateDistance } from '../hooks/useLocation';
+import { Game } from '@/store/appStore';
+import { LocationCoordinates, calculateDistance } from '@/domains/locations/hooks/useLocation';
 
 interface CacheEntry<T> {
   data: T;

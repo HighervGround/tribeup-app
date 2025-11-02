@@ -1,12 +1,12 @@
 import React, { forwardRef } from 'react';
 // import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { ClickableAvatar } from './ui/clickable-avatar';
-import { CurrentUserAvatar } from './current-user-avatar';
-import { useNotifications } from '../hooks/useNotifications';
-import { useAppStore } from '../store/appStore';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { ClickableAvatar } from '@/shared/components/ui/clickable-avatar';
+import { CurrentUserAvatar } from '@/shared/components/common/current-user-avatar';
+import { useNotifications } from '@/domains/users/hooks/useNotifications';
+import { useAppStore } from '@/store/appStore';
 import { Home, Search, Plus, Bell, User } from 'lucide-react';
 
 const navItems = [

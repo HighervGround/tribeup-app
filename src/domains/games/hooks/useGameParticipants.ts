@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function useGameParticipants(gameId: string | null) {

@@ -1,5 +1,5 @@
 // System configuration service for runtime configurable settings
-import { supabase } from './supabase';
+import { supabase } from '@/core/database/supabase';
 
 export interface SystemConfigValue {
   key: string;

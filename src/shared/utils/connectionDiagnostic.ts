@@ -3,7 +3,7 @@
  * Tests and fixes Supabase connection issues
  */
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 
 export class ConnectionDiagnostic {
   

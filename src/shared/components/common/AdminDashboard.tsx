@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
 import { 
   ArrowLeft, 
   Users, 
@@ -18,9 +18,9 @@ import {
   Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAllUsers, useAdminAuditLog, useUpdateUserRole, useDeleteGame, useCanPerformAdminActions } from '../hooks/useAdmin';
-import { useGames } from '../hooks/useGames';
-import { useAppStore } from '../store/appStore';
+import { useAllUsers, useAdminAuditLog, useUpdateUserRole, useDeleteGame, useCanPerformAdminActions } from '@/shared/hooks/useAdmin';
+import { useGames } from '@/domains/games/hooks/useGames';
+import { useAppStore } from '@/store/appStore';
 
 function AdminDashboard() {
   const navigate = useNavigate();

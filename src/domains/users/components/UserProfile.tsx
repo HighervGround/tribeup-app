@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { Settings, Trophy, Calendar, MapPin } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
-import { useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
+import { useAppStore } from '@/store/appStore';
+import { useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
 import { AchievementGrid } from './AchievementBadge';
-import { formatTimeString } from '../lib/dateUtils';
+import { formatTimeString } from '@/shared/utils/dateUtils';
 
 function UserProfile() {
   const navigate = useNavigate();

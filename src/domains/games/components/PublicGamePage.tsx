@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
-import { Alert, AlertDescription } from './ui/alert';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Separator } from '@/shared/components/ui/separator';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import { 
   Calendar, 
   MapPin, 
@@ -22,10 +22,10 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { usePublicGame, usePublicRSVPs, publicGameKeys } from '../hooks/usePublicGame';
-import { supabase } from '../lib/supabase';
+import { usePublicGame, usePublicRSVPs, publicGameKeys } from '@/domains/games/hooks/usePublicGame';
+import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
-import { GameCapacityLine } from './ui/GameCapacity';
+import { GameCapacityLine } from '@/shared/components/ui/GameCapacity';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();

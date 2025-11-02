@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Button } from '@/shared/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/components/ui/dropdown-menu';
 import { Calendar, CalendarPlus, Download, ExternalLink, Smartphone } from 'lucide-react';
-import { CalendarService } from '../lib/calendarService';
+import { CalendarService } from '@/shared/components/lib/calendarService';
 import { toast } from 'sonner';
 
 interface CalendarIntegrationProps {

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { useEnsureProfileOnLogin } from '../hooks/useEnsureProfile';
-import { useAppStore } from '../store/appStore';
+import { useEnsureProfileOnLogin } from '@/shared/hooks/useEnsureProfile';
+import { useAppStore } from '@/store/appStore';
 import { User } from '@supabase/supabase-js';
 
 interface ProfileEnsurerProps {

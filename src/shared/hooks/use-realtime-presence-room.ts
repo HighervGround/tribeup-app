@@ -1,6 +1,6 @@
 import { useCurrentUserImage } from '@/hooks/use-current-user-image'
 import { useCurrentUserName } from '@/hooks/use-current-user-name'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/core/database/supabase'
 import { useEffect, useState, useRef } from 'react'
 
 export type RealtimeUser = {

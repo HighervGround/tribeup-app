@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from './ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { RefreshCw, Trash2, AlertTriangle, Bug, Zap, Wifi } from 'lucide-react';
-import { gameKeys } from '../hooks/useGames';
-import { queryDebugger } from '../utils/queryDebugger';
-import { SupabaseDiagnostics } from '../utils/supabaseDiagnostics';
-import { SupabaseSpeedTest } from '../utils/supabaseSpeedTest';
-import { ConnectionDiagnostic } from '../utils/connectionDiagnostic';
+import { gameKeys } from '@/domains/games/hooks/useGames';
+import { queryDebugger } from '@/shared/utils/queryDebugger';
+import { SupabaseDiagnostics } from '@/shared/utils/supabaseDiagnostics';
+import { SupabaseSpeedTest } from '@/shared/utils/supabaseSpeedTest';
+import { ConnectionDiagnostic } from '@/shared/utils/connectionDiagnostic';
 
 export function CacheClearButton() {
   const queryClient = useQueryClient();

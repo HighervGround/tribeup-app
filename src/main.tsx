@@ -4,7 +4,7 @@ import App from './App.tsx'
 import './styles/globals.css'
 import './index.css'
 import './fix-colors.css'
-import { CacheCorruptionDetector } from './utils/cacheCorruptionDetector'
+import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization

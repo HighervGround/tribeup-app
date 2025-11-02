@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { SupabaseService } from '../lib/supabaseService';
-import { useAppStore } from '../store/appStore';
-import { LoadingSpinner } from './ui/loading-spinner';
-import { Card, CardContent } from './ui/card';
-import { Alert, AlertDescription } from './ui/alert';
+import { supabase } from '@/core/database/supabase';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useAppStore } from '@/store/appStore';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 function AuthCallback() {

@@ -1,6 +1,6 @@
 import React from 'react';
 // import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
-import { cn } from './utils';
+import { cn } from '@/shared/utils/utils';
 
 interface LoadingSkeletonProps {
   className?: string;

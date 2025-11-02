@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Separator } from './ui/separator';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { Separator } from '@/shared/components/ui/separator';
 import { 
   ArrowLeft, 
   MessageCircle, 
@@ -20,10 +20,10 @@ import {
   Share
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '../hooks/useUserProfile';
+import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
 import { AchievementGrid } from './AchievementBadge';
-import { initialsFrom } from '@/lib/initials';
-import { supabase } from '../lib/supabase';
+import { initialsFrom } from '@/shared/utils/initials';
+import { supabase } from '@/core/database/supabase';
 
 
 

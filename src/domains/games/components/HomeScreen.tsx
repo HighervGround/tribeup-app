@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { RefreshCw, MapPin } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
-import { useGamesWithCreators } from '../hooks/useGamesWithCreators';
-import { useLocation } from '../hooks/useLocation';
-import { useAllGamesRealtime } from '../hooks/useGameRealtime';
+import { useAppStore } from '@/store/appStore';
+import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
+import { useLocation } from '@/domains/locations/hooks/useLocation';
+import { useAllGamesRealtime } from '@/domains/games/hooks/useGameRealtime';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
-import { CacheClearButton } from './CacheClearButton';
-import { FeedbackButton } from './FeedbackButton';
+import { CacheClearButton } from '@/shared/components/common/CacheClearButton';
+import { FeedbackButton } from '@/domains/users/components/FeedbackButton';
 
 
 

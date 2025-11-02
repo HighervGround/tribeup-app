@@ -1,12 +1,12 @@
-import { cn } from '../lib/utils'
+import { cn } from '@/shared/utils/utils'
 import { ChatMessageItem } from './chat-message'
-import { useChatScroll } from '../hooks/use-chat-scroll'
+import { useChatScroll } from '@/shared/hooks/use-chat-scroll'
 import {
   type ChatMessage,
   useRealtimeChat,
-} from '../hooks/use-realtime-chat'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
+} from '@/shared/hooks/use-realtime-chat'
+import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
 import { Send } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 

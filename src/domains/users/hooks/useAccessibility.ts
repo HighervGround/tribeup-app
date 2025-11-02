@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 
 interface AccessibilityPreferences {
   theme: 'light' | 'dark' | 'auto';

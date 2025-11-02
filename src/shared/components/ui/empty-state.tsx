@@ -1,7 +1,7 @@
 import React from 'react';
 // import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
 import { Button } from './button';
-import { cn } from './utils';
+import { cn } from '@/shared/utils/utils';
 import { Bell, MessageSquare, Calendar, CheckCircle } from 'lucide-react';
 
 interface EmptyStateProps {

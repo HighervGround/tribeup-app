@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import { SupabaseService } from '../lib/supabaseService';
-import { supabase } from '../lib/supabase';
-import { useAppStore } from '../store/appStore';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { supabase } from '@/core/database/supabase';
+import { useAppStore } from '@/store/appStore';
 
 export interface RealtimeMessage {
   id: string;

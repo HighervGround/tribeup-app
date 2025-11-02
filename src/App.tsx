@@ -1,8 +1,8 @@
 import React from 'react';
-import { AppRouter } from './components/AppRouter';
-import { SimpleAuthProvider } from './providers/SimpleAuthProvider';
-import { QueryProvider } from './providers/QueryProvider';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppRouter } from '@/core/routing/AppRouter';
+import { SimpleAuthProvider } from '@/core/auth/SimpleAuthProvider';
+import { QueryProvider } from '@/core/auth/QueryProvider';
+import { ErrorBoundary } from '@/shared/components/common/ErrorBoundary';
 import { Toaster } from 'sonner';
 // import './light-mode-fix.css';
 

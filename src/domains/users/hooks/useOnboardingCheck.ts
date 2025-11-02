@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { supabase } from '../lib/supabase';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
+import { supabase } from '@/core/database/supabase';
 
 export interface OnboardingStatus {
   needsOnboarding: boolean;

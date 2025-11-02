@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { SupabaseService } from '../lib/supabaseService';
+import { SupabaseService } from '@/core/database/supabaseService';
 import { toast } from 'sonner';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 
 // Query keys
 export const adminKeys = {

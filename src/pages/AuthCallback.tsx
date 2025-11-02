@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 

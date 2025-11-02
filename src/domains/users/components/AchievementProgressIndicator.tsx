@@ -1,7 +1,7 @@
 import React from 'react';
-import { Progress } from './ui/progress';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
+import { Progress } from '@/shared/components/ui/progress';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
 import { Trophy, Target, Zap } from 'lucide-react';
 
 interface Achievement {

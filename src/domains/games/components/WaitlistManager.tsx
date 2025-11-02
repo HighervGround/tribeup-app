@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, X } from 'lucide-react';
-import { SupabaseService } from '../lib/supabaseService';
-import { useAppStore } from '../store/appStore';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useAppStore } from '@/store/appStore';
 
 interface WaitlistEntry {
   id: string;

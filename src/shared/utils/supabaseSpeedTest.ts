@@ -2,7 +2,7 @@
  * Supabase Speed Test - Let's see what's actually slow
  */
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 
 export class SupabaseSpeedTest {
   

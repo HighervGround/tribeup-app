@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { supabase } from '../lib/supabase';
-import { useAppStore } from '../store/appStore';
-import { LoadingSpinner } from './ui/loading-spinner';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
+import { supabase } from '@/core/database/supabase';
+import { useAppStore } from '@/store/appStore';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 
 interface ProfileCheckProps {
   children?: React.ReactNode;

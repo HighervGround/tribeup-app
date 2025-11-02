@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@/core/database/supabase';
 
 // Idempotent profile creation service using RPC
 export async function ensureUserProfile({ 

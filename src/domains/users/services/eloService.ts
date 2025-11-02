@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@/core/database/supabase';
 
 // Types for ELO system
 export interface PlayerEloRating {

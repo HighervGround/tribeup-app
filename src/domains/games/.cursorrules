@@ -1,0 +1,243 @@
+# Games Domain - AI Context
+
+## Context
+You are working in the **Games Domain**, the core feature of TribeUp. This domain handles the complete lifecycle of sports activities.
+
+## Domain Boundaries
+**This domain is responsible for:**
+- Game creation, editing, deletion
+- Participant management (join/leave)
+- Game discovery and search
+- In-game chat and real-time updates
+- Post-game ratings and reviews
+- Waitlist management
+- Public game sharing
+
+**This domain is NOT responsible for:**
+- User profiles (see users domain)
+- Weather data (see weather domain)  
+- Location/venue management (see locations domain)
+- Authentication (see core/auth)
+
+## Quick Reference
+
+### File Organization
+```
+games/
+├── components/     # UI components for games
+├── hooks/         # Game-related React hooks
+├── services/      # Game business logic & API calls
+└── README.md      # Full domain documentation
+```
+
+### Key Components
+- `CreateGame.tsx` - Multi-step game creation (handles weather, location, validation)
+- `GameDetails.tsx` - Full game view with join/leave/edit actions
+- `UnifiedGameCard.tsx` - Reusable card for lists
+- `HomeScreen.tsx` - Main game feed with filters
+- `GameChat.tsx` - Real-time chat interface
+
+### Key Hooks
+- `useGameActions` - Main hook for create/update/delete/join/leave
+- `useGames` - Fetch and filter games
+- `useGameJoinToggle` - Optimistic join/leave with error handling
+- `useGameRealtime` - Real-time game updates
+
+### Import Paths
+```typescript
+// Components
+import { CreateGame } from '@/domains/games/components/CreateGame';
+import { GameDetails } from '@/domains/games/components/GameDetails';
+
+// Hooks  
+import { useGameActions } from '@/domains/games/hooks/useGameActions';
+import { useGames } from '@/domains/games/hooks/useGames';
+
+// Services
+import { gameParticipantService } from '@/domains/games/services/gameParticipantService';
+
+// Cross-domain imports
+import { WeatherWidget } from '@/domains/weather/components/WeatherWidget';
+import { MapView } from '@/domains/locations/components/MapView';
+import { UserProfile } from '@/domains/users/components/UserProfile';
+```
+
+## Critical Business Rules
+
+### 2-Hour Rule
+Games cannot be modified or left within 2 hours of start time:
+```typescript
+const canModifyGame = (gameDate: string) => {
+  const gameTime = new Date(gameDate).getTime();
+  const now = Date.now();
+  const twoHours = 2 * 60 * 60 * 1000;
+  return gameTime - now > twoHours;
+};
+```
+
+### Participant Management
+- Creator automatically added as participant
+- Creator counts toward min/max capacity
+- Participants can leave up to 2 hours before start
+- Waitlist activates when capacity reached
+- Status tracking: 'active', 'left', 'waitlist'
+
+### Auto-Archive
+- Games automatically archived after end time
+- Archived games are read-only
+- Archived games still visible in history
+
+## Common Patterns
+
+### Optimistic Updates for Join/Leave
+```typescript
+const { mutate: joinGame } = useMutation({
+  mutationFn: (gameId: string) => gameService.joinGame(gameId),
+  onMutate: async (gameId) => {
+    // Cancel outgoing refetches
+    await queryClient.cancelQueries(['game', gameId]);
+    
+    // Snapshot previous value
+    const previous = queryClient.getQueryData(['game', gameId]);
+    
+    // Optimistically update
+    queryClient.setQueryData(['game', gameId], (old: any) => ({
+      ...old,
+      current_participants: (old.current_participants || 0) + 1,
+    }));
+    
+    return { previous };
+  },
+  onError: (err, gameId, context) => {
+    // Rollback on error
+    queryClient.setQueryData(['game', gameId], context?.previous);
+  },
+  onSettled: (gameId) => {
+    // Refetch after error or success
+    queryClient.invalidateQueries(['game', gameId]);
+  },
+});
+```
+
+### Real-time Game Subscriptions
+```typescript
+useEffect(() => {
+  const channel = supabase
+    .channel(`game:${gameId}`)
+    .on('postgres_changes',
+      { 
+        event: '*', 
+        schema: 'public', 
+        table: 'games',
+        filter: `id=eq.${gameId}`
+      },
+      (payload) => {
+        queryClient.setQueryData(['game', gameId], payload.new);
+      }
+    )
+    .on('postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'game_participants',
+        filter: `game_id=eq.${gameId}`
+      },
+      () => {
+        queryClient.invalidateQueries(['game', gameId, 'participants']);
+      }
+    )
+    .subscribe();
+    
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [gameId]);
+```
+
+### Game Creation with Validation
+```typescript
+const validateGameData = (data: GameInput): string[] => {
+  const errors: string[] = [];
+  
+  if (!data.sport) errors.push('Sport is required');
+  if (!data.location) errors.push('Location is required');
+  if (!data.date) errors.push('Date is required');
+  if (new Date(data.date) < new Date()) errors.push('Date must be in the future');
+  if (data.min_participants < 2) errors.push('Minimum 2 participants required');
+  if (data.max_participants < data.min_participants) {
+    errors.push('Max participants must be >= min participants');
+  }
+  
+  return errors;
+};
+```
+
+## Database Schema (Simplified)
+
+```typescript
+interface Game {
+  id: string;
+  created_by: string;          // auth_id of creator
+  sport: string;
+  date: string;                // ISO timestamp
+  location: {
+    coordinates: { lat: number; lng: number };
+    address?: string;
+    venue_name?: string;
+  };
+  min_participants: number;
+  max_participants: number;
+  current_participants: number;
+  description?: string;
+  skill_level?: string;
+  is_recurring: boolean;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface GameParticipant {
+  id: string;
+  game_id: string;
+  user_id: string;
+  status: 'active' | 'left' | 'waitlist';
+  joined_at: string;
+  left_at?: string;
+}
+```
+
+## Testing Checklist
+When modifying game functionality, test:
+- [ ] Game creation with all required fields
+- [ ] Join/leave with optimistic updates
+- [ ] 2-hour rule enforcement
+- [ ] Real-time updates work correctly
+- [ ] Weather widget displays for outdoor games
+- [ ] Location displays on map
+- [ ] Participant count updates
+- [ ] Chat functionality
+- [ ] Mobile responsiveness
+- [ ] Error handling and rollback
+
+## Performance Tips
+- Use `staleTime` in React Query (5 mins for game lists)
+- Paginate game lists (20 per page)
+- Only subscribe to realtime for games currently viewed
+- Debounce search inputs (300ms)
+- Cache creator profiles in game queries
+- Use `select` in Supabase to fetch only needed fields
+
+## Common Issues & Solutions
+
+**Issue**: Participant count not updating
+**Solution**: Check that `current_participants` is being invalidated and refetched
+
+**Issue**: Can't join full game
+**Solution**: Implement waitlist functionality
+
+**Issue**: Weather not showing
+**Solution**: Ensure game has `is_outdoor` flag and valid coordinates
+
+**Issue**: Real-time updates lagging
+**Solution**: Check subscription is properly set up and cleaned up
+

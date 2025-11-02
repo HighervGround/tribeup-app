@@ -1,7 +1,7 @@
-import { useCurrentUserImage } from '../hooks/use-current-user-image'
-import { useCurrentUserName } from '../hooks/use-current-user-name'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { cn } from '../lib/utils'
+import { useCurrentUserImage } from '@/shared/hooks/use-current-user-image'
+import { useCurrentUserName } from '@/shared/hooks/use-current-user-name'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
+import { cn } from '@/shared/utils/utils'
 
 interface CurrentUserAvatarProps {
   size?: 'sm' | 'md' | 'lg'

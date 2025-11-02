@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
-import { Button } from './ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface QueryErrorFallbackProps {

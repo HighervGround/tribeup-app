@@ -80,9 +80,8 @@ export function useGamesWithCreators() {
           .from('games_with_counts')
           .select(`
             id, title, sport, date, time, duration, location, latitude, longitude,
-            cost, max_players, current_players, public_rsvp_count, total_players, available_spots, description, image_url,
-            creator_id, created_at,
-            game_participants(user_id)
+            cost, max_players, description, image_url, creator_id, created_at,
+            public_count, private_count, capacity_used, capacity_available
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
@@ -93,14 +92,16 @@ export function useGamesWithCreators() {
         console.log(`📊 Step 1: Fetched ${gamesData?.length || 0} games`);
         setGames(gamesData ?? []);
 
-        // Step 2: Get participants for these games
+        // Step 2: Get participants for these games (fetch separately since view can't do nested selects)
         const gameIds = (gamesData ?? []).map(g => g.id);
         console.log(`🔍 Step 2a: Fetching participants for ${gameIds.length} games`);
         
-        const { data: participants, error: participantsErr } = await supabase
+        // Fetch ALL participants (for creator list) and current user's participation (for isJoined)
+        const { data: allParticipants, error: participantsErr } = await supabase
           .from('game_participants')
           .select('game_id, user_id')
-          .in('game_id', gameIds);
+          .in('game_id', gameIds)
+          .eq('status', 'joined');
 
         if (participantsErr) {
           console.warn('⚠️ Participants fetch failed, continuing with creators only:', participantsErr);
@@ -108,7 +109,7 @@ export function useGamesWithCreators() {
 
         // Step 2b: Build union of creator and participant ids
         const creatorIds = new Set((gamesData ?? []).map(g => g.creator_id).filter(id => id && id !== 'null'));
-        const participantIds = new Set((participants ?? []).map(p => p.user_id).filter(id => id && id !== 'null'));
+        const participantIds = new Set((allParticipants ?? []).map(p => p.user_id).filter(id => id && id !== 'null'));
         const userIds = Array.from(new Set([...creatorIds, ...participantIds]));
 
         console.log(`🔍 Step 2b: Found ${creatorIds.size} creators, ${participantIds.size} participants, ${userIds.length} total unique users`);
@@ -145,10 +146,20 @@ export function useGamesWithCreators() {
         setUserById(finalUserMap);
         setUsersLoaded(true);
 
+        // Build participant map for isJoined checks (only current user's games)
+        const joinedGameIds = new Set<string>();
+        if (userId) {
+          (allParticipants ?? []).forEach((p: any) => {
+            if (p.user_id === userId) {
+              joinedGameIds.add(p.game_id);
+            }
+          });
+        }
+
         // Transform games with proper user mapping and defensive fallbacks
         const transformedGames = (gamesData ?? []).map(game => {
           const user = finalUserMap.get(game.creator_id) as UserProfile | undefined;
-          const isJoined = userId && game.game_participants?.some((p: any) => p.user_id === userId) || false;
+          const isJoined = joinedGameIds.has(game.id);
           
           // Defensive fallback for creator display - following your exact pattern
           let createdBy: string;
@@ -192,10 +203,10 @@ export function useGamesWithCreators() {
             longitude: game.longitude,
             cost: game.cost,
             maxPlayers: game.max_players,
-            currentPlayers: game.current_players,
-            publicRsvpCount: game.public_rsvp_count || 0,
-            totalPlayers: game.total_players || (game.current_players + (game.public_rsvp_count || 0)),
-            availableSpots: game.available_spots || Math.max(0, game.max_players - (game.total_players || (game.current_players + (game.public_rsvp_count || 0)))),
+            currentPlayers: game.private_count || 0, // Map new field
+            publicRsvpCount: game.public_count || 0, // Map new field
+            totalPlayers: game.capacity_used || 0, // Map new field
+            availableSpots: game.capacity_available || 0, // Map new field
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),

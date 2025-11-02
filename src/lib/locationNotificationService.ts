@@ -180,11 +180,10 @@ export class LocationNotificationService {
     const lonOffset = radiusKm / (111 * Math.cos(location.latitude * Math.PI / 180));
 
     let query = supabase
-      .from('games')
+      .from('games_with_counts')
       .select(`
         id, title, sport, date, time, location, latitude, longitude,
-        max_players, current_players,
-        venues(name, venue_type)
+        max_players, private_count, public_count, capacity_used, capacity_available
       `)
       .gte('latitude', location.latitude - latOffset)
       .lte('latitude', location.latitude + latOffset)
@@ -222,7 +221,7 @@ export class LocationNotificationService {
         if (!venueTypes.includes(venueType)) continue;
       }
 
-      const playersNeeded = game.max_players - game.current_players;
+      const playersNeeded = game.capacity_available || (game.max_players - (game.capacity_used || 0));
       const gameDateTime = new Date(`${game.date}T${game.time}`);
 
       alerts.push({

@@ -696,9 +696,9 @@ export class SupabaseService {
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-          max_players, current_players, public_rsvp_count, total_players, available_spots, creator_id, 
-          creator_profile(id, full_name, username, avatar_url),
-          game_participants(user_id, status)
+          max_players, creator_id, created_at,
+          public_count, private_count, capacity_used, capacity_available,
+          creator_profile(id, full_name, username, avatar_url)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -712,24 +712,39 @@ export class SupabaseService {
       const queryTime = performance.now() - queryStart;
       console.log(`📊 Query time: ${queryTime.toFixed(2)}ms, fetched ${gamesData?.length || 0} games`);
       
+      // Step 2: Fetch participants separately (can't do nested select on views)
+      let participantsByGame = new Set<string>();
+      if (userId && gamesData && gamesData.length > 0) {
+        const gameIds = gamesData.map((g: any) => g.id);
+        const { data: participants } = await supabase
+          .from('game_participants')
+          .select('game_id') // Only need game_id since we filter by user_id
+          .in('game_id', gameIds)
+          .eq('status', 'joined')
+          .eq('user_id', userId); // Only fetch current user's participation
+        
+        if (participants) {
+          participants.forEach((p: any) => {
+            participantsByGame.add(p.game_id);
+          });
+        }
+      }
+      
       // Transform games with creator_profile from the relationship
       const games = (gamesData || []).map((game: any) => {
-        const isJoined = userId && game.game_participants?.some((p: any) => 
-          p.user_id === userId && p.status === 'joined'
-        ) || false;
+        const isJoined = participantsByGame.has(game.id);
         const creator = game.creator_profile || null;
         
         // Enhanced game object with proper creator data
         const enhancedGame = {
           ...game,
-          creator: creator,
-          game_participants: game.game_participants
+          creator: creator
         };
         
         console.log(`🎯 Game "${game.title}" creator:`, {
           creator_id: game.creator_id,
           creator_found: !!creator,
-          creator_name: creator?.display_name || 'Not found'
+          creator_name: creator?.full_name || creator?.username || 'Not found'
         });
         
         return transformGameFromDB(enhancedGame, isJoined);
@@ -763,7 +778,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, current_players, public_rsvp_count, total_players, available_spots, creator_id, sport, cost, description, image_url, latitude, longitude, created_at')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, public_count, private_count, capacity_used, capacity_available')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -1594,7 +1609,7 @@ export class SupabaseService {
       // Use games_with_counts view for optimized current_players count
       let query = supabase
         .from('games_with_counts')
-        .select('id,title,sport,date,time,location,cost,max_players,current_players,public_rsvp_count,total_players,available_spots,description,image_url,creator_id')
+        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,public_count,private_count,capacity_used,capacity_available')
 ;
 
       // Default to future games only unless specific date range is provided
@@ -1687,8 +1702,8 @@ export class SupabaseService {
         const { data: gamesWithParticipants, error } = await supabase
           .from('games_with_counts')
           .select(`
-            id,title,sport,date,time,location,cost,max_players,current_players,public_rsvp_count,total_players,available_spots,description,image_url,creator_id,
-            game_participants(user_id, status)
+            id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,
+            public_count,private_count,capacity_used,capacity_available
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1697,17 +1712,29 @@ export class SupabaseService {
 
         if (error) throw error;
 
+        // Fetch participants separately (can't do nested select on views)
+        const gameIds = (gamesWithParticipants || []).map((g: any) => g.id);
+        const { data: participants } = await supabase
+          .from('game_participants')
+          .select('game_id') // Only need game_id since we filter by user_id
+          .in('game_id', gameIds)
+          .eq('status', 'joined')
+          .eq('user_id', userId); // Only fetch current user's participation
+        
+        const participantsByGame = new Set<string>();
+        (participants || []).forEach((p: any) => {
+          participantsByGame.add(p.game_id);
+        });
+
         return (gamesWithParticipants || []).map((game: any) => {
-          const isJoined = game.game_participants?.some((p: any) => 
-            p.user_id === userId && p.status === 'joined'
-          ) || false;
+          const isJoined = participantsByGame.has(game.id);
           return transformGameFromDB(game, isJoined);
         });
       } else {
         // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
           .from('games_with_counts')
-          .select('id,title,sport,date,time,location,cost,max_players,current_players,public_rsvp_count,total_players,available_spots,description,image_url,creator_id')
+          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,public_count,private_count,capacity_used,capacity_available')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })

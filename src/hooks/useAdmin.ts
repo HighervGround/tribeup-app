@@ -114,13 +114,13 @@ export function useDeleteGame() {
       queryClient.invalidateQueries({ queryKey: ['games'] });
       queryClient.invalidateQueries({ queryKey: adminKeys.auditLog() });
       
-      toast.success('Game deleted successfully!', {
-        description: 'The game has been removed and participants have been notified',
+      toast.success('Activity deleted successfully!', {
+        description: 'The activity has been removed and participants have been notified',
       });
     },
     onError: (error) => {
-      console.error('Delete game error:', error);
-      toast.error('Failed to delete game', {
+      console.error('Delete activity error:', error);
+      toast.error('Failed to delete activity', {
         description: error instanceof Error ? error.message : 'Please try again later',
       });
     },

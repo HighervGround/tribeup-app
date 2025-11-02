@@ -216,8 +216,8 @@ function GameDetails() {
             <h2 className="text-xl font-semibold mb-2">Loading Issues</h2>
             <p className="text-muted-foreground mb-4">
               {loadingTimeout 
-                ? "The game is taking too long to load. This might be due to database connection issues."
-                : "There was an error loading the game details."
+                ? "The activity is taking too long to load. This might be due to database connection issues."
+                : "There was an error loading the activity details."
               }
             </p>
             {(gameError || participantsError) && (
@@ -245,8 +245,8 @@ function GameDetails() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl mb-4">Game not found</h1>
-          <p className="text-muted-foreground mb-4">The game you're looking for doesn't exist or has been removed.</p>
+          <h1 className="text-2xl mb-4">Activity not found</h1>
+          <p className="text-muted-foreground mb-4">The activity you're looking for doesn't exist or has been removed.</p>
           <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </div>
@@ -392,8 +392,8 @@ function GameDetails() {
               size="icon" 
               onClick={handleShare}
               data-action="share"
-              aria-label="Share game"
-              title="Share game (U)"
+              aria-label="Share activity"
+              title="Share activity (U)"
             >
               <Share className="w-5 h-5" />
             </Button>
@@ -421,18 +421,18 @@ function GameDetails() {
                   handleEditGame();
                 }}>
                   <Edit3 className="w-4 h-4 mr-2" />
-                  Edit Game
+                  Edit Activity
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => {
-                    console.log('Delete game clicked');
+                    console.log('Delete activity clicked');
                     e.stopPropagation();
                     setShowDeleteDialog(true);
                   }}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Cancel Game
+                  Cancel Activity
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1235,11 +1235,11 @@ function GameDetails() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Game Dialog */}
+      {/* Delete Activity Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Cancel Game</DialogTitle>
+            <DialogTitle>Cancel Activity</DialogTitle>
             <DialogDescription>
               This action cannot be undone. All participants will be notified of the cancellation.
             </DialogDescription>
@@ -1253,14 +1253,14 @@ function GameDetails() {
                 id="delete-reason"
                 value={deleteReason}
                 onChange={(e) => setDeleteReason(e.target.value)}
-                placeholder="Let participants know why the game is cancelled..."
+                placeholder="Let participants know why the activity is cancelled..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Keep Game
+              Keep Activity
             </Button>
             <Button 
               variant="destructive" 
@@ -1273,7 +1273,7 @@ function GameDetails() {
                   Cancelling...
                 </>
               ) : (
-                'Cancel Game'
+                'Cancel Activity'
               )}
             </Button>
           </DialogFooter>

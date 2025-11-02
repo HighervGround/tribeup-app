@@ -79,10 +79,10 @@ export function NoGamesFound({ onCreateGame }: { onCreateGame: () => void }) {
   return (
     <EmptyState
       icon={<div className="text-6xl">🏀</div>}
-      title="No games found"
-      description="Be the first to create a game in your area and start building your sports community!"
+      title="No activities found"
+      description="Be the first to create an activity in your area and start building your sports community!"
       action={{
-        label: "Create Game",
+        label: "Create Activity",
         onClick: onCreateGame
       }}
     />
@@ -105,9 +105,9 @@ export function NoFriends({ onExplore }: { onExplore: () => void }) {
     <EmptyState
       icon={<div className="text-6xl">👥</div>}
       title="No friends yet"
-      description="Connect with other players by joining games and building your sports network."
+      description="Connect with other players by joining activities and building your sports network."
       action={{
-        label: "Explore Games",
+        label: "Explore Activities",
         onClick: onExplore,
         variant: "outline"
       }}
@@ -147,8 +147,8 @@ export function NoNotifications({ filter }: { filter: string }) {
         };
       case 'games':
         return {
-          title: 'No game notifications',
-          description: 'No game updates, reminders, or join requests at the moment.',
+          title: 'No activity notifications',
+          description: 'No activity updates, reminders, or join requests at the moment.',
           icon: <Calendar className="w-8 h-8" />
         };
       default:

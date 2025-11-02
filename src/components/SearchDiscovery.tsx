@@ -25,6 +25,9 @@ const sportFilters = [
   { name: 'Golf', value: 'golf' },
   { name: 'Hockey', value: 'hockey' },
   { name: 'Rugby', value: 'rugby' },
+  { name: 'Swimming', value: 'swimming' },
+  { name: 'Rock Climbing', value: 'rock_climbing' },
+  { name: 'Hiking', value: 'hiking' },
 ];
 
 // Using UnifiedGameCard component for consistency
@@ -194,7 +197,7 @@ function SearchDiscovery() {
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">No games found</h3>
+            <h3 className="text-lg font-semibold mb-2">No activities found</h3>
             <p className="text-muted-foreground mb-4">
               Try adjusting your search or filters
             </p>

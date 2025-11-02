@@ -90,7 +90,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
             aria-label="Create new game"
           >
             <Plus className="w-5 h-5" />
-            {!sidebarCollapsed && 'Create Game'}
+            {!sidebarCollapsed && 'Create Activity'}
           </Button>
         </div>
 

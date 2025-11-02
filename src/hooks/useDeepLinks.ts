@@ -86,12 +86,12 @@ export function useDeepLinks() {
     try {
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
-        toast.success('Game shared successfully!');
+        toast.success('Activity shared successfully!');
         return true;
       } else {
         // Fallback to clipboard
         await navigator.clipboard.writeText(gameUrl);
-        toast.success('Game link copied to clipboard!', {
+        toast.success('Activity link copied to clipboard!', {
           description: 'Share with your friends',
           action: {
             label: 'Share again',
@@ -101,8 +101,8 @@ export function useDeepLinks() {
         return true;
       }
     } catch (error) {
-      console.error('Error sharing game:', error);
-      toast.error('Failed to share game');
+      console.error('Error sharing activity:', error);
+      toast.error('Failed to share activity');
       return false;
     }
   }, [generateGameUrl]);
@@ -182,8 +182,8 @@ export function useDeepLinks() {
     if (location.pathname.startsWith('/game/')) {
       const gameId = params.gameId;
       if (gameId && utmCampaign === 'game_invitation') {
-        toast.success('Welcome to the game!', {
-          description: 'You were invited to join this game'
+        toast.success('Welcome to the activity!', {
+          description: 'You were invited to join this activity'
         });
       }
     }

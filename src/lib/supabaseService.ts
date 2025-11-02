@@ -1451,6 +1451,7 @@ export class SupabaseService {
       console.log('🔍 Raw authenticated participants:', participants);
 
       // Fetch public RSVPs (guest users)
+      console.log('🔍 [getGameParticipants] Attempting to fetch public RSVPs for game:', gameId);
       const { data: publicRsvps, error: rsvpsError } = await supabase
         .from('public_rsvps')
         .select('id, name, email, created_at, attending')
@@ -1458,10 +1459,15 @@ export class SupabaseService {
         .eq('attending', true);
 
       if (rsvpsError) {
-        console.error('⚠️ Error fetching public RSVPs:', rsvpsError);
+        console.error('⚠️ [getGameParticipants] ERROR fetching public RSVPs:', rsvpsError);
+        console.error('⚠️ [getGameParticipants] Error code:', rsvpsError.code);
+        console.error('⚠️ [getGameParticipants] Error message:', rsvpsError.message);
+        console.error('⚠️ [getGameParticipants] Error details:', rsvpsError.details);
+      } else {
+        console.log('✅ [getGameParticipants] Successfully fetched public RSVPs:', publicRsvps?.length || 0);
       }
 
-      console.log('🔍 Raw public RSVPs:', publicRsvps);
+      console.log('🔍 [getGameParticipants] Raw public RSVPs data:', publicRsvps);
 
       const allParticipants: any[] = [];
 
@@ -1529,7 +1535,15 @@ export class SupabaseService {
       );
 
       const duration = performance.now() - startTime;
-      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} total (${participants?.length || 0} authenticated + ${publicRsvps?.length || 0} guests) in ${duration.toFixed(2)}ms`);
+      const guestCount = allParticipants.filter(p => p.isGuest).length;
+      const authCount = allParticipants.filter(p => !p.isGuest).length;
+      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} total (${authCount} authenticated + ${guestCount} guests) in ${duration.toFixed(2)}ms`);
+      console.log(`✅ [getGameParticipants] Returning participants:`, allParticipants.map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        isGuest: p.isGuest,
+        isHost: p.isHost 
+      })));
       
       return allParticipants;
     } catch (error) {

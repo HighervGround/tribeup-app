@@ -264,12 +264,12 @@ export function useJoinGame() {
         queryClient.setQueryData(gameKeys.participants(gameId), context.previousParticipants);
       }
       
-      toast.error('Failed to join game', {
+      toast.error('Failed to join activity', {
         description: 'Please try again later',
       });
     },
     onSuccess: async (_, gameId) => {
-      console.log('✅ Successfully joined game:', gameId);
+      console.log('✅ Successfully joined activity:', gameId);
       
       // Log state before refetch
       const gameBefore = queryClient.getQueryData(gameKeys.detail(gameId));
@@ -368,12 +368,12 @@ export function useLeaveGame() {
         queryClient.setQueryData(gameKeys.participants(gameId), context.previousParticipants);
       }
       
-      toast.error('Failed to leave game', {
+      toast.error('Failed to leave activity', {
         description: 'Please try again later',
       });
     },
     onSuccess: async (_, gameId) => {
-      console.log('✅ Successfully left game:', gameId);
+      console.log('✅ Successfully left activity:', gameId);
       
       // Log state before refetch
       const gameBefore = queryClient.getQueryData(gameKeys.detail(gameId));
@@ -416,14 +416,14 @@ export function useCreateGame() {
       // Invalidate games list to refetch
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
-      toast.success('Game created!', {
-        description: 'Your game is now live',
+      toast.success('Activity created!', {
+        description: 'Your activity is now live',
       });
     },
     onError: (error) => {
-      console.error('❌ Create game error:', error);
+      console.error('❌ Create activity error:', error);
       
-      toast.error('Failed to create game', {
+      toast.error('Failed to create activity', {
         description: 'Please try again later',
       });
     },

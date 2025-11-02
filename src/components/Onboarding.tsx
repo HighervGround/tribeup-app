@@ -41,8 +41,10 @@ const sportsOptions = [
   { name: 'Football', icon: '🏈', color: 'bg-sport-football' },
   { name: 'Baseball', icon: '⚾', color: 'bg-sport-baseball' },
   { name: 'Running', icon: '🏃', color: 'bg-primary' },
-  { name: 'Swimming', icon: '🏊', color: 'bg-secondary' },
   { name: 'Cycling', icon: '🚴', color: 'bg-success' },
+  { name: 'Swimming', icon: '🏊', color: 'bg-secondary' },
+  { name: 'Rock Climbing', icon: '🧗', color: 'bg-primary' },
+  { name: 'Hiking', icon: '🥾', color: 'bg-success' },
 ];
 
 function Onboarding({ onComplete }: OnboardingProps) {

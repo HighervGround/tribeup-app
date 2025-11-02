@@ -154,10 +154,8 @@ export function UnifiedGameCard({
               
               <div className="flex items-center justify-between">
                 <GameCapacity
-                  currentPlayers={game.currentPlayers}
-                  maxPlayers={game.maxPlayers}
-                  publicRsvpCount={game.publicRsvpCount}
                   totalPlayers={game.totalPlayers}
+                  maxPlayers={game.maxPlayers}
                   availableSpots={game.availableSpots}
                 />
                 
@@ -221,10 +219,8 @@ export function UnifiedGameCard({
         <div className="text-right flex-shrink-0">
           {game.cost && <div className="text-sm font-medium">{formatCost(game.cost)}</div>}
           <GameCapacity
-            currentPlayers={game.currentPlayers}
-            maxPlayers={game.maxPlayers}
-            publicRsvpCount={game.publicRsvpCount}
             totalPlayers={game.totalPlayers}
+            maxPlayers={game.maxPlayers}
             availableSpots={game.availableSpots}
             className="text-xs justify-end"
           />
@@ -238,10 +234,8 @@ export function UnifiedGameCard({
           <span>{game.location}</span>
         </div>
         <GameCapacity
-          currentPlayers={game.currentPlayers}
-          maxPlayers={game.maxPlayers}
-          publicRsvpCount={game.publicRsvpCount}
           totalPlayers={game.totalPlayers}
+          maxPlayers={game.maxPlayers}
           availableSpots={game.availableSpots}
           className="text-sm"
         />

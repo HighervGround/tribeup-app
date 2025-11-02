@@ -9,11 +9,9 @@ interface Game {
   date: string;
   time: string;
   description: string;
-  currentPlayers: number;
   maxPlayers: number;
-  publicRsvpCount?: number;
-  totalPlayers?: number;
-  availableSpots?: number;
+  totalPlayers: number; // From capacity_used
+  availableSpots: number; // From capacity_available
   isJoined: boolean;
   cost?: string;
   category?: string;
@@ -72,18 +70,27 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   };
   
   /**
-   * Check if the game is full (using total players including public RSVPs)
-   * IMPORTANT: Read NEW database fields FIRST (capacity_used, private_count, public_count)
-   * before falling back to mapped fields (totalPlayers, currentPlayers, publicRsvpCount)
+   * SINGLE SOURCE OF TRUTH: Only use pre-computed view fields
    */
   const totalPlayers = Number((game as any).capacity_used ?? game.totalPlayers ?? 0);
-  const currentPlayers = Number((game as any).private_count ?? game.currentPlayers ?? 0);
-  const publicRsvpCount = Number((game as any).public_count ?? game.publicRsvpCount ?? 0);
   const maxPlayers = Number((game as any).max_players ?? game.maxPlayers ?? 0);
+  const availableSpots = Number((game as any).capacity_available ?? game.availableSpots ?? 0);
   const isFull = totalPlayers >= maxPlayers;
   
+  // Debug logging
+  console.log('useGameCard data:', {
+    game_id: game.id,
+    capacity_used: (game as any).capacity_used,
+    capacity_available: (game as any).capacity_available,
+    max_players: (game as any).max_players,
+    totalPlayers,
+    maxPlayers,
+    availableSpots,
+    isFull
+  });
+  
   /**
-   * Get formatted player count string (includes both authenticated and public RSVPs)
+   * Get formatted player count string
    */
   const getPlayerCount = () => `${totalPlayers}/${maxPlayers} players`;
   

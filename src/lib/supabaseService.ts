@@ -697,7 +697,7 @@ export class SupabaseService {
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
           max_players, creator_id, created_at,
-          public_count, private_count, capacity_used, capacity_available,
+          capacity_used, capacity_available,
           creator_profile(id, full_name, username, avatar_url)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
@@ -778,7 +778,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, public_count, private_count, capacity_used, capacity_available')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, capacity_used, capacity_available')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -1609,7 +1609,7 @@ export class SupabaseService {
       // Use games_with_counts view for optimized current_players count
       let query = supabase
         .from('games_with_counts')
-        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,public_count,private_count,capacity_used,capacity_available')
+        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,capacity_used,capacity_available')
 ;
 
       // Default to future games only unless specific date range is provided
@@ -1703,7 +1703,7 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,
-            public_count,private_count,capacity_used,capacity_available
+            capacity_used,capacity_available
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1734,7 +1734,7 @@ export class SupabaseService {
         // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
           .from('games_with_counts')
-          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,public_count,private_count,capacity_used,capacity_available')
+          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,capacity_used,capacity_available')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })

@@ -212,6 +212,12 @@ export function useGamesWithCreators() {
             createdBy,
             creatorId: game.creator_id,
             creatorData,
+            // Add host property for UnifiedGameCard compatibility
+            host: creatorData ? {
+              id: creatorData.id,
+              name: creatorData.name,
+              avatar: creatorData.avatar
+            } : undefined,
             createdAt: game.created_at,
           };
         });

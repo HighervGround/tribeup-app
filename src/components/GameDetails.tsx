@@ -1012,39 +1012,54 @@ function GameDetails() {
                 <div key={player.id}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <ClickableAvatar
-                        userId={player.id}
-                        src={player.avatar}
-                        alt={player.name}
-                        size="md"
-                      />
+                      {player.isGuest ? (
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-muted">
+                            {player.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <ClickableAvatar
+                          userId={player.id}
+                          src={player.avatar}
+                          alt={player.name}
+                          size="md"
+                        />
+                      )}
                       <div>
                         <div className="flex items-center gap-2">
-                          <button 
-                            onClick={async () => {
-                              console.log('🔍 [GameDetails] Clicking on player:', player);
-                              
-                              // Debug: Verify session and client before navigation
-                              const { data: { session } } = await supabase.auth.getSession();
-                              console.log('🔍 [GameDetails] Session check:', {
-                                hasSession: !!session,
-                                userId: session?.user?.id,
-                                targetPlayerId: player.id
-                              });
-                              console.log('🔍 [GameDetails] Client check:', {
-                                hasClient: !!supabase,
-                                hasAuth: !!supabase.auth
-                              });
-                              
-                              navigateToUser(player.id);
-                            }}
-                            className="hover:text-primary transition-colors cursor-pointer font-medium"
-                            data-action="view-profile"
-                          >
-                            {player.name}
-                          </button>
+                          {player.isGuest ? (
+                            <span className="font-medium">{player.name}</span>
+                          ) : (
+                            <button 
+                              onClick={async () => {
+                                console.log('🔍 [GameDetails] Clicking on player:', player);
+                                
+                                // Debug: Verify session and client before navigation
+                                const { data: { session } } = await supabase.auth.getSession();
+                                console.log('🔍 [GameDetails] Session check:', {
+                                  hasSession: !!session,
+                                  userId: session?.user?.id,
+                                  targetPlayerId: player.id
+                                });
+                                console.log('🔍 [GameDetails] Client check:', {
+                                  hasClient: !!supabase,
+                                  hasAuth: !!supabase.auth
+                                });
+                                
+                                navigateToUser(player.id);
+                              }}
+                              className="hover:text-primary transition-colors cursor-pointer font-medium"
+                              data-action="view-profile"
+                            >
+                              {player.name}
+                            </button>
+                          )}
                           {player.isHost && (
                             <Badge variant="secondary" className="text-xs px-2 py-0">Host</Badge>
+                          )}
+                          {player.isGuest && (
+                            <Badge variant="outline" className="text-xs px-2 py-0 border-muted-foreground/30">Guest</Badge>
                           )}
                         </div>
                         {/* Player rating temporarily hidden during early testing phase */}

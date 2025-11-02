@@ -163,7 +163,7 @@ function SearchDiscovery() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-lg font-semibold">
-              {filteredResults.length} activities found
+              {filteredResults.length} {filteredResults.length === 1 ? 'activity' : 'activities'} found
             </h2>
             {searchQuery && (
               <p className="text-sm text-muted-foreground">

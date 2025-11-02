@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { SupabaseService } from '../lib/supabaseService';
-import { joinGame, leaveGame, getGameParticipants, isUserInGame } from '../lib/gameParticipantService';
-import { useAppStore } from '../store/appStore';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { joinGame, leaveGame, getGameParticipants, isUserInGame } from '@/domains/games/services/gameParticipantService';
+import { useAppStore } from '@/store/appStore';
 import { toast } from 'sonner';
-import { CacheCorruptionDetector } from '../utils/cacheCorruptionDetector';
+import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector';
 
 // Query keys
 export const gameKeys = {

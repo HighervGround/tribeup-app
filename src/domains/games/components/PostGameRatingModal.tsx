@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Badge } from './ui/badge';
-import { Textarea } from './ui/textarea';
-import { Separator } from './ui/separator';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { Badge } from '@/shared/components/ui/badge';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Separator } from '@/shared/components/ui/separator';
 import { 
   Dialog, 
   DialogContent, 
   DialogDescription, 
   DialogHeader, 
   DialogTitle 
-} from './ui/dialog';
+} from '@/shared/components/ui/dialog';
 import { Star, Users, Trophy, MessageCircle, CheckCircle } from 'lucide-react';
-import { SupabaseService } from '../lib/supabaseService';
-import { useAchievements } from '../hooks/useAchievements';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useAchievements } from '@/domains/users/hooks/useAchievements';
 import { toast } from 'sonner';
 
 interface Player {

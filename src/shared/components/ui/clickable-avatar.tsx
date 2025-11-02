@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarImage, AvatarFallback } from './avatar';
-import { cn } from './utils';
-import { useAppStore } from '../../store/appStore';
+import { cn } from '@/shared/utils/utils';
+import { useAppStore } from '@/store/appStore';
 
 interface ClickableAvatarProps {
   userId?: string;

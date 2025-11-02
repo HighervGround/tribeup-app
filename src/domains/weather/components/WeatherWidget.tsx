@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
 import { Loader2, Cloud, AlertTriangle } from 'lucide-react';
-import { WeatherService, WeatherData } from '../lib/weatherService';
+import { WeatherService, WeatherData } from '@/domains/weather/services/weatherService';
 
 interface WeatherWidgetProps {
   latitude?: number;

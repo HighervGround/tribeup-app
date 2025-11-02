@@ -1,0 +1,435 @@
+# Users Domain - AI Context
+
+## Context
+You are working in the **Users Domain**, responsible for user profiles, achievements, onboarding, notifications, and feedback.
+
+## Domain Boundaries
+**This domain is responsible for:**
+- User profile management
+- Onboarding flow
+- Achievement tracking
+- Notification preferences
+- Feedback collection
+- User settings and preferences
+
+**This domain is NOT responsible for:**
+- Authentication (see core/auth)
+- Game creation/management (see games domain)
+- Location tracking (see locations domain)
+
+## Quick Reference
+
+### File Organization
+```
+users/
+├── components/     # User-related UI components
+├── hooks/         # User data hooks
+├── services/      # User business logic
+└── README.md      # Full domain documentation
+```
+
+### Key Files
+- `UserProfile.tsx` - User profile display
+- `EditProfile.tsx` - Profile editing form
+- `Onboarding.tsx` - Multi-step onboarding wizard
+- `Settings.tsx` - User settings page
+- `AchievementBadge.tsx` - Achievement display components
+- `useUserProfile.ts` - Profile data fetching
+- `useAchievements.ts` - Achievement tracking
+- `profileService.ts` - Profile CRUD operations
+
+### Import Paths
+```typescript
+// This domain
+import { UserProfile } from '@/domains/users/components/UserProfile';
+import { useUserProfile } from '@/domains/users/hooks/useUserProfile';
+import { profileService } from '@/domains/users/services/profileService';
+
+// Used by other domains
+import { OtherUserProfile } from '@/domains/users/components/OtherUserProfile';
+import { useOnboardingCheck } from '@/domains/users/hooks/useOnboardingCheck';
+```
+
+## Onboarding Flow
+
+### Onboarding Requirement
+All users MUST complete onboarding before accessing the app:
+
+```typescript
+export const useOnboardingCheck = () => {
+  const { data: profile } = useUserProfile();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!profile) return;
+    
+    if (!profile.onboarding_completed) {
+      navigate('/onboarding');
+    }
+  }, [profile, navigate]);
+  
+  return {
+    isOnboardingComplete: profile?.onboarding_completed ?? false,
+    profile,
+  };
+};
+```
+
+### Onboarding Steps
+1. **Welcome** - Introduction to TribeUp
+2. **Sport Preferences** - Select favorite sports (min 1 required)
+3. **Skill Level** - Self-assessment (optional)
+4. **Location** - Set location preferences (optional)
+5. **Profile Photo** - Upload photo (optional)
+6. **Completion** - Mark onboarding as complete
+
+```typescript
+const completeOnboarding = async (data: OnboardingData) => {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      sport_preferences: data.sports,
+      skill_level: data.skillLevel,
+      location: data.location,
+      avatar_url: data.photoUrl,
+      onboarding_completed: true,
+    })
+    .eq('auth_id', user.id);
+    
+  if (error) throw error;
+};
+```
+
+## Achievement System
+
+### Achievement Definitions
+```typescript
+const ACHIEVEMENTS = [
+  {
+    id: 'first_timer',
+    name: 'First Timer',
+    description: 'Complete your profile',
+    icon: '🎉',
+    criteria: { type: 'onboarding_complete' },
+  },
+  {
+    id: 'team_player',
+    name: 'Team Player',
+    description: 'Join your first game',
+    icon: '⚽',
+    criteria: { type: 'games_joined', count: 1 },
+  },
+  {
+    id: 'social_butterfly',
+    name: 'Social Butterfly',
+    description: 'Join 5 games',
+    icon: '🦋',
+    criteria: { type: 'games_joined', count: 5 },
+  },
+  {
+    id: 'regular',
+    name: 'Regular',
+    description: 'Join 10 games',
+    icon: '🔥',
+    criteria: { type: 'games_joined', count: 10 },
+  },
+  {
+    id: 'creator',
+    name: 'Creator',
+    description: 'Create your first game',
+    icon: '🎨',
+    criteria: { type: 'games_created', count: 1 },
+  },
+];
+```
+
+### Checking Achievements
+```typescript
+export const useAchievements = () => {
+  const { data: profile } = useUserProfile();
+  const { data: stats } = useUserStats(profile?.id);
+  
+  const unlockedAchievements = ACHIEVEMENTS.filter(achievement => {
+    return checkAchievementCriteria(achievement.criteria, stats);
+  });
+  
+  const nextAchievement = ACHIEVEMENTS.find(achievement => {
+    return !checkAchievementCriteria(achievement.criteria, stats);
+  });
+  
+  return {
+    unlocked: unlockedAchievements,
+    next: nextAchievement,
+    progress: calculateProgress(nextAchievement, stats),
+  };
+};
+```
+
+### Achievement Notifications
+```typescript
+// Trigger when achievement unlocked
+useEffect(() => {
+  if (newAchievement) {
+    toast({
+      title: '🎉 Achievement Unlocked!',
+      description: `${newAchievement.name}: ${newAchievement.description}`,
+      duration: 5000,
+    });
+  }
+}, [newAchievement]);
+```
+
+## Profile Management
+
+### Profile Data Structure
+```typescript
+interface UserProfile {
+  id: string;
+  auth_id: string;
+  display_name: string;
+  email: string;
+  avatar_url?: string;
+  bio?: string;
+  sport_preferences: string[];
+  skill_level?: 'beginner' | 'intermediate' | 'advanced';
+  location?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Updating Profile
+```typescript
+export const updateProfile = async (
+  userId: string,
+  updates: Partial<UserProfile>
+): Promise<UserProfile> => {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('auth_id', userId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+```
+
+### Profile Photo Upload
+```typescript
+export const uploadProfilePhoto = async (
+  userId: string,
+  file: File
+): Promise<string> => {
+  // Validate file
+  if (!file.type.startsWith('image/')) {
+    throw new Error('File must be an image');
+  }
+  
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('File size must be less than 5MB');
+  }
+  
+  // Compress image
+  const compressed = await compressImage(file);
+  
+  // Upload to Supabase Storage
+  const fileName = `${userId}-${Date.now()}.jpg`;
+  const { data, error } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, compressed);
+    
+  if (error) throw error;
+  
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(fileName);
+    
+  return publicUrl;
+};
+```
+
+## Notification Management
+
+### Notification Preferences
+```typescript
+interface NotificationPreferences {
+  email_notifications: boolean;
+  push_notifications: boolean;
+  game_reminders: boolean;
+  new_participant_alerts: boolean;
+  chat_messages: boolean;
+  achievement_notifications: boolean;
+}
+```
+
+### Push Notifications Setup
+```typescript
+export const requestPushPermission = async (): Promise<boolean> => {
+  if (!('Notification' in window)) {
+    console.warn('Push notifications not supported');
+    return false;
+  }
+  
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+  
+  if (Notification.permission === 'denied') {
+    return false;
+  }
+  
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+};
+```
+
+## Feedback Collection
+
+### Feedback Types
+- Bug reports
+- Feature requests
+- General feedback
+- User testing surveys
+
+```typescript
+interface Feedback {
+  type: 'bug' | 'feature' | 'feedback' | 'survey';
+  subject: string;
+  description: string;
+  user_id: string;
+  metadata?: Record<string, any>;
+}
+
+export const submitFeedback = async (feedback: Feedback) => {
+  const { error } = await supabase
+    .from('user_feedback')
+    .insert(feedback);
+    
+  if (error) throw error;
+  
+  toast.success('Thank you for your feedback!');
+};
+```
+
+## ELO Rating System
+
+### Initial Rating
+All users start with an ELO rating of 1200
+
+### Rating Calculation
+```typescript
+const K_FACTOR = 32; // How much ratings change per game
+
+export const calculateNewRating = (
+  currentRating: number,
+  opponentRating: number,
+  result: 'win' | 'loss' | 'draw'
+): number => {
+  const expectedScore =
+    1 / (1 + Math.pow(10, (opponentRating - currentRating) / 400));
+    
+  const actualScore = result === 'win' ? 1 : result === 'loss' ? 0 : 0.5;
+  
+  const newRating = currentRating + K_FACTOR * (actualScore - expectedScore);
+  
+  return Math.round(newRating);
+};
+```
+
+### Skill Level Mapping
+```typescript
+const getSkillLevel = (rating: number): string => {
+  if (rating < 1000) return 'Beginner';
+  if (rating < 1400) return 'Intermediate';
+  return 'Advanced';
+};
+```
+
+## Privacy & Security
+
+### Profile Visibility
+- Display name: Always public
+- Email: Private (only visible to user)
+- Location: Used for recommendations only
+- Game history: Visible to game participants only
+
+### Data Validation
+```typescript
+const validateProfileUpdate = (data: Partial<UserProfile>): string[] => {
+  const errors: string[] = [];
+  
+  if (data.display_name && data.display_name.length < 2) {
+    errors.push('Display name must be at least 2 characters');
+  }
+  
+  if (data.bio && data.bio.length > 500) {
+    errors.push('Bio must be less than 500 characters');
+  }
+  
+  if (data.sport_preferences && data.sport_preferences.length === 0) {
+    errors.push('At least one sport preference required');
+  }
+  
+  return errors;
+};
+```
+
+## Performance Considerations
+- Cache user profile in React Query
+- Optimistic updates for profile edits
+- Lazy load achievement images
+- Compress profile photos before upload
+- Batch notification fetches
+- Use Supabase realtime for presence
+
+## Testing Checklist
+- [ ] Onboarding flow completes successfully
+- [ ] Profile updates save correctly
+- [ ] Photo upload works and compresses images
+- [ ] Achievements unlock at correct milestones
+- [ ] Notifications display properly
+- [ ] Settings changes persist
+- [ ] Privacy controls work as expected
+- [ ] ELO rating calculates correctly
+- [ ] Feedback submission works
+- [ ] Mobile responsiveness
+
+## Common Issues & Solutions
+
+**Issue**: Profile not loading
+**Solution**: Check auth context is available, verify RLS policies
+
+**Issue**: Photo upload fails
+**Solution**: Check file size, verify storage bucket permissions
+
+**Issue**: Achievements not unlocking
+**Solution**: Check database triggers, verify achievement criteria
+
+**Issue**: Onboarding loop
+**Solution**: Ensure `onboarding_completed` flag is set correctly
+
+**Issue**: Notifications not showing
+**Solution**: Check permission status, verify notification preferences
+
+## Future Enhancements
+- Social connections (friends/followers)
+- Private messaging
+- Team/group formation
+- Customizable profile themes
+- Fitness tracker integration
+- Verification badges
+- Reputation system
+- Player statistics dashboard
+- Profile completeness score
+

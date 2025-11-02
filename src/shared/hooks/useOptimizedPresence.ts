@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 // Simple debounce implementation to avoid lodash-es dependency
 const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): T => {
   let timeout: NodeJS.Timeout;

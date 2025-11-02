@@ -1,6 +1,6 @@
 import React from 'react';
-import { CurrentUserAvatar } from '../current-user-avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { CurrentUserAvatar } from '@/components/current-user-avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 /**
  * Example component showing different ways to use CurrentUserAvatar

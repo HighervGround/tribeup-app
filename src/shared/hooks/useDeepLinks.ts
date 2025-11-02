@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 
 interface DeepLink {
   path: string;

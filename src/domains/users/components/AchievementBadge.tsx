@@ -1,6 +1,6 @@
 import React from 'react';
-import { Badge } from './ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Badge } from '@/shared/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { Trophy, Star, Crown, Target, Handshake, User } from 'lucide-react';
 
 interface Achievement {

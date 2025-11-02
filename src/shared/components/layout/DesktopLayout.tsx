@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 // import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { useNotifications } from '../hooks/useNotifications';
-import { useAppStore } from '../store/appStore';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { useNotifications } from '@/domains/users/hooks/useNotifications';
+import { useAppStore } from '@/store/appStore';
 import { 
   Home, 
   Search, 

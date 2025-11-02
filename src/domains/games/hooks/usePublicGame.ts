@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { SupabaseService } from '../lib/supabaseService';
+import { SupabaseService } from '@/core/database/supabaseService';
 import { toast } from 'sonner';
 
 // Query keys

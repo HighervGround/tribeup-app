@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Badge } from './ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { Badge } from '@/shared/components/ui/badge';
 import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { SupabaseService } from '../lib/supabaseService';
-import { useUpdateUserProfile } from '../hooks/useUserProfile';
-import { useAppStore } from '../store/appStore';
-import { supabase } from '../lib/supabase';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useUpdateUserProfile } from '@/domains/users/hooks/useUserProfile';
+import { useAppStore } from '@/store/appStore';
+import { supabase } from '@/core/database/supabase';
 
 interface ProfileFormData {
   fullName: string;

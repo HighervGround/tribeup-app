@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 
 // Helper function to get sport colors
 const getSportColor = (sport: string): string => {

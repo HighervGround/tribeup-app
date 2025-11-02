@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { LoadingSpinner } from './ui/loading-spinner';
+import { supabase } from '@/core/database/supabase';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 
 interface AuthGateProps {
   children: React.ReactNode;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, AlertTriangle } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { Badge } from '@/shared/components/ui/badge';
 
 export function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);

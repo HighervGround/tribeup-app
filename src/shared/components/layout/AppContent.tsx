@@ -3,10 +3,10 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { BottomNavigation } from './BottomNavigation';
 import { DesktopLayout } from './DesktopLayout';
-import { useAppStore } from '../store/appStore';
-import { useUserPresence } from '../hooks/useUserPresence';
-import { useAccessibility } from '../hooks/useAccessibility';
-import { useResponsive } from '../hooks/useResponsive';
+import { useAppStore } from '@/store/appStore';
+import { useUserPresence } from '@/shared/hooks/useUserPresence';
+import { useAccessibility } from '@/domains/users/hooks/useAccessibility';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 import { toast } from 'sonner';
 
 function AppContent() {

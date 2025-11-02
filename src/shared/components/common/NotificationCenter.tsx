@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
-import { LoadingSpinner } from './ui/loading-spinner';
-import { NoNotifications } from './ui/empty-state';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
+import { Badge } from '@/shared/components/ui/badge';
+import { Separator } from '@/shared/components/ui/separator';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
+import { NoNotifications } from '@/shared/components/ui/empty-state';
 import { 
   Bell, 
   BellOff, 
@@ -21,8 +21,8 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
-import { useNotifications } from '../hooks/useNotifications';
-import { useDeepLinks } from '../hooks/useDeepLinks';
+import { useNotifications } from '@/domains/users/hooks/useNotifications';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 import { toast } from 'sonner';
 
 const getNotificationIcon = (type: string) => {

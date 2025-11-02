@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { SupabaseService } from '../lib/supabaseService';
+import { SupabaseService } from '@/core/database/supabaseService';
 
 // Types
 export interface User {

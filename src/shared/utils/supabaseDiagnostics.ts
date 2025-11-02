@@ -5,7 +5,7 @@
  * different database operations and RLS policies.
  */
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/core/database/supabase';
 
 export class SupabaseDiagnostics {
   

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { MessageSquare } from 'lucide-react';
 
 interface FeedbackButtonProps {

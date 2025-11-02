@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Switch } from './ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Separator } from './ui/separator';
-import { Alert, AlertDescription } from './ui/alert';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Switch } from '@/shared/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
+import { Separator } from '@/shared/components/ui/separator';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import { 
   ArrowLeft, 
   Bell, 
@@ -27,11 +27,11 @@ import {
   Monitor,
   Settings as SettingsIcon
 } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { useNotifications } from '../hooks/useNotifications';
+import { useTheme } from '@/shared/hooks/useTheme';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
+import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { toast } from 'sonner';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 
 function Settings() {
   const navigate = useNavigate();

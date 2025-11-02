@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useJoinGame, useLeaveGame } from './useGames';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 
 interface Game {
   id: string;

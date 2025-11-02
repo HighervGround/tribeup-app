@@ -1,0 +1,306 @@
+# Weather Domain - AI Context
+
+## Context
+You are working in the **Weather Domain**, responsible for real-time weather data and sport-specific suitability analysis.
+
+## Domain Boundaries
+**This domain is responsible for:**
+- Fetching weather forecasts from Weather API
+- Calculating sport-specific suitability scores
+- Providing weather warnings and recommendations
+- Caching weather data for performance
+
+**This domain is NOT responsible for:**
+- Game creation/management (see games domain)
+- Location coordinates (see locations domain)
+- User preferences (see users domain)
+
+## Quick Reference
+
+### File Organization
+```
+weather/
+├── components/     # Weather UI components
+├── services/      # Weather API integration
+└── README.md      # Full domain documentation
+```
+
+### Key Files
+- `WeatherWidget.tsx` - Weather display with suitability indicator
+- `weatherService.ts` - Weather API calls and suitability calculations
+
+### Import Paths
+```typescript
+// This domain
+import { WeatherWidget } from '@/domains/weather/components/WeatherWidget';
+import { weatherService } from '@/domains/weather/services/weatherService';
+
+// Used by games domain
+import { WeatherWidget } from '@/domains/weather/components/WeatherWidget';
+```
+
+## Weather Suitability Thresholds
+
+```typescript
+const SPORT_THRESHOLDS = {
+  basketball: {
+    maxTemp: 95,        // °F
+    maxPrecipChance: 20, // %
+    maxWindSpeed: 25,    // mph
+  },
+  soccer: {
+    maxTemp: 95,
+    maxPrecipChance: 40,
+    maxWindSpeed: 30,
+  },
+  tennis: {
+    maxTemp: 100,
+    maxPrecipChance: 10,
+    maxWindSpeed: 20,
+  },
+  volleyball: {
+    maxTemp: 100,
+    maxPrecipChance: 20,
+    maxWindSpeed: 25,
+  },
+  baseball: {
+    maxTemp: 95,
+    maxPrecipChance: 30,
+    maxWindSpeed: 35,
+  },
+  running: {
+    maxTemp: 90,
+    maxPrecipChance: 50,
+    maxWindSpeed: null, // No limit
+  },
+  cycling: {
+    maxTemp: 90,
+    maxPrecipChance: 50,
+    maxWindSpeed: null,
+  },
+};
+```
+
+## Suitability Scoring Algorithm
+
+```typescript
+const calculateSuitability = (
+  weather: WeatherData,
+  sport: string
+): number => {
+  const thresholds = SPORT_THRESHOLDS[sport];
+  if (!thresholds) return 100; // Unknown sport, assume suitable
+  
+  let score = 100;
+  
+  // Temperature penalty
+  if (weather.temp_f > thresholds.maxTemp) {
+    const excess = weather.temp_f - thresholds.maxTemp;
+    score -= excess * 2; // 2 points per degree over
+  }
+  
+  // Precipitation penalty
+  if (weather.precip_chance > thresholds.maxPrecipChance) {
+    const excess = weather.precip_chance - thresholds.maxPrecipChance;
+    score -= excess * 1.5; // 1.5 points per % over
+  }
+  
+  // Wind penalty (if threshold exists)
+  if (thresholds.maxWindSpeed && weather.wind_mph > thresholds.maxWindSpeed) {
+    const excess = weather.wind_mph - thresholds.maxWindSpeed;
+    score -= excess; // 1 point per mph over
+  }
+  
+  return Math.max(0, Math.min(100, score));
+};
+```
+
+## Weather API Integration
+
+### API Configuration
+```typescript
+const WEATHER_API = {
+  baseUrl: 'https://api.weatherapi.com/v1',
+  key: import.meta.env.VITE_WEATHER_API_KEY,
+  endpoints: {
+    forecast: '/forecast.json',
+  },
+};
+```
+
+### Fetching Weather
+```typescript
+export const getWeatherForGame = async (
+  location: { lat: number; lng: number },
+  date: string
+): Promise<WeatherData> => {
+  const response = await fetch(
+    `${WEATHER_API.baseUrl}${WEATHER_API.endpoints.forecast}?` +
+    `key=${WEATHER_API.key}&` +
+    `q=${location.lat},${location.lng}&` +
+    `dt=${date}&` +
+    `hour=12` // Get midday weather
+  );
+  
+  if (!response.ok) {
+    throw new Error('Weather API request failed');
+  }
+  
+  const data = await response.json();
+  return parseWeatherResponse(data);
+};
+```
+
+### Caching Strategy
+```typescript
+// Cache weather data for 30 minutes
+const WEATHER_CACHE_TIME = 30 * 60 * 1000;
+
+export const useWeather = (
+  location: { lat: number; lng: number },
+  date: string
+) => {
+  return useQuery({
+    queryKey: ['weather', location.lat, location.lng, date],
+    queryFn: () => getWeatherForGame(location, date),
+    staleTime: WEATHER_CACHE_TIME,
+    cacheTime: WEATHER_CACHE_TIME,
+    retry: 2,
+    retryDelay: 1000,
+  });
+};
+```
+
+## WeatherWidget Component Pattern
+
+```typescript
+interface WeatherWidgetProps {
+  location: { lat: number; lng: number };
+  date: string;
+  sport: string;
+  className?: string;
+}
+
+export const WeatherWidget = ({ 
+  location, 
+  date, 
+  sport,
+  className 
+}: WeatherWidgetProps) => {
+  const { data: weather, isLoading, error } = useWeather(location, date);
+  
+  if (isLoading) return <WeatherSkeleton />;
+  if (error) return <WeatherError />;
+  if (!weather) return null;
+  
+  const suitability = calculateSuitability(weather, sport);
+  const warning = suitability < 60;
+  
+  return (
+    <div className={cn("weather-widget", className)}>
+      <div className="flex items-center gap-2">
+        <WeatherIcon condition={weather.condition} />
+        <span>{weather.temp_f}°F</span>
+        {warning && <AlertTriangle className="text-amber-500" />}
+      </div>
+      
+      <div className="suitability-score">
+        <Progress value={suitability} />
+        <span>{getSuitabilityLabel(suitability)}</span>
+      </div>
+      
+      {warning && (
+        <Alert variant="warning">
+          <AlertDescription>
+            Weather may not be suitable for {sport}. Consider rescheduling.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+};
+```
+
+## Suitability Labels
+
+```typescript
+const getSuitabilityLabel = (score: number): string => {
+  if (score >= 80) return 'Excellent';
+  if (score >= 60) return 'Good';
+  if (score >= 40) return 'Fair';
+  return 'Poor';
+};
+
+const getSuitabilityColor = (score: number): string => {
+  if (score >= 80) return 'text-green-600';
+  if (score >= 60) return 'text-blue-600';
+  if (score >= 40) return 'text-amber-600';
+  return 'text-red-600';
+};
+```
+
+## Error Handling
+
+```typescript
+// Graceful degradation if weather API fails
+const { data: weather } = useWeather(location, date);
+
+if (!weather) {
+  // Still show game, just without weather info
+  return <GameDetails game={game} weatherUnavailable={true} />;
+}
+```
+
+## Testing Weather Integration
+
+### Manual Test Cases
+- [ ] Weather displays for outdoor games
+- [ ] No weather shown for indoor games
+- [ ] Suitability score calculated correctly
+- [ ] Warnings show when conditions are poor
+- [ ] Weather updates when game date changes
+- [ ] Loading state displays properly
+- [ ] Error state handled gracefully
+- [ ] Cache prevents excessive API calls
+
+### Mock Weather Data
+```typescript
+const mockWeather = {
+  temp_f: 75,
+  temp_c: 24,
+  condition: 'Partly cloudy',
+  precip_chance: 10,
+  wind_mph: 8,
+  humidity: 60,
+};
+```
+
+## Performance Considerations
+- Cache weather data for 30 minutes
+- Batch weather requests when displaying multiple games
+- Show cached data immediately while revalidating
+- Debounce weather refetches on date changes
+- Consider using weather from game creation time as fallback
+
+## Common Issues & Solutions
+
+**Issue**: Weather not loading
+**Solution**: Check API key is set in environment variables, verify coordinates are valid
+
+**Issue**: Suitability score seems wrong
+**Solution**: Verify sport thresholds are correct, check calculation logic
+
+**Issue**: Too many API calls
+**Solution**: Ensure caching is working, batch requests for game lists
+
+**Issue**: Weather data outdated
+**Solution**: Check cache time, consider reducing staleTime for near-term games
+
+## Future Enhancements
+- Historical weather accuracy tracking
+- Multiple weather provider support (fallback APIs)
+- User-customizable thresholds
+- Weather-based automatic game cancellation
+- Extended forecast for recurring games
+- Weather alerts/notifications
+

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { MessageSquare, Send } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
-import { supabase } from '../lib/supabase';
+import { useAppStore } from '@/store/appStore';
+import { supabase } from '@/core/database/supabase';
 import { formatDistanceToNow } from 'date-fns';
-import { cn } from '../lib/utils';
+import { cn } from '@/shared/utils/utils';
 interface ChatMessage {
   id: string;
   game_id: string;

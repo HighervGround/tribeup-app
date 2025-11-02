@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoginForm } from './login-form';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { toast } from 'sonner';
 
 function EnhancedAuth() {

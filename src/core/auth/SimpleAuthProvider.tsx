@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, transformUserFromDB } from '../lib/supabase';
-import { SupabaseService } from '../lib/supabaseService';
-import { useAppStore } from '../store/appStore';
-import { ProfileEnsurer } from '../components/ProfileEnsurer';
+import { supabase, transformUserFromDB } from '@/core/database/supabase';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useAppStore } from '@/store/appStore';
+import { ProfileEnsurer } from '@/core/auth/ProfileEnsurer';
 import { toast } from 'sonner';
 
 interface SimpleAuthContextType {

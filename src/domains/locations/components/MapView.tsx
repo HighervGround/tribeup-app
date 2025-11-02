@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
-import { LoadingSpinner } from './ui/loading-spinner';
-import { EmptyState } from './ui/empty-state';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
+import { EmptyState } from '@/shared/components/ui/empty-state';
 import { 
   MapPin, 
   Navigation, 
@@ -18,8 +18,8 @@ import {
   Clock,
   DollarSign
 } from 'lucide-react';
-import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '../hooks/useLocation';
-import { useGames } from '../hooks/useGames';
+import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '@/domains/locations/hooks/useLocation';
+import { useGames } from '@/domains/locations/hooks/useGames';
 import { toast } from 'sonner';
 
 export interface MapGame {

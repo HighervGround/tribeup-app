@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@/core/database/supabase';
 
 export interface GameFeedback {
   id: string;

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
-import { useAppStore } from '../store/appStore';
-import { LoadingSpinner } from './ui/loading-spinner';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '@/core/providers/AuthProvider';
+import { useAppStore } from '@/store/appStore';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
+import { supabase } from '@/core/database/supabase';
 
 interface SimpleAuthWrapperProps {
   children: React.ReactNode;

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { Progress } from './ui/progress';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
+import { Progress } from '@/shared/components/ui/progress';
 import { 
   ArrowRight, 
   MapPin, 
@@ -14,11 +14,11 @@ import {
   Calendar,
   Trophy
 } from 'lucide-react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { useNavigate } from 'react-router-dom';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { SupabaseService } from '../lib/supabaseService';
-import { supabase } from '../lib/supabase';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { supabase } from '@/core/database/supabase';
 import { toast } from 'sonner';
 
 interface OnboardingProps {
@@ -120,7 +120,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
         // Update the app store with the latest profile data
         const updatedProfile = await SupabaseService.getUserProfile(authUser.id);
         if (updatedProfile) {
-          const { useAppStore } = await import('../store/appStore');
+          const { useAppStore } = await import('@/store/appStore');
           useAppStore.getState().setUser(updatedProfile);
           console.log('✅ [Onboarding] Updated app store with completed onboarding profile');
         }

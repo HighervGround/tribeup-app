@@ -1,5 +1,5 @@
-import { cn } from '../lib/utils'
-import type { ChatMessage } from '../hooks/use-realtime-chat'
+import { cn } from '@/shared/utils/utils'
+import type { ChatMessage } from '@/shared/hooks/use-realtime-chat'
 
 interface ChatMessageItemProps {
   message: ChatMessage

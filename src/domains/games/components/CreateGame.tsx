@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Progress } from './ui/progress';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Alert, AlertDescription } from './ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Progress } from '@/shared/components/ui/progress';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { ArrowLeft, CheckCircle, Loader2, MapPin, Clock, Users, DollarSign, AlertCircle, Navigation } from 'lucide-react';
-import { InteractiveRoutePlanner } from './InteractiveRoutePlanner';
+import { InteractiveRoutePlanner } from '@/domains/locations/components/InteractiveRoutePlanner';
 import { toast } from 'sonner';
-import { useAppStore } from '../store/appStore';
-import { SupabaseService } from '../lib/supabaseService';
-import { useLocationSearch } from '../hooks/useLocationSearch';
-import { useGeolocation } from '../hooks/useGeolocation';
-import { systemConfig } from '../lib/systemConfig';
+import { useAppStore } from '@/store/appStore';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useLocationSearch } from '@/domains/locations/hooks/useLocationSearch';
+import { useGeolocation } from '@/domains/locations/hooks/useGeolocation';
+import { systemConfig } from '@/core/config/systemConfig';
 
 interface FormData {
   sport: string;

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/components/ui/dialog';
+import { Button } from '@/shared/components/ui/button';
+import { Textarea } from '@/shared/components/ui/textarea';
 import { Star, MapPin, Clock, Car, Accessibility, Sparkles } from 'lucide-react';
-import { VenueService, Venue } from '../lib/venueService';
+import { VenueService, Venue } from '@/domains/locations/services/venueService';
 import { toast } from 'sonner';
 
 interface VenueRatingModalProps {

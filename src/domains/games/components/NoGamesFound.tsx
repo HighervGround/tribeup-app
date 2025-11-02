@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
 import { Users, MapPin, Calendar } from 'lucide-react';
 
 interface NoGamesFoundProps {

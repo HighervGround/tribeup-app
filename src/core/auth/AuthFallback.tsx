@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Alert, AlertDescription } from './ui/alert';
-import { useAppStore } from '../store/appStore';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Alert, AlertDescription } from '@/shared/components/ui/alert';
+import { useAppStore } from '@/store/appStore';
 
 export function AuthFallback() {
   const { setUser } = useAppStore();

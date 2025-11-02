@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { queryDebugger } from '../utils/queryDebugger';
+import { queryDebugger } from '@/shared/utils/queryDebugger';
 
 // Create a client with enhanced error handling
 const queryClient = new QueryClient({

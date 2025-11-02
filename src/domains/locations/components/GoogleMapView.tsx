@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { loadGoogleMapsApi } from '../lib/googleMapsLoader';
-import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
-import { LoadingSpinner } from './ui/loading-spinner';
+import { loadGoogleMapsApi } from '@/domains/locations/services/googleMapsLoader';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 import { 
   MapPin, 
   Navigation, 
@@ -15,7 +15,7 @@ import {
   Clock,
   DollarSign
 } from 'lucide-react';
-import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '../hooks/useLocation';
+import { useLocation, LocationCoordinates, calculateDistance, formatDistance } from '@/domains/locations/hooks/useLocation';
 import { toast } from 'sonner';
 
 export interface MapGame {

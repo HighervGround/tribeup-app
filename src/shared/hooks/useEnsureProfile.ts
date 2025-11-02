@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ensureUserProfile, checkUserProfileExists } from '../lib/profileService';
+import { ensureUserProfile, checkUserProfileExists } from '@/domains/users/services/profileService';
 
 // React guard pattern for profile creation
 export function useEnsureProfileOnLogin({ 

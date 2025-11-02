@@ -1,0 +1,401 @@
+# Locations Domain - AI Context
+
+## Context
+You are working in the **Locations Domain**, responsible for geospatial features, venue management, and map integrations.
+
+## Domain Boundaries
+**This domain is responsible for:**
+- Venue discovery and management
+- Distance calculations
+- Map rendering and interactions
+- Location search and autocomplete
+- Route planning
+
+**This domain is NOT responsible for:**
+- Game data (see games domain)
+- User profiles (see users domain)
+- Weather data (see weather domain)
+
+## Quick Reference
+
+### File Organization
+```
+locations/
+├── components/     # Map views and location UI
+├── hooks/         # Location-related hooks
+├── services/      # Geospatial services
+└── README.md      # Full domain documentation
+```
+
+### Key Files
+- `MapView.tsx` - Base map component
+- `EnhancedMapView.tsx` - Map with clustering and filters
+- `GoogleMapView.tsx` - Google Maps implementation
+- `useLocation.ts` - User location tracking
+- `useLocationSearch.ts` - Location search with autocomplete
+- `venueService.ts` - Venue CRUD operations
+- `googleMapsLoader.ts` - Google Maps SDK loader
+
+### Import Paths
+```typescript
+// This domain
+import { MapView } from '@/domains/locations/components/MapView';
+import { useLocation } from '@/domains/locations/hooks/useLocation';
+import { venueService } from '@/domains/locations/services/venueService';
+
+// Used by games domain
+import { MapView } from '@/domains/locations/components/MapView';
+import { useLocationSearch } from '@/domains/locations/hooks/useLocationSearch';
+```
+
+## Distance Calculations
+
+### Haversine Formula
+```typescript
+export const calculateDistance = (
+  point1: { lat: number; lng: number },
+  point2: { lat: number; lng: number }
+): number => {
+  const R = 3959; // Earth's radius in miles
+  const dLat = toRad(point2.lat - point1.lat);
+  const dLon = toRad(point2.lng - point1.lng);
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(point1.lat)) *
+    Math.cos(toRad(point2.lat)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+    
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  
+  return Math.round(distance * 10) / 10; // Round to 1 decimal
+};
+
+const toRad = (degrees: number) => degrees * (Math.PI / 180);
+```
+
+### Filtering by Distance
+```typescript
+const filterGamesByDistance = (
+  games: Game[],
+  userLocation: { lat: number; lng: number },
+  maxDistance: number // in miles
+): Game[] => {
+  return games
+    .map(game => ({
+      ...game,
+      distance: calculateDistance(userLocation, game.location.coordinates),
+    }))
+    .filter(game => game.distance <= maxDistance)
+    .sort((a, b) => a.distance - b.distance);
+};
+```
+
+## Google Maps Integration
+
+### Loading the SDK
+```typescript
+// googleMapsLoader.ts
+let isLoaded = false;
+let loadPromise: Promise<void> | null = null;
+
+export const loadGoogleMaps = (): Promise<void> => {
+  if (isLoaded) return Promise.resolve();
+  if (loadPromise) return loadPromise;
+  
+  loadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${
+      import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    }&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    
+    script.onload = () => {
+      isLoaded = true;
+      resolve();
+    };
+    
+    script.onerror = () => {
+      reject(new Error('Failed to load Google Maps'));
+    };
+    
+    document.head.appendChild(script);
+  });
+  
+  return loadPromise;
+};
+```
+
+### Map Component Pattern
+```typescript
+interface MapViewProps {
+  games: Game[];
+  center?: { lat: number; lng: number };
+  zoom?: number;
+  onMarkerClick?: (game: Game) => void;
+}
+
+export const MapView = ({ 
+  games, 
+  center, 
+  zoom = 12,
+  onMarkerClick 
+}: MapViewProps) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  
+  useEffect(() => {
+    loadGoogleMaps().then(() => {
+      if (!mapRef.current) return;
+      
+      const newMap = new google.maps.Map(mapRef.current, {
+        center: center || { lat: 0, lng: 0 },
+        zoom,
+        styles: MAP_STYLES, // Custom styling
+      });
+      
+      setMap(newMap);
+    });
+  }, []);
+  
+  useEffect(() => {
+    if (!map) return;
+    
+    // Clear existing markers
+    markers.forEach(marker => marker.setMap(null));
+    
+    // Add new markers
+    const newMarkers = games.map(game => {
+      const marker = new google.maps.Marker({
+        position: game.location.coordinates,
+        map,
+        title: game.sport,
+      });
+      
+      marker.addListener('click', () => {
+        onMarkerClick?.(game);
+      });
+      
+      return marker;
+    });
+    
+    setMarkers(newMarkers);
+  }, [map, games]);
+  
+  return <div ref={mapRef} className="w-full h-full" />;
+};
+```
+
+## Location Search & Autocomplete
+
+### Search Hook Pattern
+```typescript
+export const useLocationSearch = (query: string) => {
+  const [results, setResults] = useState<Location[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    if (query.length < 3) {
+      setResults([]);
+      return;
+    }
+    
+    const timeoutId = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const locations = await searchLocations(query);
+        setResults(locations);
+      } catch (error) {
+        console.error('Location search failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300); // Debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [query]);
+  
+  return { results, isLoading };
+};
+```
+
+### Location Caching
+```typescript
+// locationCache.ts
+const cache = new Map<string, { data: Location; timestamp: number }>();
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+export const getCachedLocation = (key: string): Location | null => {
+  const cached = cache.get(key);
+  if (!cached) return null;
+  
+  const isExpired = Date.now() - cached.timestamp > CACHE_DURATION;
+  if (isExpired) {
+    cache.delete(key);
+    return null;
+  }
+  
+  return cached.data;
+};
+
+export const cacheLocation = (key: string, location: Location): void => {
+  cache.set(key, {
+    data: location,
+    timestamp: Date.now(),
+  });
+};
+```
+
+## Map Clustering
+
+### Cluster Configuration
+```typescript
+const CLUSTER_CONFIG = {
+  minimumClusterSize: 3,
+  gridSize: 60,
+  maxZoom: 15, // Don't cluster beyond this zoom level
+};
+
+const createCluster = (games: Game[], zoom: number) => {
+  if (zoom > CLUSTER_CONFIG.maxZoom) {
+    return games.map(game => ({ type: 'marker', game }));
+  }
+  
+  // Implement clustering logic
+  // Group nearby games into clusters
+  // Return array of markers and clusters
+};
+```
+
+## User Location Tracking
+
+### Requesting Permission
+```typescript
+export const useUserLocation = () => {
+  const [location, setLocation] = useState<GeolocationCoordinates | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported');
+      setIsLoading(false);
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation(position.coords);
+        setIsLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setIsLoading(false);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 300000, // 5 minutes
+      }
+    );
+  }, []);
+  
+  return { location, error, isLoading };
+};
+```
+
+## Venue Management
+
+### Venue Data Structure
+```typescript
+interface Venue {
+  id: string;
+  name: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  address?: string;
+  sport_types: string[];
+  is_indoor: boolean;
+  amenities?: string[];
+  rating?: number;
+  reviews_count?: number;
+}
+```
+
+### Searching Venues
+```typescript
+export const searchVenues = async (
+  sport: string,
+  location: { lat: number; lng: number },
+  radius: number = 25 // miles
+): Promise<Venue[]> => {
+  const { data, error } = await supabase
+    .from('venues')
+    .select('*')
+    .contains('sport_types', [sport])
+    .order('rating', { ascending: false });
+    
+  if (error) throw error;
+  
+  // Filter by distance
+  return data.filter(venue => {
+    const distance = calculateDistance(location, venue.coordinates);
+    return distance <= radius;
+  });
+};
+```
+
+## Performance Considerations
+- Lazy load Google Maps SDK
+- Cache location searches for 1 hour
+- Debounce location search input (300ms)
+- Use map bounds for efficient game queries
+- Implement virtual scrolling for venue lists
+- Batch geocoding requests
+- Use IndexedDB for offline venue data
+
+## Testing Checklist
+- [ ] Map loads and displays correctly
+- [ ] Game markers appear at correct locations
+- [ ] Clicking marker opens game details
+- [ ] User location displays with blue dot
+- [ ] Location search returns results
+- [ ] Distance calculations are accurate
+- [ ] Clustering works at various zoom levels
+- [ ] Venue search filters by sport type
+- [ ] Mobile touch gestures work on map
+- [ ] Error handling for permission denied
+
+## Common Issues & Solutions
+
+**Issue**: Map not loading
+**Solution**: Check Google Maps API key, ensure SDK loaded before rendering
+
+**Issue**: Markers not appearing
+**Solution**: Verify game locations have valid coordinates, check map bounds
+
+**Issue**: Distance calculations seem wrong
+**Solution**: Verify Haversine formula, check coordinate order (lat, lng)
+
+**Issue**: Location search slow
+**Solution**: Implement debouncing, cache results, use autocomplete API
+
+**Issue**: Map performance poor with many markers
+**Solution**: Implement clustering, render only markers in viewport
+
+## Future Enhancements
+- Heatmap of popular game areas
+- Transit directions
+- Street view integration
+- 3D venue visualization
+- Offline map support
+- Custom map styles
+- Venue availability checking
+- Parking information
+- Accessibility details
+

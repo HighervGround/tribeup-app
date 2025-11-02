@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users, Wifi } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { Badge } from '@/shared/components/ui/badge';
 import { RealtimeAvatarStack } from './realtime-avatar-stack';
 
 export function OnlinePlayersWidget() {

@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { SupabaseService } from '../lib/supabaseService';
-import { useAppStore } from '../store/appStore';
+import { supabase } from '@/core/database/supabase';
+import { SupabaseService } from '@/core/database/supabaseService';
+import { useAppStore } from '@/store/appStore';
 import { toast } from 'sonner';
 
 interface AuthContextType {

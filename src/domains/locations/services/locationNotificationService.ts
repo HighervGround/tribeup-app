@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
+import { supabase } from '@/core/database/supabase';
 import { NotificationService } from './notificationService';
-import { LocationCoordinates, calculateDistance } from '../hooks/useLocation';
+import { LocationCoordinates, calculateDistance } from '@/domains/locations/hooks/useLocation';
 import { VenueService } from './venueService';
 import { envConfig } from './envConfig';
 

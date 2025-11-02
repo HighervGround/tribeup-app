@@ -1,15 +1,15 @@
-import { cn } from '../lib/utils'
-import { supabase } from '../lib/supabase'
-import { Button } from './ui/button'
+import { cn } from '@/shared/utils/utils'
+import { supabase } from '@/core/database/supabase'
+import { Button } from '@/shared/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from './ui/card'
-import { Input } from './ui/input'
-import { Alert, AlertDescription } from './ui/alert'
+} from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
+import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useState } from 'react'
 import { Chrome, Mail } from 'lucide-react'
 

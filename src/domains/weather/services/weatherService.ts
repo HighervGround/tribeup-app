@@ -1,4 +1,4 @@
-import { env } from './envUtils';
+import { env } from '@/core/config/envUtils';
 
 export interface WeatherData {
   temperature: number;

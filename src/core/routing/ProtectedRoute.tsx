@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useSimpleAuth } from '../providers/SimpleAuthProvider';
-import { useOnboardingCheck } from '../hooks/useOnboardingCheck';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
+import { useOnboardingCheck } from '@/core/hooks/useOnboardingCheck';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;

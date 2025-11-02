@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button } from './ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { toast } from 'sonner';
 import { X, Navigation } from 'lucide-react';
-import { computeRoute, decodePolyline } from '../lib/routesApi';
-import { loadGoogleMapsApi } from '../lib/googleMapsLoader';
+import { computeRoute, decodePolyline } from '@/domains/locations/services/routesApi';
+import { loadGoogleMapsApi } from '@/domains/locations/services/googleMapsLoader';
 
 interface Waypoint {
   lat: number;

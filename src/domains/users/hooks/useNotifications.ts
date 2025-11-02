@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { SupabaseService } from '../lib/supabaseService';
+import { SupabaseService } from '@/core/database/supabaseService';
 
 interface Notification {
   id: string;

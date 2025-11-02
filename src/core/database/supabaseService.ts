@@ -1,6 +1,6 @@
 import { supabase, transformGameFromDB, transformUserFromDB, Database } from './supabase';
-import type { Game, User, UserPreferences } from '../store/appStore';
-import { envConfig } from './envConfig';
+import type { Game, User, UserPreferences } from '@/store/appStore';
+import { envConfig } from '@/core/config/envConfig';
 import { networkService } from './networkService';
 
 // Types for database operations

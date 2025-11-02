@@ -76,11 +76,39 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
    * IMPORTANT: Read NEW database fields FIRST (capacity_used, private_count, public_count)
    * before falling back to mapped fields (totalPlayers, currentPlayers, publicRsvpCount)
    */
+  
+  // DEBUG: Log what fields are available on the game object
+  if (typeof window !== 'undefined') {
+    console.log('🎮 useGameCard game object:', game.id?.slice(0, 8), {
+      // Raw DB fields
+      capacity_used: (game as any).capacity_used,
+      private_count: (game as any).private_count,
+      public_count: (game as any).public_count,
+      max_players: (game as any).max_players,
+      // Mapped fields
+      totalPlayers: game.totalPlayers,
+      currentPlayers: game.currentPlayers,
+      publicRsvpCount: game.publicRsvpCount,
+      maxPlayers: game.maxPlayers
+    });
+  }
+  
   const totalPlayers = Number((game as any).capacity_used ?? game.totalPlayers ?? 0);
   const currentPlayers = Number((game as any).private_count ?? game.currentPlayers ?? 0);
   const publicRsvpCount = Number((game as any).public_count ?? game.publicRsvpCount ?? 0);
   const maxPlayers = Number((game as any).max_players ?? game.maxPlayers ?? 0);
   const isFull = totalPlayers >= maxPlayers;
+  
+  // DEBUG: Log computed values
+  if (typeof window !== 'undefined') {
+    console.log('📊 useGameCard computed:', {
+      totalPlayers,
+      currentPlayers,
+      publicRsvpCount,
+      maxPlayers,
+      getPlayerCount: `${totalPlayers}/${maxPlayers} players`
+    });
+  }
   
   /**
    * Get formatted player count string (includes both authenticated and public RSVPs)

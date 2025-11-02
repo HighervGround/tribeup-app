@@ -43,10 +43,10 @@ export function useGameJoinToggle() {
     console.log('🎯 toggleJoin called with game:', game.id, 'isJoined:', game.isJoined);
     
     if (game.isJoined) {
-      // Prevent creators from leaving their own games
+      // Prevent creators from leaving their own activities
       if (isGameCreator(game)) {
-        toast.error('Cannot leave your own game', {
-          description: 'Use the menu options to delete the game instead.'
+        toast.error('Cannot leave your own activity', {
+          description: 'Use the menu options to delete the activity instead.'
         });
         return;
       }
@@ -54,8 +54,8 @@ export function useGameJoinToggle() {
       console.log('🔄 Attempting to leave game:', game.id);
       leaveGameMutation.mutate(game.id, {
         onSuccess: () => {
-          console.log('✅ Leave game success callback');
-          toast.success('Left game successfully');
+          console.log('✅ Leave activity success callback');
+          toast.success('Left activity successfully');
         },
         onError: (error) => {
           console.error('❌ Leave game error callback:', error);
@@ -65,8 +65,8 @@ export function useGameJoinToggle() {
       console.log('🔄 Attempting to join game:', game.id);
       joinGameMutation.mutate(game.id, {
         onSuccess: () => {
-          console.log('✅ Join game success callback');
-          toast.success('Joined game successfully!');
+          console.log('✅ Join activity success callback');
+          toast.success('Joined activity successfully!');
         },
         onError: (error) => {
           console.error('❌ Join game error callback:', error);

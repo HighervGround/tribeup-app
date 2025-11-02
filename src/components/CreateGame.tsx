@@ -46,7 +46,9 @@ const sportOptions = [
   { value: 'baseball', label: 'Baseball', icon: '⚾' },
   { value: 'running', label: 'Running', icon: '🏃' },
   { value: 'cycling', label: 'Cycling', icon: '🚴' },
+  { value: 'swimming', label: 'Swimming', icon: '🏊' },
   { value: 'hiking', label: 'Hiking', icon: '🥾' },
+  { value: 'rock_climbing', label: 'Rock Climbing', icon: '🧗' },
 ];
 
 const steps = [
@@ -521,7 +523,7 @@ function CreateGame() {
       const { user } = useAppStore.getState();
       console.log('[CreateGame] submit clicked. user =', user?.id);
       if (!user) {
-        throw new Error('You must be logged in to create a game');
+        throw new Error('You must be logged in to create an activity');
       }
 
       const gameData = {
@@ -652,7 +654,7 @@ function CreateGame() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">Create Game</h1>
+                <h1 className="text-xl font-semibold">Create Activity</h1>
                 <p className="text-sm text-muted-foreground">
                   {steps[currentStep - 1].title}
                 </p>
@@ -678,7 +680,7 @@ function CreateGame() {
                     {selectedSport.icon}
                   </div>
                   <div>
-                    <h3 className="font-semibold">{formData.title || 'New Game'}</h3>
+                    <h3 className="font-semibold">{formData.title || 'New Activity'}</h3>
                     <p className="text-sm text-muted-foreground">{selectedSport.label}</p>
                   </div>
                 </div>
@@ -1226,7 +1228,7 @@ function CreateGame() {
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Create Game</span>
+                    <span className="hidden sm:inline">Create Activity</span>
                     <span className="sm:hidden">Create</span>
                   </>
                 )}

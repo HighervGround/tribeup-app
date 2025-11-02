@@ -16,16 +16,16 @@ export function NoGamesFound({ onCreateGame }: NoGamesFoundProps) {
         </div>
         
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">No Games Found</h3>
+          <h3 className="text-lg font-semibold">No Activities Found</h3>
           <p className="text-muted-foreground max-w-md mx-auto">
-            There are no games available in your area right now. Be the first to create one and start building your sports community!
+            There are no activities available in your area right now. Be the first to create one and start building your sports community!
           </p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button onClick={onCreateGame} className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
-            Create Game
+            Create Activity
           </Button>
           <Button variant="outline" className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />

@@ -90,7 +90,7 @@ export function useWebSocket({
         break;
         
       case 'game_update':
-        toast.info('Game details updated');
+        toast.info('Activity details updated');
         break;
     }
   }, []);

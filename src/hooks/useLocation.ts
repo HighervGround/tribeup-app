@@ -191,7 +191,7 @@ export function useLocation(options: UseLocationOptions = {}) {
           case error.PERMISSION_DENIED:
             errorMessage = 'Location access denied by user';
             permission = 'denied';
-            toast.error('Please enable location access to find nearby games');
+            toast.error('Please enable location access to find nearby activities');
             break;
           case error.POSITION_UNAVAILABLE:
             errorMessage = 'Location information unavailable';

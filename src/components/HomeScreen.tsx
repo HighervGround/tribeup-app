@@ -275,9 +275,9 @@ function HomeScreen() {
               </div>
             </div>
 
-            {/* Games List */}
+            {/* Activities List */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold">Upcoming Games</h2>
+              <h2 className="text-lg md:text-xl font-semibold">Upcoming Activities</h2>
               <Button
                 variant="outline"
                 size="sm"

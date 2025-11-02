@@ -52,10 +52,10 @@ export function useSupabaseRealtime({
   const handleGameUpdate = useCallback((payload: any) => {
     console.log('Game update received:', payload);
     
-    // Only show toast for game detail updates, not participant changes
+    // Only show toast for activity detail updates, not participant changes
     // (participant changes are handled by React Query mutations)
     if (payload.eventType === 'UPDATE' && payload.table === 'games') {
-      toast.info('Game details updated');
+      toast.info('Activity details updated');
     }
   }, []);
 

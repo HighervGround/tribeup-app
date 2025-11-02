@@ -41,9 +41,9 @@ function AppContent() {
     const getRouteTitle = (pathname: string) => {
       if (pathname === '/') return 'Home';
       if (pathname === '/search') return 'Search';
-      if (pathname === '/create') return 'Create Game';
+      if (pathname === '/create') return 'Create Activity';
       if (pathname === '/profile') return 'Profile';
-      if (pathname.startsWith('/game/')) return 'Game Details';
+      if (pathname.startsWith('/game/')) return 'Activity Details';
       if (pathname.startsWith('/chat/')) return 'Chat';
       if (pathname.startsWith('/user/')) return 'User Profile';
       if (pathname.startsWith('/settings')) return 'Settings';

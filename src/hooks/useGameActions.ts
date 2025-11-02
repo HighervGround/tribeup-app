@@ -47,13 +47,13 @@ export function useGameActions() {
         description: `${reason ? `CANCELLED: ${reason}` : 'CANCELLED'}` 
       });
       
-      toast.success('Game cancelled', {
-        description: reason || 'The game has been cancelled',
+      toast.success('Activity cancelled', {
+        description: reason || 'The activity has been cancelled',
       });
       
       return true;
     } catch (error) {
-      toast.error('Failed to cancel game', {
+      toast.error('Failed to cancel activity', {
         description: 'Please try again later',
       });
       return false;

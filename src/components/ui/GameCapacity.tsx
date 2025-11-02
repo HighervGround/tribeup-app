@@ -34,31 +34,6 @@ export function GameCapacity({
   const total = totalPlayers ?? (currentPlayers + publicRsvpCount);
   const available = availableSpots ?? Math.max(0, maxPlayers - total);
   
-  // DEBUG: Log what we're receiving and displaying
-  if (typeof window !== 'undefined' && (window as any).__debugCapacity) {
-    console.log('🎯 GameCapacity render:', {
-      props: { currentPlayers, publicRsvpCount, totalPlayers, availableSpots, maxPlayers },
-      computed: { total, available },
-      displayWillShow: `${total}/${maxPlayers}`,
-      publicBadge: publicRsvpCount > 0 ? `+${publicRsvpCount} public` : 'none',
-      usingTotalPlayers: totalPlayers !== undefined,
-      fallbackCalc: currentPlayers + publicRsvpCount
-    });
-  }
-  
-  // Warn if there's a mismatch
-  if (totalPlayers !== undefined && totalPlayers !== (currentPlayers + publicRsvpCount)) {
-    const expected = currentPlayers + publicRsvpCount;
-    if (Math.abs(totalPlayers - expected) > 0 && typeof window !== 'undefined' && (window as any).__debugCapacity) {
-      console.warn('⚠️ totalPlayers mismatch:', {
-        totalPlayers,
-        expected,
-        currentPlayers,
-        publicRsvpCount
-      });
-    }
-  }
-  
   // Determine if game is full or nearly full
   const isFull = available === 0;
   const isNearlyFull = available <= 2 && available > 0;

@@ -3,13 +3,14 @@ import { Users } from 'lucide-react';
 import { Badge } from './badge';
 
 interface GameCapacityProps {
-  currentPlayers: number; // Authenticated participants
-  maxPlayers: number;
-  publicRsvpCount?: number; // Anonymous RSVPs
-  totalPlayers?: number; // Pre-computed total (optional)
-  availableSpots?: number; // Pre-computed available (optional)
+  currentPlayers: number; // Authenticated participants (private_count)
+  maxPlayers: number; // max_players
+  publicRsvpCount?: number; // Anonymous RSVPs (public_count)
+  totalPlayers?: number; // Pre-computed total from capacity_used (preferred)
+  availableSpots?: number; // Pre-computed available from capacity_available (preferred)
   showDetailed?: boolean; // Show breakdown of private/public
   className?: string;
+  game?: any; // Optional: Pass game object to read capacity_used directly
 }
 
 /**
@@ -28,10 +29,11 @@ export function GameCapacity({
   totalPlayers,
   availableSpots,
   showDetailed = false,
-  className = ''
+  className = '',
+  game
 }: GameCapacityProps) {
-  // Calculate totals (use pre-computed if available, otherwise calculate)
-  const total = totalPlayers ?? (currentPlayers + publicRsvpCount);
+  // IMPORTANT: Use capacity_used directly, DON'T recalculate (avoids doubling)
+  const total = totalPlayers ?? 0; // totalPlayers should come from capacity_used
   const available = availableSpots ?? Math.max(0, maxPlayers - total);
   
   // Determine if game is full or nearly full
@@ -53,7 +55,7 @@ export function GameCapacity({
         </Badge>
       )}
       
-      {!showDetailed && publicRsvpCount > 0 && (
+      {publicRsvpCount > 0 && !showDetailed && (
         <Badge variant="secondary" className="text-xs px-2 py-0.5">
           +{publicRsvpCount} public
         </Badge>

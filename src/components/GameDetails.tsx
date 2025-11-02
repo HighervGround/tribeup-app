@@ -929,7 +929,7 @@ function GameDetails() {
         {/* Description */}
         <Card>
           <CardHeader>
-            <CardTitle>About This Game</CardTitle>
+            <CardTitle>About This Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -965,7 +965,7 @@ function GameDetails() {
         {/* Host Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Game Host</CardTitle>
+            <CardTitle>Activity Host</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">

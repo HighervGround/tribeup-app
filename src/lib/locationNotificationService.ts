@@ -183,7 +183,7 @@ export class LocationNotificationService {
       .from('games_with_counts')
       .select(`
         id, title, sport, date, time, location, latitude, longitude,
-        max_players, private_count, public_count, capacity_used, capacity_available
+        max_players, capacity_used, capacity_available
       `)
       .gte('latitude', location.latitude - latOffset)
       .lte('latitude', location.latitude + latOffset)

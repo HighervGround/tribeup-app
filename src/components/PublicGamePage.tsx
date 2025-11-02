@@ -127,10 +127,8 @@ export default function PublicGamePage() {
   const capacityData = useMemo(() => {
     if (!capacity) return null;
     return {
-      currentPlayers: capacity.private_rsvp_count ?? 0,
-      publicRsvpCount: capacity.public_rsvp_count ?? 0,
-      maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
       totalPlayers: capacity.total_rsvps ?? 0,
+      maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
       availableSpots: capacity.capacity_remaining ?? 0
     };
   }, [capacity, game?.maxPlayers]);
@@ -326,10 +324,8 @@ export default function PublicGamePage() {
               {capacityData && (
                 <div className="mb-3">
                   <GameCapacityLine
-                    currentPlayers={capacityData.currentPlayers}
-                    maxPlayers={capacityData.maxPlayers}
-                    publicRsvpCount={capacityData.publicRsvpCount}
                     totalPlayers={capacityData.totalPlayers}
+                    maxPlayers={capacityData.maxPlayers}
                     availableSpots={capacityData.availableSpots}
                   />
                 </div>

@@ -130,12 +130,9 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     longitude: dbGame.longitude,
     cost: dbGame.cost,
     maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
-    // Live counts from games_with_counts view (NEW FIELD NAMES)
-    // IMPORTANT: Use capacity_used directly, don't recalculate to avoid doubling
-    currentPlayers: Number(dbGame.private_count ?? 0), // Authenticated participants (status='joined')
-    publicRsvpCount: Number(dbGame.public_count ?? 0), // Anonymous RSVPs (attending=true)
-    totalPlayers: Number(dbGame.capacity_used ?? 0), // Total from view (private_count + public_count)
-    availableSpots: Number(dbGame.capacity_available ?? 0), // Available from view (max_players - capacity_used)
+    // SINGLE SOURCE OF TRUTH: Only use pre-computed view fields
+    totalPlayers: Number(dbGame.capacity_used ?? 0),
+    availableSpots: Number(dbGame.capacity_available ?? Math.max(0, Number(dbGame.max_players ?? 0) - Number(dbGame.capacity_used ?? 0))),
     
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',

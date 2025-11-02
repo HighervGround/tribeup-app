@@ -3,45 +3,43 @@ import { Users } from 'lucide-react';
 import { Badge } from './badge';
 
 interface GameCapacityProps {
-  currentPlayers: number; // Authenticated participants (private_count)
-  maxPlayers: number; // max_players
-  publicRsvpCount?: number; // Anonymous RSVPs (public_count)
-  totalPlayers?: number; // Pre-computed total from capacity_used (preferred)
-  availableSpots?: number; // Pre-computed available from capacity_available (preferred)
-  showDetailed?: boolean; // Show breakdown of private/public
+  totalPlayers: number; // Pre-computed from capacity_used (DO NOT recalculate)
+  maxPlayers: number; // From max_players
+  availableSpots: number; // Pre-computed from capacity_available (DO NOT recalculate)
   className?: string;
-  game?: any; // Optional: Pass game object to read capacity_used directly
 }
 
 /**
- * GameCapacity - Displays live game capacity with accurate counts
+ * GameCapacity - Displays game capacity from pre-computed view fields ONLY
  * 
- * Counts are computed from:
- * - currentPlayers: COUNT(*) from game_participants WHERE status='joined'
- * - publicRsvpCount: COUNT(*) from public_rsvps WHERE attending=true
- * - totalPlayers: currentPlayers + publicRsvpCount
- * - availableSpots: maxPlayers - totalPlayers
+ * SINGLE SOURCE OF TRUTH:
+ * - totalPlayers: from games_with_counts.capacity_used
+ * - maxPlayers: from games_with_counts.max_players
+ * - availableSpots: from games_with_counts.capacity_available
+ * 
+ * DO NOT pass private_count/public_count or recalculate anything
  */
 export function GameCapacity({
-  currentPlayers,
-  maxPlayers,
-  publicRsvpCount = 0,
   totalPlayers,
+  maxPlayers,
   availableSpots,
-  showDetailed = false,
-  className = '',
-  game
+  className = ''
 }: GameCapacityProps) {
-  // IMPORTANT: Use capacity_used directly, DON'T recalculate (avoids doubling)
-  // Ensure numbers to prevent string concatenation
-  const total = Number(totalPlayers ?? 0); // totalPlayers should come from capacity_used
+  const total = Number(totalPlayers ?? 0);
   const max = Number(maxPlayers ?? 0);
-  const available = Math.max(0, Number(availableSpots ?? (max - total)));
+  const available = Math.max(0, Number(availableSpots ?? 0));
   
   // Determine if game is full or nearly full
   const isFull = available === 0;
   const isNearlyFull = available <= 2 && available > 0;
   
+  // Debug logging
+  console.log('GameCapacity render:', {
+    totalPlayers: total,
+    maxPlayers: max,
+    availableSpots: available
+  });
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -50,18 +48,6 @@ export function GameCapacity({
           {total}/{max}
         </span>
       </div>
-      
-      {showDetailed && publicRsvpCount > 0 && (
-        <Badge variant="secondary" className="text-xs px-2 py-0.5">
-          {currentPlayers} private, {publicRsvpCount} public
-        </Badge>
-      )}
-      
-      {publicRsvpCount > 0 && !showDetailed && (
-        <Badge variant="secondary" className="text-xs px-2 py-0.5">
-          +{publicRsvpCount} public
-        </Badge>
-      )}
       
       {isFull && (
         <Badge variant="destructive" className="text-xs px-2 py-0.5">
@@ -79,23 +65,21 @@ export function GameCapacity({
 }
 
 /**
- * GameCapacityLine - Displays detailed capacity information as text
- * Format: "Capacity: X/Y (A private, B public) | Z available"
+ * GameCapacityLine - Displays capacity as text
+ * Format: "Capacity: X/Y | Z available"
  */
 export function GameCapacityLine({
-  currentPlayers,
-  maxPlayers,
-  publicRsvpCount = 0,
   totalPlayers,
+  maxPlayers,
   availableSpots
-}: Omit<GameCapacityProps, 'showDetailed' | 'className' | 'game'>) {
+}: GameCapacityProps) {
   const total = Number(totalPlayers ?? 0);
   const max = Number(maxPlayers ?? 0);
-  const available = Math.max(0, Number(availableSpots ?? (max - total)));
+  const available = Math.max(0, Number(availableSpots ?? 0));
   
   return (
     <span className="text-sm text-muted-foreground">
-      Capacity: {total}/{max} ({currentPlayers} private, {publicRsvpCount} public) | {available} available
+      Capacity: {total}/{max} | {available} available
     </span>
   );
 }

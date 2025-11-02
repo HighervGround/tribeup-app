@@ -51,7 +51,6 @@ function UserProfile() {
   const displayBio = user?.bio || 'Sports enthusiast • Always up for an activity!';
   const displayAvatar = user?.avatar || '';
   const displaySports = user?.preferences?.sports || ['Basketball', 'Soccer', 'Tennis', 'Volleyball'];
-  const needsCompletion = !(user?.name && user?.email);
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,11 +85,6 @@ function UserProfile() {
             <Button variant="outline" className="w-full" onClick={() => navigate('/profile/edit')}>
               Edit Profile
             </Button>
-            {needsCompletion && (
-              <Button variant="outline" className="w-full mt-2" onClick={() => navigate('/onboarding')}>
-                Complete Profile
-              </Button>
-            )}
           </CardContent>
         </Card>
 

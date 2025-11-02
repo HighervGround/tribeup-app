@@ -40,8 +40,23 @@ export function GameCapacity({
       props: { currentPlayers, publicRsvpCount, totalPlayers, availableSpots, maxPlayers },
       computed: { total, available },
       displayWillShow: `${total}/${maxPlayers}`,
-      publicBadge: publicRsvpCount > 0 ? `+${publicRsvpCount} public` : 'none'
+      publicBadge: publicRsvpCount > 0 ? `+${publicRsvpCount} public` : 'none',
+      usingTotalPlayers: totalPlayers !== undefined,
+      fallbackCalc: currentPlayers + publicRsvpCount
     });
+  }
+  
+  // Warn if there's a mismatch
+  if (totalPlayers !== undefined && totalPlayers !== (currentPlayers + publicRsvpCount)) {
+    const expected = currentPlayers + publicRsvpCount;
+    if (Math.abs(totalPlayers - expected) > 0 && typeof window !== 'undefined' && (window as any).__debugCapacity) {
+      console.warn('⚠️ totalPlayers mismatch:', {
+        totalPlayers,
+        expected,
+        currentPlayers,
+        publicRsvpCount
+      });
+    }
   }
   
   // Determine if game is full or nearly full

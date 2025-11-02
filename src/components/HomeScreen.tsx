@@ -326,11 +326,11 @@ function HomeScreen() {
               <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Games Today</span>
+                  <span className="text-muted-foreground">Activities Today</span>
                   <span className="font-semibold">{stats.gamesToday}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Games Nearby</span>
+                  <span className="text-muted-foreground">Activities Nearby</span>
                   <span className="font-semibold">
                     {currentLocation ? stats.gamesNearby : '?'}
                     {!currentLocation && (
@@ -347,7 +347,7 @@ function HomeScreen() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Games Created</span>
+                  <span className="text-muted-foreground">Activities Created</span>
                   <span className="font-semibold">{stats.gamesCreated}</span>
                 </div>
               </div>
@@ -360,14 +360,14 @@ function HomeScreen() {
                     className="w-full justify-start"
                     variant="outline"
                   >
-                    Create New Game
+                    Create New Activity
                   </Button>
                   <Button 
                     onClick={() => navigate('/search')} 
                     className="w-full justify-start"
                     variant="outline"
                   >
-                    Search Games
+                    Search Activities
                   </Button>
                 </div>
               </div>

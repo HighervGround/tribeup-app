@@ -48,7 +48,7 @@ function UserProfile() {
   // Get user data with fallbacks
   const displayName = user?.name || 'User Profile';
   const displayUsername = user?.username ? `@${user.username}` : '@user';
-  const displayBio = user?.bio || 'Sports enthusiast • Always up for a game!';
+  const displayBio = user?.bio || 'Sports enthusiast • Always up for an activity!';
   const displayAvatar = user?.avatar || '';
   const displaySports = user?.preferences?.sports || ['Basketball', 'Soccer', 'Tennis', 'Volleyball'];
   const needsCompletion = !(user?.name && user?.email);

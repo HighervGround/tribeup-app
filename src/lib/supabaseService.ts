@@ -648,7 +648,8 @@ export class SupabaseService {
         location: 'Local Community Center',
         cost: 'Free',
         maxPlayers: 10,
-        currentPlayers: 6,
+        totalPlayers: 6,
+        availableSpots: 4,
         description: 'Casual pickup basketball game. All skill levels welcome!',
         imageUrl: '',
         sportColor: '#FA4616',
@@ -666,7 +667,8 @@ export class SupabaseService {
         location: 'City Park Field',
         cost: '$5',
         maxPlayers: 22,
-        currentPlayers: 18,
+        totalPlayers: 18,
+        availableSpots: 4,
         description: 'Friendly soccer match. Bring your own water!',
         imageUrl: '',
         sportColor: '#22C55E',
@@ -696,8 +698,8 @@ export class SupabaseService {
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-          max_players, creator_id, created_at,
-          capacity_used, capacity_available,
+          max_players, creator_id, created_at, duration,
+          total_players, available_spots, current_players, public_rsvp_count,
           creator_profile(id, full_name, username, avatar_url)
         `)
         .gte('date', new Date().toISOString().split('T')[0])
@@ -778,7 +780,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, capacity_used, capacity_available')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, total_players, available_spots, current_players, public_rsvp_count')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -797,7 +799,8 @@ export class SupabaseService {
           longitude: game.longitude,
           cost: game.cost,
           maxPlayers: game.max_players,
-          currentPlayers: game.current_players,
+          totalPlayers: game.total_players || 0,
+          availableSpots: game.available_spots || 0,
           description: game.description,
           imageUrl: game.image_url || '',
           sportColor: '#6B7280',
@@ -831,7 +834,9 @@ export class SupabaseService {
     const { data: gamesData, error } = await supabase
       .from('games_with_counts')
       .select(`
-        *,
+        id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
+        max_players, creator_id, created_at, duration,
+        total_players, available_spots, current_players, public_rsvp_count,
         creator_profile(id, full_name, username, avatar_url)
       `)
       .eq('creator_id', userId)

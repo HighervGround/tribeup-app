@@ -24,13 +24,13 @@ const sidebarItems = [
     path: '/', 
     icon: Home, 
     label: 'Home', 
-    description: 'Discover games' 
+    description: 'Discover activities' 
   },
   { 
     path: '/search', 
     icon: Search, 
     label: 'Search', 
-    description: 'Find your game' 
+    description: 'Find activities' 
   },
   { 
     path: '/notifications', 

@@ -26,9 +26,9 @@ interface OnboardingProps {
 }
 
 const onboardingSteps = [
-  { id: 1, title: 'Welcome', description: 'Find your game, find your tribe' },
+  { id: 1, title: 'Welcome', description: 'Find your activity, find your tribe' },
   { id: 2, title: 'Sports', description: 'Choose your favorite sports' },
-  { id: 3, title: 'Location', description: 'Find games near you' },
+  { id: 3, title: 'Location', description: 'Find activities near you' },
   { id: 4, title: 'Profile', description: 'Set up your profile' },
 ];
 

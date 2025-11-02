@@ -1087,7 +1087,7 @@ function GameDetails() {
         )}
       </div>
 
-      {/* Game Chat */}
+      {/* Activity Chat */}
       <div className="lg:col-span-4">
         <GameChat gameId={gameId!} />
       </div>

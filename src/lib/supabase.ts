@@ -135,6 +135,21 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     publicRsvpCount: Number(dbGame.public_count ?? 0), // Anonymous RSVPs (attending=true)
     totalPlayers: Number(dbGame.capacity_used ?? (dbGame.private_count ?? 0) + (dbGame.public_count ?? 0)), // Total of both
     availableSpots: Number(dbGame.capacity_available ?? Math.max(0, (dbGame.max_players ?? 0) - (dbGame.capacity_used ?? 0))), // Available capacity
+    
+    // DEBUG: Log the transform
+    ...((() => {
+      console.log('🔄 transformGameFromDB:', dbGame.id?.slice(0, 8), {
+        db_private_count: dbGame.private_count,
+        db_public_count: dbGame.public_count,
+        db_capacity_used: dbGame.capacity_used,
+        db_capacity_available: dbGame.capacity_available,
+        mapped_currentPlayers: Number(dbGame.private_count ?? 0),
+        mapped_publicRsvpCount: Number(dbGame.public_count ?? 0),
+        mapped_totalPlayers: Number(dbGame.capacity_used ?? 0),
+        mapped_availableSpots: Number(dbGame.capacity_available ?? 0)
+      });
+      return {};
+    })())
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',
     sportColor: getSportColor(dbGame.sport),

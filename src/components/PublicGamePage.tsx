@@ -284,7 +284,7 @@ export default function PublicGamePage() {
                       </>
                     ) : (
                       <>
-                        {Number((game as any).capacity_used ?? game.totalPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
+                        {game.totalPlayers ?? 0}/{game.maxPlayers ?? 0} players
                       </>
                     )}
                   </p>

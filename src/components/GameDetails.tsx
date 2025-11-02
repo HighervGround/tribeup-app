@@ -137,7 +137,7 @@ function GameDetails() {
     return formatCalendarInfo(game.date, game.time);
   }, [game?.date, game?.time]);
 
-  const isFull = game ? (game.totalPlayers ?? game.currentPlayers) >= game.maxPlayers : false;
+  const isFull = game ? game.totalPlayers >= game.maxPlayers : false;
   const tags: string[] | undefined = game ? (game as any).tags : undefined;
 
   // Check if current user is the game creator
@@ -1002,12 +1002,7 @@ function GameDetails() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle>Players ({Number((game as any).capacity_used ?? game.totalPlayers ?? players.length)}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
-                {Number(game.publicRsvpCount || 0) > 0 && (
-                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                    +{game.publicRsvpCount} public RSVPs
-                  </Badge>
-                )}
+                <CardTitle>Players ({game.totalPlayers ?? players.length}/{game.maxPlayers ?? 0})</CardTitle>
               </div>
             </div>
           </CardHeader>

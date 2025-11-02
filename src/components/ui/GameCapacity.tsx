@@ -3,9 +3,9 @@ import { Users } from 'lucide-react';
 import { Badge } from './badge';
 
 interface GameCapacityProps {
-  totalPlayers: number; // Pre-computed from capacity_used (DO NOT recalculate)
-  maxPlayers: number; // From max_players
-  availableSpots: number; // Pre-computed from capacity_available (DO NOT recalculate)
+  totalPlayers: number; // Pre-computed from games_with_counts.total_players (DO NOT recalculate)
+  maxPlayers: number; // From games_with_counts.max_players
+  availableSpots: number; // Pre-computed from games_with_counts.available_spots (DO NOT recalculate)
   className?: string;
 }
 
@@ -13,9 +13,9 @@ interface GameCapacityProps {
  * GameCapacity - Displays game capacity from pre-computed view fields ONLY
  * 
  * SINGLE SOURCE OF TRUTH:
- * - totalPlayers: from games_with_counts.capacity_used
+ * - totalPlayers: from games_with_counts.total_players
  * - maxPlayers: from games_with_counts.max_players
- * - availableSpots: from games_with_counts.capacity_available
+ * - availableSpots: from games_with_counts.available_spots
  * 
  * DO NOT pass private_count/public_count or recalculate anything
  */

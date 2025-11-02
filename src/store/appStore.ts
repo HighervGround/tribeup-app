@@ -27,8 +27,8 @@ export interface Game {
   latitude?: number;
   longitude?: number;
   maxPlayers: number;
-  totalPlayers: number; // Total participants from capacity_used (DO NOT recalculate)
-  availableSpots: number; // Available capacity from capacity_available (DO NOT recalculate)
+  totalPlayers: number; // Total participants from games_with_counts.total_players (DO NOT recalculate)
+  availableSpots: number; // Available capacity from games_with_counts.available_spots (DO NOT recalculate)
   cost: string;
   description: string;
   imageUrl: string;

@@ -81,7 +81,7 @@ export function useGamesWithCreators() {
           .select(`
             id, title, sport, date, time, duration, location, latitude, longitude,
             cost, max_players, description, image_url, creator_id, created_at,
-            capacity_used, capacity_available
+            total_players, available_spots
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
@@ -203,8 +203,8 @@ export function useGamesWithCreators() {
             longitude: game.longitude,
             cost: game.cost,
             maxPlayers: Number(game.max_players ?? 0),
-            totalPlayers: Number(game.capacity_used ?? 0),
-            availableSpots: Number(game.capacity_available ?? 0),
+            totalPlayers: Number(game.total_players ?? 0),
+            availableSpots: Number(game.available_spots ?? 0),
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),

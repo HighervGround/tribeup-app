@@ -68,7 +68,7 @@ function SearchDiscovery() {
       ...game,
       sportColor: getSportColor(game.sport),
       imageUrl: game.imageUrl || ''
-      // DON'T overwrite currentPlayers/maxPlayers - they're already correct from the query
+      // DON'T overwrite totalPlayers/maxPlayers - they're already correct from the query
     }))
     .filter(game => {
       // Robust search that includes description and handles null values

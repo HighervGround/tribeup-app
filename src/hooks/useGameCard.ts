@@ -73,11 +73,13 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   
   /**
    * Check if the game is full (using total players including public RSVPs)
+   * IMPORTANT: Read NEW database fields FIRST (capacity_used, private_count, public_count)
+   * before falling back to mapped fields (totalPlayers, currentPlayers, publicRsvpCount)
    */
-  const currentPlayers = Number((game as any).private_count ?? (game as any).current_players ?? game.currentPlayers ?? 0);
+  const totalPlayers = Number((game as any).capacity_used ?? game.totalPlayers ?? 0);
+  const currentPlayers = Number((game as any).private_count ?? game.currentPlayers ?? 0);
+  const publicRsvpCount = Number((game as any).public_count ?? game.publicRsvpCount ?? 0);
   const maxPlayers = Number((game as any).max_players ?? game.maxPlayers ?? 0);
-  const publicRsvpCount = Number((game as any).public_count ?? (game as any).public_rsvp_count ?? game.publicRsvpCount ?? 0);
-  const totalPlayers = Number((game as any).capacity_used ?? (game as any).total_players ?? game.totalPlayers ?? (currentPlayers + publicRsvpCount));
   const isFull = totalPlayers >= maxPlayers;
   
   /**

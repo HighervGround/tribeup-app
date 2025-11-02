@@ -137,7 +137,7 @@ function GameDetails() {
     return formatCalendarInfo(game.date, game.time);
   }, [game?.date, game?.time]);
 
-  const isFull = game ? game.currentPlayers >= game.maxPlayers : false;
+  const isFull = game ? (game.totalPlayers ?? game.currentPlayers) >= game.maxPlayers : false;
   const tags: string[] | undefined = game ? (game as any).tags : undefined;
 
   // Check if current user is the game creator

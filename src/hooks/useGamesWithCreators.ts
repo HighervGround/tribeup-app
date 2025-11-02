@@ -32,6 +32,9 @@ export interface GameWithCreator {
   cost: string;
   maxPlayers: number;
   currentPlayers: number;
+  publicRsvpCount?: number;
+  totalPlayers?: number;
+  availableSpots?: number;
   description: string;
   imageUrl?: string;
   sportColor: string;
@@ -74,10 +77,10 @@ export function useGamesWithCreators() {
         const userId = user?.id;
         
         const { data: gamesData, error: gamesErr } = await supabase
-          .from('games')
+          .from('games_with_counts')
           .select(`
             id, title, sport, date, time, duration, location, latitude, longitude,
-            cost, max_players, current_players, description, image_url,
+            cost, max_players, current_players, public_rsvp_count, total_players, available_spots, description, image_url,
             creator_id, created_at,
             game_participants(user_id)
           `)
@@ -190,6 +193,9 @@ export function useGamesWithCreators() {
             cost: game.cost,
             maxPlayers: game.max_players,
             currentPlayers: game.current_players,
+            publicRsvpCount: game.public_rsvp_count || 0,
+            totalPlayers: game.total_players || (game.current_players + (game.public_rsvp_count || 0)),
+            availableSpots: game.available_spots || Math.max(0, game.max_players - (game.total_players || (game.current_players + (game.public_rsvp_count || 0)))),
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),

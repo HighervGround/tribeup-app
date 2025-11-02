@@ -101,7 +101,7 @@ function SearchDiscovery() {
               name="search-games"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search games, sports, locations..."
+              placeholder="Search activities, sports, locations..."
               className="pl-10"
             />
           </div>
@@ -163,7 +163,7 @@ function SearchDiscovery() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-lg font-semibold">
-              {filteredResults.length} games found
+              {filteredResults.length} activities found
             </h2>
             {searchQuery && (
               <p className="text-sm text-muted-foreground">

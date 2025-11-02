@@ -110,7 +110,7 @@ function MapView({
       locationName: typeof game.location === 'string' ? game.location : 'Unknown Location',
       date: game.date,
       time: game.time,
-      players: game.currentPlayers || game.players || 0,
+      players: game.totalPlayers || 0, // Use totalPlayers (capacity_used) not currentPlayers
       maxPlayers: game.maxPlayers || 0,
       cost: game.cost || 'Free',
       difficulty: game.difficulty || 'Beginner'

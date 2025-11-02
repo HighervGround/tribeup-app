@@ -63,7 +63,7 @@ function NotificationCenter() {
   const navigate = useNavigate();
   const { navigateToGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [isLoading, setIsLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'messages' | 'games'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'messages' | 'activities'>('all');
   
   const {
     notifications,
@@ -80,7 +80,7 @@ function NotificationCenter() {
         return !notification.read;
       case 'messages':
         return notification.type === 'new_message';
-      case 'games':
+      case 'activities':
         return ['game_reminder', 'game_update', 'join_request'].includes(notification.type);
       default:
         return true;
@@ -201,7 +201,7 @@ function NotificationCenter() {
             {[
               { key: 'all', label: 'All', count: notifications.length },
               { key: 'unread', label: 'Unread', count: unreadCount },
-              { key: 'games', label: 'Games', count: notifications.filter(n => ['game_reminder', 'game_update', 'join_request'].includes(n.type)).length },
+              { key: 'activities', label: 'Activities', count: notifications.filter(n => ['game_reminder', 'game_update', 'join_request'].includes(n.type)).length },
             ].map((tab) => (
               <button
                 key={tab.key}

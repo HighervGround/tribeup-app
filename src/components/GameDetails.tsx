@@ -1002,7 +1002,7 @@ function GameDetails() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle>Players ({players.length}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
+                <CardTitle>Players ({Number((game as any).capacity_used ?? game.totalPlayers ?? players.length)}/{Number(game.max_players ?? game.maxPlayers ?? 0)})</CardTitle>
                 {Number(game.publicRsvpCount || 0) > 0 && (
                   <Badge variant="secondary" className="text-xs px-2 py-0.5">
                     +{game.publicRsvpCount} public RSVPs

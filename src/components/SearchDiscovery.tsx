@@ -67,9 +67,8 @@ function SearchDiscovery() {
     .map(game => ({
       ...game,
       sportColor: getSportColor(game.sport),
-      imageUrl: game.imageUrl || '',
-      currentPlayers: game.currentPlayers || game.participants || 0,
-      maxPlayers: game.maxPlayers || game.maxParticipants || 0
+      imageUrl: game.imageUrl || ''
+      // DON'T overwrite currentPlayers/maxPlayers - they're already correct from the query
     }))
     .filter(game => {
       // Robust search that includes description and handles null values

@@ -306,7 +306,7 @@ function AdminDashboard() {
                           {game.sport} • {game.date} at {game.time}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {game.location} • {Number((game as any).current_players ?? game.currentPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
+                          {game.location} • {Number((game as any).capacity_used ?? game.totalPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
                         </p>
                       </div>
                       <Button

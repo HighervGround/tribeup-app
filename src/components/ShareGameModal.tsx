@@ -70,7 +70,7 @@ I'm organizing a ${game.sport} game and would love for you to join:
 📍 ${game.location}
 📅 ${game.date} at ${game.time}
 💰 ${game.cost || 'Free'}
-👥 ${Number(game.current_players ?? game.currentPlayers ?? 0)}/${Number(game.max_players ?? game.maxPlayers ?? 0)} players
+👥 ${Number(game.capacity_used ?? game.totalPlayers ?? 0)}/${Number(game.max_players ?? game.maxPlayers ?? 0)} players
 
 ${game.description ? game.description + '\n\n' : ''}View game details: ${gameDetailsUrl}
 
@@ -122,7 +122,7 @@ Hope to see you there!
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="w-4 h-4" />
-                <span>{Number(game.current_players ?? game.currentPlayers ?? 0)}/{Number(game.max_players ?? game.maxPlayers ?? 0)} players</span>
+                <span>{Number((game as any).capacity_used ?? game.totalPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players</span>
               </div>
             </div>
           </div>

@@ -1101,7 +1101,7 @@ function GameDetails() {
         onJoinSuccess={handleQuickJoinSuccess}
       />
 
-      {/* Share Game Modal */}
+      {/* Share Activity Modal */}
       <ShareGameModal
         isOpen={showInvite}
         onClose={() => setShowInvite(false)}

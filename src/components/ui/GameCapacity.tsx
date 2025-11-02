@@ -33,8 +33,10 @@ export function GameCapacity({
   game
 }: GameCapacityProps) {
   // IMPORTANT: Use capacity_used directly, DON'T recalculate (avoids doubling)
-  const total = totalPlayers ?? 0; // totalPlayers should come from capacity_used
-  const available = availableSpots ?? Math.max(0, maxPlayers - total);
+  // Ensure numbers to prevent string concatenation
+  const total = Number(totalPlayers ?? 0); // totalPlayers should come from capacity_used
+  const max = Number(maxPlayers ?? 0);
+  const available = Math.max(0, Number(availableSpots ?? (max - total)));
   
   // Determine if game is full or nearly full
   const isFull = available === 0;
@@ -45,7 +47,7 @@ export function GameCapacity({
       <div className="flex items-center gap-1 text-sm text-muted-foreground">
         <Users className="w-4 h-4" />
         <span>
-          {total}/{maxPlayers}
+          {total}/{max}
         </span>
       </div>
       
@@ -86,13 +88,14 @@ export function GameCapacityLine({
   publicRsvpCount = 0,
   totalPlayers,
   availableSpots
-}: Omit<GameCapacityProps, 'showDetailed' | 'className'>) {
-  const total = totalPlayers ?? (currentPlayers + publicRsvpCount);
-  const available = availableSpots ?? Math.max(0, maxPlayers - total);
+}: Omit<GameCapacityProps, 'showDetailed' | 'className' | 'game'>) {
+  const total = Number(totalPlayers ?? 0);
+  const max = Number(maxPlayers ?? 0);
+  const available = Math.max(0, Number(availableSpots ?? (max - total)));
   
   return (
     <span className="text-sm text-muted-foreground">
-      Capacity: {total}/{maxPlayers} ({currentPlayers} private, {publicRsvpCount} public) | {available} available
+      Capacity: {total}/{max} ({currentPlayers} private, {publicRsvpCount} public) | {available} available
     </span>
   );
 }

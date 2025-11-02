@@ -202,11 +202,11 @@ export function useGamesWithCreators() {
             latitude: game.latitude,
             longitude: game.longitude,
             cost: game.cost,
-            maxPlayers: game.max_players,
-            currentPlayers: game.private_count || 0, // Map new field
-            publicRsvpCount: game.public_count || 0, // Map new field
-            totalPlayers: game.capacity_used || 0, // Map new field
-            availableSpots: game.capacity_available || 0, // Map new field
+            maxPlayers: Number(game.max_players ?? 0),
+            currentPlayers: Number(game.private_count ?? 0), // Map new field
+            publicRsvpCount: Number(game.public_count ?? 0), // Map new field
+            totalPlayers: Number(game.capacity_used ?? 0), // Map new field
+            availableSpots: Number(game.capacity_available ?? 0), // Map new field
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),

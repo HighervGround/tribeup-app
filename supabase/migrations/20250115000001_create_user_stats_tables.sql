@@ -172,14 +172,14 @@ CREATE TRIGGER trigger_update_hosted_games_count
 
 -- Insert some default achievements
 INSERT INTO public.achievements (name, description, icon, category, criteria, points) VALUES
-('First Game', 'Play your first game', '🎮', 'participation', '{"games_played": 1}', 10),
-('Game Host', 'Host your first game', '🏠', 'hosting', '{"games_hosted": 1}', 15),
-('Regular Player', 'Play 10 games', '🏃', 'participation', '{"games_played": 10}', 50),
-('Community Builder', 'Host 5 games', '🏗️', 'hosting', '{"games_hosted": 5}', 75),
-('Sports Enthusiast', 'Play 25 games', '⚽', 'participation', '{"games_played": 25}', 100),
-('Event Organizer', 'Host 10 games', '📅', 'hosting', '{"games_hosted": 10}', 150),
-('Veteran Player', 'Play 50 games', '🏆', 'participation', '{"games_played": 50}', 200),
-('Community Leader', 'Host 20 games', '👑', 'hosting', '{"games_hosted": 20}', 300);
+('First Activity', 'Join your first activity', '🎮', 'participation', '{"games_played": 1}', 10),
+('Activity Host', 'Host your first activity', '🏠', 'hosting', '{"games_hosted": 1}', 15),
+('Regular Player', 'Join 10 activities', '🏃', 'participation', '{"games_played": 10}', 50),
+('Community Builder', 'Host 5 activities', '🏗️', 'hosting', '{"games_hosted": 5}', 75),
+('Sports Enthusiast', 'Join 25 activities', '⚽', 'participation', '{"games_played": 25}', 100),
+('Event Organizer', 'Host 10 activities', '📅', 'hosting', '{"games_hosted": 10}', 150),
+('Veteran Player', 'Join 50 activities', '🏆', 'participation', '{"games_played": 50}', 200),
+('Community Leader', 'Host 20 activities', '👑', 'hosting', '{"games_hosted": 20}', 300);
 
 -- Create function to update updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()

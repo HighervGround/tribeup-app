@@ -25,7 +25,7 @@ function UserProfile() {
   
   // Transform stats data for display
   const userStats = useMemo(() => [
-    { label: 'Activities Played', value: stats?.totalGamesPlayed?.toString() || '0', icon: Calendar },
+    { label: 'Activities Joined', value: stats?.totalGamesPlayed?.toString() || '0', icon: Calendar },
     { label: 'Activities Hosted', value: stats?.totalGamesHosted?.toString() || '0', icon: MapPin },
     { label: 'Achievements', value: achievements.length.toString(), icon: Trophy },
   ], [stats, achievements]);

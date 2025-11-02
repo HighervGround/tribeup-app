@@ -216,27 +216,25 @@ export function useJoinGame() {
       const previousGame = queryClient.getQueryData(gameKeys.detail(gameId));
       const previousParticipants = queryClient.getQueryData(gameKeys.participants(gameId));
       
-      // Optimistically update games list
+      // Optimistically update games list (isJoined only, counts come from DB)
       queryClient.setQueryData(gameKeys.lists(), (old: any) => {
         if (!old) return old;
         return old.map((game: any) => 
           game.id === gameId 
             ? { 
                 ...game, 
-                isJoined: true, 
-                currentPlayers: Math.min(game.currentPlayers + 1, game.maxPlayers)
+                isJoined: true
               }
             : game
         );
       });
 
-      // Optimistically update game detail
+      // Optimistically update game detail (isJoined only, counts come from DB)
       queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
         if (!old) return old;
         return {
           ...old,
-          isJoined: true,
-          currentPlayers: Math.min(old.currentPlayers + 1, old.maxPlayers)
+          isJoined: true
         };
       });
 
@@ -323,27 +321,25 @@ export function useLeaveGame() {
       const previousGame = queryClient.getQueryData(gameKeys.detail(gameId));
       const previousParticipants = queryClient.getQueryData(gameKeys.participants(gameId));
       
-      // Optimistically update games list
+      // Optimistically update games list (isJoined only, counts come from DB)
       queryClient.setQueryData(gameKeys.lists(), (old: any) => {
         if (!old) return old;
         return old.map((game: any) => 
           game.id === gameId 
             ? { 
                 ...game, 
-                isJoined: false, 
-                currentPlayers: Math.max(game.currentPlayers - 1, 0)
+                isJoined: false
               }
             : game
         );
       });
 
-      // Optimistically update game detail
+      // Optimistically update game detail (isJoined only, counts come from DB)
       queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
         if (!old) return old;
         return {
           ...old,
-          isJoined: false,
-          currentPlayers: Math.max(old.currentPlayers - 1, 0)
+          isJoined: false
         };
       });
 

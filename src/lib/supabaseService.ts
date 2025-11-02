@@ -1439,77 +1439,99 @@ export class SupabaseService {
     const startTime = performance.now();
     
     try {
-      // Get participant user IDs (no timeout - let it complete)
+      // Fetch authenticated participants
       const { data: participants, error: participantsError } = await supabase
         .from('game_participants')
         .select('user_id, joined_at')
-        .eq('game_id', gameId);
+        .eq('game_id', gameId)
+        .eq('status', 'joined');
 
       if (participantsError) throw participantsError;
 
-      console.log('🔍 Raw participants data:', participants);
+      console.log('🔍 Raw authenticated participants:', participants);
 
-      if (!participants || participants.length === 0) {
-        return [];
+      // Fetch public RSVPs (guest users)
+      const { data: publicRsvps, error: rsvpsError } = await supabase
+        .from('public_rsvps')
+        .select('id, name, email, created_at, attending')
+        .eq('game_id', gameId)
+        .eq('attending', true);
+
+      if (rsvpsError) {
+        console.error('⚠️ Error fetching public RSVPs:', rsvpsError);
       }
 
-      // Then fetch user details for each participant (via safe public view)
-      const userIds = participants.map(p => p.user_id);
-      
-      // Debug: Show what user IDs we're trying to fetch
-      console.log('🔍 Fetching user details for IDs:', userIds);
-      
-      // Test RLS permissions first with a simple query
-      console.log('🧪 Testing RLS permissions...');
-      const { data: testUsers, error: testError } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .limit(1);
-      
-      console.log('🧪 RLS test result:', { testUsers, testError });
-      
-      if (testError) {
-        console.error('🚨 RLS is blocking basic user queries!');
-        console.error('🚨 Error details:', testError);
-        console.error('🚨 You MUST run the RLS fix SQL in Supabase dashboard');
-      }
-      
-      // Fetch user details from users table
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, full_name, username, avatar_url')
-        .in('id', userIds);
-      
-      console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
+      console.log('🔍 Raw public RSVPs:', publicRsvps);
 
-      // Handle case where RLS blocks or users don't exist
-      const usersMap = new Map();
-      if (users && !usersError) {
-        users.forEach(u => usersMap.set(u.id, u));
-      }
+      const allParticipants: any[] = [];
 
-      // Combine participant and user data - always return valid names
-      return participants.map(participant => {
-        const user = usersMap.get(participant.user_id);
-        console.log('🔍 Processing participant:', participant.user_id, 'found user:', !!user);
+      // Process authenticated participants
+      if (participants && participants.length > 0) {
+        const userIds = participants.map(p => p.user_id);
         
-        // Compute display_name: full_name || username || 'Player'
-        let name = 'Player';
-        if (user) {
-          name = user.full_name?.trim() || user.username?.trim() || 'Player';
-        } else {
-          // If RLS blocked or user not found, use a default but try to get partial info
-          name = `Player ${participant.user_id.slice(0, 6)}`;
+        console.log('🔍 Fetching user details for IDs:', userIds);
+        
+        // Fetch user details from users table
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, username, avatar_url')
+          .in('id', userIds);
+        
+        console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
+
+        // Handle case where RLS blocks or users don't exist
+        const usersMap = new Map();
+        if (users && !usersError) {
+          users.forEach(u => usersMap.set(u.id, u));
         }
-        
-        return {
-          id: participant.user_id,
-          name: name.trim() || 'Player', // Final fallback
-          avatar: user?.avatar_url || null,
-          isHost: false, // We'll determine this separately by checking if user is game creator
-          rating: 4.5 // Default rating - in real app this would come from a ratings table
-        };
-      });
+
+        // Add authenticated participants
+        participants.forEach(participant => {
+          const user = usersMap.get(participant.user_id);
+          
+          let name = 'Player';
+          if (user) {
+            name = user.full_name?.trim() || user.username?.trim() || 'Player';
+          } else {
+            name = `Player ${participant.user_id.slice(0, 6)}`;
+          }
+          
+          allParticipants.push({
+            id: participant.user_id,
+            name: name.trim() || 'Player',
+            avatar: user?.avatar_url || null,
+            isHost: false, // We'll determine this separately
+            isGuest: false,
+            rating: 4.5,
+            joinedAt: participant.joined_at
+          });
+        });
+      }
+
+      // Add public RSVPs (guests)
+      if (publicRsvps && publicRsvps.length > 0) {
+        publicRsvps.forEach(rsvp => {
+          allParticipants.push({
+            id: `guest-${rsvp.id}`, // Prefix with 'guest-' to avoid conflicts
+            name: rsvp.name,
+            avatar: null, // Guests don't have avatars
+            isHost: false,
+            isGuest: true,
+            rating: null,
+            joinedAt: rsvp.created_at
+          });
+        });
+      }
+
+      // Sort by join date (earliest first)
+      allParticipants.sort((a, b) => 
+        new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+      );
+
+      const duration = performance.now() - startTime;
+      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} total (${participants?.length || 0} authenticated + ${publicRsvps?.length || 0} guests) in ${duration.toFixed(2)}ms`);
+      
+      return allParticipants;
     } catch (error) {
       console.error('❌ getGameParticipants failed:', error);
       return [];

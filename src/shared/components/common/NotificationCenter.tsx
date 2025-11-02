@@ -93,10 +93,30 @@ function NotificationCenter() {
       markAsRead(notification.id);
     }
 
+    // Determine navigation URL - prioritize actionUrl, fallback to data fields
+    let url: string | null = notification.actionUrl;
+    
+    if (!url) {
+      // Build URL from data fields based on notification type
+      if (notification.gameId || notification.data?.gameId) {
+        const gameId = notification.gameId || notification.data?.gameId;
+        if (notification.type === 'new_message') {
+          // Game chat messages
+          url = `/chat/game/${gameId}`;
+        } else {
+          // Game-related notifications
+          url = `/game/${gameId}`;
+        }
+      } else if (notification.userId || notification.data?.userId) {
+        const userId = notification.userId || notification.data?.userId;
+        url = `/user/${userId}`;
+      } else if (notification.data?.chatId && notification.data?.chatType) {
+        url = `/chat/${notification.data.chatType}/${notification.data.chatId}`;
+      }
+    }
+
     // Navigate to appropriate screen
-    if (notification.actionUrl) {
-      const url = notification.actionUrl;
-      
+    if (url) {
       if (url.startsWith('/game/')) {
         const gameId = url.split('/')[2];
         navigateToGame(gameId);

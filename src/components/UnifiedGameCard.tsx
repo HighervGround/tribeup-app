@@ -220,9 +220,14 @@ export function UnifiedGameCard({
         </div>
         <div className="text-right flex-shrink-0">
           {game.cost && <div className="text-sm font-medium">{formatCost(game.cost)}</div>}
-          <div className="text-xs text-muted-foreground">
-            {getPlayerCount()}
-          </div>
+          <GameCapacity
+            currentPlayers={game.currentPlayers}
+            maxPlayers={game.maxPlayers}
+            publicRsvpCount={game.publicRsvpCount}
+            totalPlayers={game.totalPlayers}
+            availableSpots={game.availableSpots}
+            className="text-xs justify-end"
+          />
         </div>
       </div>
       

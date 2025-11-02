@@ -383,7 +383,7 @@ function MapView({
                             </div>
                             <div className="flex items-center gap-1">
                               <Users className="w-3 h-3" />
-                              <span>{game.players}/{game.maxPlayers}</span>
+                              <span>{game.players}/{game.maxPlayers} players</span>
                             </div>
                             {game.cost !== 'Free' && (
                               <div className="flex items-center gap-1">

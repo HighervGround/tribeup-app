@@ -221,7 +221,7 @@ function GoogleMapView({
               </div>
               <div class="flex items-center gap-1">
                 <span>👥</span>
-                <span>${game.players}/${game.maxPlayers} players</span>
+                <span>{game.players}/{game.maxPlayers} players</span>
               </div>
               ${game.cost !== 'Free' ? `
                 <div class="flex items-center gap-1">

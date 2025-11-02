@@ -286,7 +286,7 @@ export default function PublicGamePage() {
                       </>
                     ) : (
                       <>
-                        {publicRsvps.length + Number((game as any).current_players ?? game.currentPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
+                        {Number((game as any).capacity_used ?? game.totalPlayers ?? 0)}/{Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
                       </>
                     )}
                   </p>

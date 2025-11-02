@@ -168,9 +168,9 @@ export function UnifiedGameCard({
                       variant={getButtonVariant(game)}
                       onClick={handleJoinClick}
                       className="transition-all duration-200 flex-1"
-                      disabled={isLoading || ((game.totalPlayers ?? (game.currentPlayers + (game.publicRsvpCount || 0))) >= game.maxPlayers && !game.isJoined)}
+                      disabled={isLoading || (totalPlayers >= game.maxPlayers && !game.isJoined)}
                     >
-                      {(game.totalPlayers ?? (game.currentPlayers + (game.publicRsvpCount || 0))) >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
+                      {totalPlayers >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
                     </Button>
                   )}
                   <SimpleCalendarButton 

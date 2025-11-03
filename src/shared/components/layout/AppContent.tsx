@@ -1,13 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Toaster } from 'sonner';
 import { BottomNavigation } from './BottomNavigation';
 import { DesktopLayout } from './DesktopLayout';
 import { useAppStore } from '@/store/appStore';
 import { useUserPresence } from '@/shared/hooks/useUserPresence';
 import { useAccessibility } from '@/domains/users/hooks/useAccessibility';
 import { useResponsive } from '@/shared/hooks/useResponsive';
-import { toast } from 'sonner';
 
 function AppContent() {
   const { isMobile } = useResponsive();
@@ -78,47 +76,27 @@ function AppContent() {
     const isCreateGameRoute = location.pathname === '/create';
     
     return (
-      <>
-        <div className="min-h-screen bg-background">
-          {/* Main content area with proper scrolling */}
-          <main style={{ paddingBottom: isCreateGameRoute ? '0px' : `${navigationHeight + 16}px` }}>
-            <Outlet />
-          </main>
+      <div className="min-h-screen bg-background">
+        {/* Main content area with proper scrolling */}
+        <main style={{ paddingBottom: isCreateGameRoute ? '0px' : `${navigationHeight + 16}px` }}>
+          <Outlet />
+        </main>
 
-          {/* Bottom navigation - hide for CreateGame route */}
-          {!isCreateGameRoute && <BottomNavigation ref={navigationRef} />}
-
-        </div>
-
-      </>
+        {/* Bottom navigation - hide for CreateGame route */}
+        {!isCreateGameRoute && <BottomNavigation ref={navigationRef} />}
+      </div>
     );
   }
 
   // Render desktop layout
   return (
-    <>
-      <div className="min-h-screen bg-background">
-        <DesktopLayout>
-          <main id="main-content" className="flex-1 overflow-hidden">
-            <Outlet />
-          </main>
-        </DesktopLayout>
-
-      </div>
-
-
-      {/* Toast notifications for desktop */}
-      <Toaster 
-        position="bottom-right"
-        theme="system"
-        richColors
-        closeButton
-        duration={4000}
-        toastOptions={{
-          className: 'animate-slide-in-down',
-        }}
-      />
-    </>
+    <div className="min-h-screen bg-background">
+      <DesktopLayout>
+        <main id="main-content" className="flex-1 overflow-hidden">
+          <Outlet />
+        </main>
+      </DesktopLayout>
+    </div>
   );
 }
 

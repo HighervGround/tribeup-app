@@ -63,30 +63,44 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         }`}
       >
         {/* Sidebar Header */}
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between">
-            {!sidebarCollapsed && (
+        <div className={sidebarCollapsed ? 'px-4 py-4' : 'p-6 border-b border-border'}>
+          {!sidebarCollapsed ? (
+            <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl text-foreground">TribeUp</h1>
                 <p className="text-sm text-gray-600 dark:text-muted-foreground">Find your tribe</p>
               </div>
-            )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label="Collapse sidebar"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+            </div>
+          ) : (
             <Button
               variant="ghost"
-              size="icon"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label="Expand sidebar"
+              className="w-10 h-10 p-0 mx-auto"
             >
               <Menu className="w-5 h-5" />
             </Button>
-          </div>
+          )}
         </div>
 
         {/* Quick Create Button */}
         <div className="p-4">
           <Button
             onClick={() => navigate('/create')}
-            className="w-full justify-start gap-3 bg-[#FA4616] hover:bg-[#E63E12] text-white"
+            className={`gap-3 text-white hover:opacity-90 ${
+              sidebarCollapsed 
+                ? 'w-10 h-10 p-0 justify-center mx-auto' 
+                : 'w-full justify-start'
+            }`}
+            style={{ backgroundColor: '#FA4616', borderColor: '#FA4616' }}
             aria-label="Create new game"
           >
             <Plus className="w-5 h-5" />
@@ -105,11 +119,13 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                 key={item.path}
               >
                 <Button
-                  variant={isActive ? 'default' : 'ghost'}
+                  variant="ghost"
                   onClick={() => navigate(item.path)}
-                  className={`w-full gap-3 h-10 relative ${
-                    sidebarCollapsed ? 'justify-center px-0' : 'justify-start px-4'
-                  }`}
+                  className={`gap-3 h-10 relative ${
+                    sidebarCollapsed 
+                      ? 'w-10 p-0 justify-center mx-auto' 
+                      : 'w-full justify-start px-4'
+                  } ${isActive ? 'bg-accent text-accent-foreground' : ''}`}
                   role="menuitem"
                   aria-current={isActive ? 'page' : undefined}
                   title={sidebarCollapsed ? item.label : undefined}
@@ -144,13 +160,13 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-3">
-            <Avatar className="cursor-pointer" onClick={() => navigate('/profile')}>
-              {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
-              <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
-            {!sidebarCollapsed && (
+        <div className={`border-t border-border ${sidebarCollapsed ? 'px-4 py-4' : 'p-4'}`}>
+          {!sidebarCollapsed ? (
+            <div className="flex items-center gap-3">
+              <Avatar className="cursor-pointer" onClick={() => navigate('/profile')}>
+                {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
+                <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
                   {user?.name || 'User'}
@@ -159,8 +175,15 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                   {user?.username ? `@${user.username}` : '@user'}
                 </p>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="w-8 h-8 mx-auto">
+              <Avatar className="cursor-pointer w-8 h-8" onClick={() => navigate('/profile')}>
+                {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
+                <AvatarFallback className="text-xs">{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+              </Avatar>
+            </div>
+          )}
         </div>
       </aside>
 

@@ -175,6 +175,7 @@ export const transformUserFromDB = (dbUser: Database['public']['Tables']['users'
   avatar: dbUser.avatar_url || '',
   bio: dbUser.bio || '',
   location: dbUser.location || '',
+  preferred_sports: dbUser.preferred_sports || [],
   role: dbUser.role || 'user',
   onboarding_completed: dbUser.onboarding_completed === true,
   preferences: {

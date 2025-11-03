@@ -50,7 +50,9 @@ function UserProfile() {
   const displayUsername = user?.username ? `@${user.username}` : '@user';
   const displayBio = user?.bio || 'Sports enthusiast • Always up for an activity!';
   const displayAvatar = user?.avatar || '';
-  const displaySports = user?.preferences?.sports || ['Basketball', 'Soccer', 'Tennis', 'Volleyball'];
+  const displaySports = (user?.preferred_sports && Array.isArray(user.preferred_sports) && user.preferred_sports.length > 0) 
+    ? user.preferred_sports 
+    : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,13 +116,27 @@ function UserProfile() {
             <CardTitle>Sports I Play</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {displaySports.map((sport) => (
-                <Badge key={sport} variant="secondary">
-                  {sport}
-                </Badge>
-              ))}
-            </div>
+            {displaySports.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {displaySports.map((sport) => (
+                  <Badge key={sport} variant="secondary">
+                    {sport}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <p className="text-sm">No sports selected yet</p>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={() => navigate('/profile/edit')}
+                  className="mt-2"
+                >
+                  Add your sports
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

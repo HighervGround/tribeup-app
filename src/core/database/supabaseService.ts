@@ -219,7 +219,7 @@ export class SupabaseService {
         console.log('🔍 [getUserProfile] Fetching own profile from users table');
         const { data, error } = await supabase
           .from('users')
-          .select('id, full_name, username, avatar_url, bio, location')
+          .select('id, full_name, username, avatar_url, bio, location, preferred_sports')
           .eq('id', userId)
           .single();
 
@@ -242,6 +242,7 @@ export class SupabaseService {
           avatar: data.avatar_url || '',
           bio: data.bio || '',
           location: data.location || '',
+          preferred_sports: data.preferred_sports || [],
           role: 'user' as const,
           preferences: {
             theme: 'auto' as const,
@@ -303,7 +304,7 @@ export class SupabaseService {
       // Use users table directly
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, avatar_url, username, bio, location')
+        .select('id, full_name, avatar_url, username, bio, location, preferred_sports')
         .eq('id', userId)
         .maybeSingle();
 
@@ -352,6 +353,7 @@ export class SupabaseService {
         avatar: data.avatar_url || '',
         bio: data.bio || '',
         location: data.location || '',
+        preferred_sports: data.preferred_sports || [],
         role: 'user' as const,
         preferences: {
           theme: 'auto' as const,

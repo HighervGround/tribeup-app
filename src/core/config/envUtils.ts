@@ -43,6 +43,7 @@ export const env = {
   get VAPID_PUBLIC_KEY() { return getEnvVar('VAPID_PUBLIC_KEY'); },
   
   // App Configuration
+  get APP_URL() { return getEnvVar('APP_URL') || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'); },
   get APP_VERSION() { return getEnvVar('APP_VERSION') || '1.0.0'; },
   get ENVIRONMENT() { return getEnvVar('ENVIRONMENT') || 'development'; },
   get ENABLE_MOCK_DATA() { return getEnvVar('ENABLE_MOCK_DATA') === 'true'; },
@@ -55,7 +56,8 @@ export function debugEnvVars() {
   
   const vars = [
     'SUPABASE_URL',
-    'SUPABASE_ANON_KEY', 
+    'SUPABASE_ANON_KEY',
+    'APP_URL',
     'WEATHERAPI_KEY',
     'GOOGLE_MAPS_API_KEY',
     'GOOGLE_PLACES_API_KEY',

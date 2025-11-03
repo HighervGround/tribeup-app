@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/core/database/supabase';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { useAppStore } from '@/store/appStore';
+import { env } from '@/core/config/envUtils';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -295,13 +296,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOAuth = async (provider: 'google' | 'apple', options?: { pendingGameId?: string }) => {
     try {
-      // Use the correct redirect URL for production
-      const baseUrl = window.location.origin;
-      const redirectTo = `${baseUrl}/auth/callback`;
+      // Use the configured app URL for OAuth redirects to ensure Google sees consistent domain
+      const redirectUrl = `${env.APP_URL}/auth/callback`;
       
       console.log(`🔐 OAuth Debug - Starting ${provider} OAuth flow`);
-      console.log(`🔐 Base URL: ${baseUrl}`);
-      console.log(`🔐 Redirect URL: ${redirectTo}`);
+      console.log(`🔐 App URL: ${env.APP_URL}`);
+      console.log(`🔐 Redirect URL: ${redirectUrl}`);
       
       // Store pending game ID if provided
       if (options?.pendingGameId) {
@@ -312,7 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -355,7 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`
+        redirectTo: `${env.APP_URL}/auth?reset=true`
       });
 
       if (error) throw error;

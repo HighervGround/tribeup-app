@@ -1,5 +1,6 @@
 import { cn } from '@/shared/utils/utils'
 import { supabase } from '@/core/database/supabase'
+import { env } from '@/core/config/envUtils'
 import { Button } from '@/shared/components/ui/button'
 import {
   Card,
@@ -33,10 +34,14 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
     setError(null)
 
     try {
+      // Use the configured app URL for OAuth redirects to ensure Google sees consistent domain
+      const redirectUrl = `${env.APP_URL}/auth/callback`;
+      console.log('🔐 Starting OAuth flow with redirect:', redirectUrl);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -87,7 +92,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                 variant="outline"
                 onClick={() => handleSocialLogin('google')}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full cursor-pointer"
               >
                 <Chrome className="mr-2 h-4 w-4" />
                 Continue with Google
@@ -110,7 +115,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                 variant="outline"
                 onClick={() => setShowEmailForm(true)}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full cursor-pointer"
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Continue with Email
@@ -177,7 +182,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
               <Button 
                 type="submit" 
                 variant="default" 
-                className="w-full" 
+                className="w-full cursor-pointer" 
                 disabled={isLoading}
                 style={{ backgroundColor: '#FA4616', color: 'white' }}
               >
@@ -188,7 +193,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                 <button
                   type="button"
                   onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
                 </button>
@@ -198,7 +203,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                     <button
                       type="button"
                       onClick={onForgotPassword}
-                      className="text-sm text-muted-foreground hover:text-foreground"
+                      className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       Forgot your password?
                     </button>
@@ -208,7 +213,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                 <button
                   type="button"
                   onClick={() => setShowEmailForm(false)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   Back to social login
                 </button>

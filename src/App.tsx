@@ -16,7 +16,14 @@ export default function App() {
           <AppRouter />
         </SimpleAuthProvider>
       </QueryProvider>
-      <Toaster />
+      <Toaster 
+        theme="system"
+        position="top-center"
+        toastOptions={{
+          className: 'mb-16 md:mb-0',
+        }}
+        offset="80px"
+      />
     </ErrorBoundary>
   );
 }

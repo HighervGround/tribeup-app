@@ -86,7 +86,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         <div className="p-4">
           <Button
             onClick={() => navigate('/create')}
-            className="w-full justify-start gap-3"
+            className="w-full justify-start gap-3 bg-[#FA4616] hover:bg-[#E63E12] text-white"
             aria-label="Create new game"
           >
             <Plus className="w-5 h-5" />
@@ -107,8 +107,8 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                 <Button
                   variant={isActive ? 'default' : 'ghost'}
                   onClick={() => navigate(item.path)}
-                  className={`w-full justify-start gap-3 h-12 relative ${
-                    sidebarCollapsed ? 'px-2' : 'px-4'
+                  className={`w-full gap-3 h-10 relative ${
+                    sidebarCollapsed ? 'justify-center px-0' : 'justify-start px-4'
                   }`}
                   role="menuitem"
                   aria-current={isActive ? 'page' : undefined}
@@ -134,9 +134,6 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </Badge>
                         )}
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-muted-foreground">
-                        {item.description}
                       </div>
                     </div>
                   )}

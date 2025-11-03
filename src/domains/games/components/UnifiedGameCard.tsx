@@ -184,40 +184,27 @@ export function UnifiedGameCard({
     );
   }
 
-  // Simple variant (for HomeScreen and SearchDiscovery)
+  // Simple variant (for HomeScreen and SearchDiscovery) - Optimized for less scrolling
   return (
     <div 
-      className="bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md transition-shadow"
+      className="bg-card rounded-lg p-3 border border-border cursor-pointer hover:shadow-md transition-shadow"
       onClick={handleCardClick}
     >
       {/* Header with title and category badge */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 pr-4">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1 pr-3 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-lg">{game.title}</h3>
+            <h3 className="font-semibold text-base truncate">{game.title}</h3>
             {getCategoryBadge() && (
-              <span className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${getCategoryBadge()?.className}`}>
+              <span className={`inline-block text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${getCategoryBadge()?.className}`}>
                 {getCategoryBadge()?.text}
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{game.sport}</p>
-          
-          {/* Host info for simple variant */}
-          {game.host && (
-            <div className="flex items-center gap-2 mt-2 text-sm">
-              <ClickableAvatar
-                userId={game.host.id}
-                src={game.host.avatar}
-                alt={game.host.name}
-                size="xs"
-              />
-              <span className="text-muted-foreground">Hosted by {game.host.name}</span>
-            </div>
-          )}
+          <p className="text-xs text-muted-foreground">{game.sport}</p>
         </div>
         <div className="text-right flex-shrink-0">
-          {game.cost && <div className="text-sm font-medium">{formatCost(game.cost)}</div>}
+          {game.cost && <div className="text-xs font-medium">{formatCost(game.cost)}</div>}
           <GameCapacity
             totalPlayers={game.totalPlayers}
             maxPlayers={game.maxPlayers}
@@ -227,41 +214,38 @@ export function UnifiedGameCard({
         </div>
       </div>
       
-      {/* Game details */}
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-          <span>{game.location}</span>
+      {/* Game details - Condensed */}
+      <div className="space-y-1 text-xs text-muted-foreground mb-2">
+        <div className="flex items-center gap-1.5 truncate">
+          <MapPin className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">{game.location}</span>
         </div>
-        <GameCapacity
-          totalPlayers={game.totalPlayers}
-          maxPlayers={game.maxPlayers}
-          availableSpots={game.availableSpots}
-          className="text-sm"
-        />
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-muted-foreground" />
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-3 h-3 flex-shrink-0" />
           <span>{game.date} at {formatTimeString(game.time)}</span>
         </div>
       </div>
       
-      <p className="text-sm text-muted-foreground mt-3">{game.description}</p>
+      {/* Truncated description */}
+      {game.description && (
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+          {game.description}
+        </p>
+      )}
       
-      {/* Footer with join status and button */}
+      {/* Footer with join button */}
       {showJoinButton && (
-        <div className="flex items-center justify-between mt-3">
-          {getJoinStatus() ? (
-            <span className={`inline-block ${getJoinStatus()?.className}`}>
+        <div className="flex items-center justify-end gap-2">
+          {getJoinStatus() && (
+            <span className={`inline-block text-xs ${getJoinStatus()?.className}`}>
               {getJoinStatus()?.text}
             </span>
-          ) : (
-            <div></div>
           )}
           
           <button
             onClick={handleJoinClick}
             disabled={isLoading}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               isLoading 
                 ? 'opacity-50 cursor-not-allowed' 
                 : game.isJoined 

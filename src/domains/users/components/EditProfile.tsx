@@ -348,23 +348,13 @@ function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-12 pb-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl font-semibold">Edit Profile</h1>
-        </div>
-        <Button 
-          onClick={handleSave} 
-          disabled={!isDirty || loading || checkingUsername || !!usernameError || !!avatarError || !formData.fullName || !formData.username}
-          className="flex items-center gap-2"
-        >
-          <Save className="w-4 h-4" />
-          {loading ? 'Saving...' : 'Save'}
+      <div className="flex items-center gap-4 px-4 pt-12 pb-6">
+        <Button variant="ghost" size="icon" onClick={handleBack}>
+          <ArrowLeft className="w-5 h-5" />
         </Button>
+        <h1 className="text-xl font-semibold">Edit Profile</h1>
       </div>
 
       <div className="px-4 space-y-6">
@@ -407,7 +397,7 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Full Name</label>
               <Input
-                placeholder="Enter your full name"
+                placeholder="Full Name"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
               />
@@ -416,7 +406,7 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Username <span className="text-muted-foreground font-normal">(3–20 chars)</span></label>
               <Input
-                placeholder="Choose a username"
+                placeholder="Username"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 onBlur={handleUsernameBlur}
@@ -438,7 +428,7 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Location</label>
               <Input
-                placeholder="City, State"
+                placeholder="Location"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
               />
@@ -447,7 +437,7 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Bio <span className="text-muted-foreground font-normal">(max {BIO_MAX} chars)</span></label>
               <Textarea
-                placeholder="Tell us about yourself..."
+                placeholder="Bio"
                 value={formData.bio}
                 onChange={(e) => handleInputChange('bio', e.target.value)}
                 rows={3}
@@ -487,6 +477,18 @@ function EditProfile() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Fixed Save Button at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+        <Button 
+          onClick={handleSave} 
+          disabled={!isDirty || loading || checkingUsername || !!usernameError || !!avatarError || !formData.fullName || !formData.username}
+          className="w-full flex items-center justify-center gap-2"
+        >
+          <Save className="w-4 h-4" />
+          {loading ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
     </div>
   );

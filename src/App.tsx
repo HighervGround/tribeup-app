@@ -19,6 +19,9 @@ export default function App() {
       <Toaster 
         theme="system"
         position="top-center"
+        richColors
+        closeButton
+        duration={4000}
         toastOptions={{
           className: 'mb-16 md:mb-0',
         }}

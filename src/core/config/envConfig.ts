@@ -4,6 +4,9 @@ export interface EnvConfig {
   supabaseUrl: string;
   supabaseAnonKey: string;
   
+  // App Configuration
+  appUrl: string; // Production domain for OAuth flows
+  
   // Weather API
   weatherApiKey?: string;
   weatherTempUnit: string;
@@ -53,6 +56,9 @@ class EnvironmentConfig {
       // Supabase (required)
       supabaseUrl: env.VITE_SUPABASE_URL,
       supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY,
+      
+      // App Configuration - use production domain or fallback to current origin
+      appUrl: env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'),
       
       // Weather API (optional)
       weatherApiKey: env.VITE_WEATHERAPI_KEY,

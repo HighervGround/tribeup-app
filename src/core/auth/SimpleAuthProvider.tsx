@@ -4,6 +4,7 @@ import { supabase, transformUserFromDB } from '@/core/database/supabase';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { useAppStore } from '@/store/appStore';
 import { ProfileEnsurer } from '@/core/auth/ProfileEnsurer';
+import { env } from '@/core/config/envUtils';
 import { toast } from 'sonner';
 
 interface SimpleAuthContextType {
@@ -385,10 +386,14 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    // Use the configured app URL for OAuth redirects to ensure consistent domain
+    const redirectUrl = `${env.APP_URL}/auth/callback`;
+    console.log('🔐 Starting OAuth flow with redirect:', redirectUrl);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
       }
     });
     if (error) throw error;

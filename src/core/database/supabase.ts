@@ -27,6 +27,11 @@ declare global {
 
 const createSupabaseClient = () => {
   console.log('🔧 Creating new Supabase client...');
+  
+  // Get the app URL for OAuth redirects (use production domain)
+  const appUrl = env.APP_URL;
+  console.log('🌐 App URL for OAuth:', appUrl);
+  
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true, // Keep sessions persistent for good UX

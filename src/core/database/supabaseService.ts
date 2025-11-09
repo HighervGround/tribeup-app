@@ -1,7 +1,7 @@
-import { supabase, transformGameFromDB, transformUserFromDB, Database } from './supabase';
+import { supabase, transformGameFromDB, transformUserFromDB, Database } from '@/core/database/supabase';
 import type { Game, User, UserPreferences } from '@/store/appStore';
 import { envConfig } from '@/core/config/envConfig';
-import { networkService } from './networkService';
+import { networkService } from '@/core/notifications/networkService';
 
 // Types for database operations
 type GameRow = Database['public']['Tables']['games']['Row'];

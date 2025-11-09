@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import type { Database } from '@/core/database/database.types';
 import { env } from '@/core/config/envUtils';
 
 // Environment variables - these will need to be set in your .env file
@@ -78,7 +78,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Re-export the generated database types
-export type { Database } from './database.types';
+export type { Database } from '@/core/database/database.types';
 
 // Helper functions for data transformation
 export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any => {

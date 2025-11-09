@@ -6,8 +6,8 @@ import { useAppStore } from '@/store/appStore';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
 import { useLocation } from '@/domains/locations/hooks/useLocation';
 import { useAllGamesRealtime } from '@/domains/games/hooks/useGameRealtime';
-import { UnifiedGameCard } from './UnifiedGameCard';
-import { GameCardSkeleton } from './GameCardSkeleton';
+import { UnifiedGameCard } from '@/domains/games/components/UnifiedGameCard';
+import { GameCardSkeleton } from '@/domains/games/components/GameCardSkeleton';
 import { CacheClearButton } from '@/shared/components/common/CacheClearButton';
 import { FeedbackButton } from '@/domains/users/components/FeedbackButton';
 

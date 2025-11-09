@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
-import { AchievementGrid } from './AchievementBadge';
+import { AchievementGrid } from '@/domains/users/components/AchievementBadge';
 import { initialsFrom } from '@/shared/utils/initials';
 import { supabase } from '@/core/database/supabase';
 

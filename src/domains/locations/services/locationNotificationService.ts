@@ -1,8 +1,8 @@
 import { supabase } from '@/core/database/supabase';
-import { NotificationService } from './notificationService';
+import { NotificationService } from '@/core/notifications/notificationService';
 import { LocationCoordinates, calculateDistance } from '@/domains/locations/hooks/useLocation';
-import { VenueService } from './venueService';
-import { envConfig } from './envConfig';
+import { VenueService } from '@/domains/locations/services/venueService';
+import { envConfig } from '@/core/config/envConfig';
 
 export interface LocationNotificationPreferences {
   enabled: boolean;

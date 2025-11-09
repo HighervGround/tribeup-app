@@ -1,5 +1,5 @@
 import { cn } from '@/shared/utils/utils'
-import { ChatMessageItem } from './chat-message'
+import { ChatMessageItem } from '@/shared/components/common/chat-message'
 import { useChatScroll } from '@/shared/hooks/use-chat-scroll'
 import {
   type ChatMessage,

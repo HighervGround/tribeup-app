@@ -70,19 +70,13 @@ src/
 - ✅ `src/domains/users/README.md` - User Engagement documentation
 - ✅ `src/domains/users/.cursorrules` - Users domain AI context
 
-## 🚧 In Progress (Phase 4)
+### Phase 4: Import Path Migration ✅
+**Highlights:**
+- ✅ Migrated the remaining 200+ TypeScript modules to `@/` path aliases (no lingering `./` or `../` imports).
+- ✅ Normalized shared UI components, hooks, and services to reference their canonical alias locations.
+- ✅ Updated entry point styling imports (`main.tsx`) to use absolute aliases and removed duplicate package manifests.
 
-### Phase 4: Import Path Migration
-**Status:** Partially complete (2/209 files updated)
-
-**Completed:**
-- ✅ Updated `src/main.tsx`
-- ✅ Updated `src/App.tsx`
-- ✅ Created `update-imports.js` automation script
-
-**Remaining:** ~207 TypeScript files need import updates
-
-**Import Pattern Examples:**
+**Key Patterns:**
 
 ```typescript
 // OLD (relative paths)
@@ -96,52 +90,27 @@ import { Button } from '@/shared/components/ui/button';
 import { useGameActions } from '@/domains/games/hooks/useGameActions';
 ```
 
-**Key Mappings:**
+### Phase 5: Documentation Realignment ✅
+**Highlights:**
+- ✅ Consolidated project-wide guides under a new root-level `docs/` directory (accessibility, design system, motion, developer guide, export audit, etc.).
+- ✅ Promoted the former `src/README.md` content to `docs/ARCHITECTURE_OVERVIEW.md` and refreshed references in the main README.
+- ✅ Removed obsolete `src/public`, `src/pages`, and duplicate `package.json` artifacts to keep `src/` strictly application code.
 
-| Old Path | New Path |
-|----------|----------|
-| `./components/CreateGame` | `@/domains/games/components/CreateGame` |
-| `./components/WeatherWidget` | `@/domains/weather/components/WeatherWidget` |
-| `./components/MapView` | `@/domains/locations/components/MapView` |
-| `./components/UserProfile` | `@/domains/users/components/UserProfile` |
-| `./components/ErrorBoundary` | `@/shared/components/common/ErrorBoundary` |
-| `./components/ui/button` | `@/shared/components/ui/button` |
-| `./lib/supabase` | `@/core/database/supabase` |
-| `./lib/weatherService` | `@/domains/weather/services/weatherService` |
-| `./hooks/useGames` | `@/domains/games/hooks/useGames` |
-| `./hooks/useDebounce` | `@/shared/hooks/useDebounce` |
+## 🚧 In Progress
+
+### Phase 6: Build Verification ✅
+- ✅ `npm run build` passes after reinstalling dependencies (resolved a missing optional Rollup binary).
+- 📌 Add CI verification once local build passes.
+
+### Phase 7: Functional Testing
+- 🔄 Validate critical user journeys (game discovery, creation, chat, onboarding, notifications).
+- 📋 Use `USER_TESTING_CHECKLIST.md` as the baseline for manual QA until automated tests are added.
 
 ## 📝 Next Steps
 
-### Option 1: Automated Migration (Recommended)
-Run the provided script to update all imports:
-
-```bash
-cd "/Users/cole.guyton/Downloads/React TribeUp Social Sports App"
-node update-imports.js
-```
-
-⚠️ **Before running:**
-1. Commit current changes to git
-2. Review the script (update-imports.js)
-3. Test on a few files first
-4. Run the full script
-5. Fix any remaining issues manually
-
-### Option 2: Manual Migration
-Update imports file by file:
-1. Start with core files (App.tsx, main.tsx) ✅
-2. Update domain files (games, weather, locations, users)
-3. Update shared components
-4. Update core infrastructure
-5. Test build after each domain
-
-### Option 3: Gradual Migration
-Mix of both approaches:
-1. Run automated script
-2. Fix compilation errors
-3. Test critical paths
-4. Deploy incrementally
+1. Run `npm run build` to confirm the reorganized code compiles.
+2. Launch the dev server (`npm run dev`) for smoke testing on mobile & desktop breakpoints.
+3. Walk through the manual QA checklist, logging any regressions.
 
 ## 🧪 Testing After Migration
 
@@ -181,16 +150,15 @@ npm run dev
 ✅ **Path aliases** - Cleaner, absolute imports
 
 ### Remaining Work
-⏳ **Import migration** - ~207 files need import updates
-⏳ **Build verification** - Ensure app compiles and runs
-⏳ **Testing** - Verify critical functionality works
+⏳ **Manual testing** - Verify critical functionality end-to-end
+🚀 **Optional hardening** - Add CI checks for linting/build once verification passes
 
 ## 🎯 Estimated Time to Complete
 
-- **Automated import migration**: 5-10 minutes (script runtime)
-- **Fix compilation errors**: 30-60 minutes
-- **Testing**: 30 minutes
-- **Total**: 1-2 hours
+- **Build verification**: 5-10 minutes
+- **Manual smoke testing**: 30 minutes
+- **Regression pass via checklist**: 30-45 minutes
+- **Total**: ~1.5 hours
 
 ## 📚 Documentation Reference
 
@@ -223,12 +191,13 @@ After import migration, expect these types of errors:
 ## 🎉 Success Criteria
 
 Project reorganization is complete when:
-- ✅ Phase 1: Root directory cleaned (DONE)
-- ✅ Phase 2: Files moved to domains (DONE)
-- ✅ Phase 3: AI context files created (DONE)
-- ⏳ Phase 4: All imports use @/ aliases
-- ⏳ Phase 5: App builds without errors
-- ⏳ Phase 6: Critical paths tested and working
+- ✅ Phase 1: Root directory cleaned
+- ✅ Phase 2: Files moved to domains
+- ✅ Phase 3: AI context files created
+- ✅ Phase 4: All imports use `@/` aliases
+- ✅ Phase 5: Documentation consolidated under `docs/`
+- ✅ Phase 6: App builds without errors
+- ⏳ Phase 7: Critical paths tested and working
 
 ## 💡 Tips for Using New Structure
 
@@ -253,6 +222,6 @@ Project reorganization is complete when:
 
 ---
 
-*Generated: 2025-11-02*
-*Status: Phases 1-3 Complete, Phase 4 In Progress*
+*Generated: 2025-11-09*
+*Status: Phases 1-6 Complete, Phase 7 In Progress*
 

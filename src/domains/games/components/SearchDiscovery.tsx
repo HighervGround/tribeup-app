@@ -7,8 +7,8 @@ import { Badge } from '@/shared/components/ui/badge';
 import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useGames } from '@/domains/games/hooks/useGames';
-import { UnifiedGameCard } from './UnifiedGameCard';
-import { GameCardSkeleton } from './GameCardSkeleton';
+import { UnifiedGameCard } from '@/domains/games/components/UnifiedGameCard';
+import { GameCardSkeleton } from '@/domains/games/components/GameCardSkeleton';
 import { formatTimeString } from '@/shared/utils/dateUtils';
 
 

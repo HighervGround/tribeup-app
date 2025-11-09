@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { useJoinGame, useLeaveGame } from './useGames';
+import { useJoinGame, useLeaveGame } from '@/domains/games/hooks/useGames';
 import { useAppStore } from '@/store/appStore';
 
 interface Game {

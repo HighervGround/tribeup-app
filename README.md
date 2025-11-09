@@ -63,6 +63,7 @@ When deploying to Vercel, add these under **Project Settings → Environment Var
 - `src/shared/` – Reusable UI components, hooks, and utilities.
 - `src/core/` – App infrastructure: Supabase client, routing, auth, notifications.
 - `supabase/` – SQL migrations, seeds, and configuration synced with Supabase CLI.
+- `docs/` – Architecture & design references (`ARCHITECTURE_OVERVIEW.md`, accessibility, design system, motion guides).
 - `vercel.json` – Rewrites, headers, and build output configuration for production.
 
 Refer to the domain-specific READMEs in `src/domains/**` for deeper architectural guidance.
@@ -70,9 +71,11 @@ Refer to the domain-specific READMEs in `src/domains/**` for deeper architectura
 ---
 
 ## Additional Documentation
-- `AUTH_SETUP.md` – Authentication configuration.
-- `GOOGLE_OAUTH_SETUP.md` – Google OAuth provider instructions.
-- `SUPABASE_SETUP.md` – Supabase project bootstrap steps.
+- `docs/ARCHITECTURE_OVERVIEW.md` – End-to-end walkthrough of the front-end architecture.
+- `docs/ACCESSIBILITY_GUIDE.md` – WCAG compliance and testing strategy.
+- `docs/DESIGN_SYSTEM.md` & `docs/MOTION_SYSTEM.md` – Visual language and animation standards.
+- `docs/DEVELOPER_GUIDE.md` – Coding conventions, tooling, and contribution guidelines.
+- `AUTH_SETUP.md` / `GOOGLE_OAUTH_SETUP.md` / `SUPABASE_SETUP.md` – Environment configuration.
 - `USER_TESTING_CHECKLIST.md` – Manual QA flows.
 - `REORGANIZATION_SUMMARY.md` / `SETUP_SUMMARY.md` – Context on recent structural changes.
 

@@ -1,5 +1,5 @@
 import { supabase } from '@/core/database/supabase';
-import { WeatherService, WeatherData } from './weatherService';
+import { WeatherService, WeatherData } from '@/domains/weather/services/weatherService';
 import { LocationCoordinates, calculateDistance } from '@/domains/locations/hooks/useLocation';
 
 export interface VenueFacility {

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { BottomNavigation } from './BottomNavigation';
-import { DesktopLayout } from './DesktopLayout';
+import { BottomNavigation } from '@/shared/components/layout/BottomNavigation';
+import { DesktopLayout } from '@/shared/components/layout/DesktopLayout';
 import { useAppStore } from '@/store/appStore';
 import { useUserPresence } from '@/shared/hooks/useUserPresence';
 import { useAccessibility } from '@/domains/users/hooks/useAccessibility';

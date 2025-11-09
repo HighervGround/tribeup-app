@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { envConfig } from './envConfig';
+import { supabase } from '@/core/database/supabase';
+import { envConfig } from '@/core/config/envConfig';
 
 export interface NotificationPreferences {
   gameReminders: boolean;

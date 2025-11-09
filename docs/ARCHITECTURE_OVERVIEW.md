@@ -67,15 +67,25 @@ npm run test         # Run tests
 
 ### Project Structure
 ```
-├── components/          # React components
-│   ├── ui/             # shadcn/ui components
-│   └── figma/          # Protected Figma components
-├── hooks/              # Custom React hooks
-├── store/              # Zustand state management
-├── styles/             # Global CSS and design tokens
-├── public/             # Static assets and service worker
-└── docs/               # Documentation
+├── src/
+│   ├── domains/
+│   │   ├── games/        # Game creation, discovery, realtime chat
+│   │   ├── locations/    # Location search, maps, geospatial utilities
+│   │   ├── users/        # Profiles, onboarding, achievements
+│   │   └── weather/      # Weather suitability, forecasts
+│   ├── shared/           # Cross-domain UI, hooks, utilities
+│   ├── core/             # Auth, routing, config, Supabase client, notifications
+│   ├── store/            # Global Zustand stores
+│   ├── styles/           # Global Tailwind overrides & fixes
+│   ├── App.tsx           # Root component
+│   └── main.tsx          # Application entry point
+├── docs/                 # Architecture, accessibility, design system guides
+├── supabase/             # Database schema, migrations, policies
+├── public/               # Static assets (PWA manifest, icons, service worker)
+└── package.json          # Workspace configuration
 ```
+
+> All intra-app imports use the `@/` path alias (configured via `tsconfig.json`) to simplify cross-domain references.
 
 ## 🎨 Design System
 

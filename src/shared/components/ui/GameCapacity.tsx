@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users } from 'lucide-react';
-import { Badge } from './badge';
+import { Badge } from '@/shared/components/ui/badge';
 
 interface GameCapacityProps {
   totalPlayers: number; // Pre-computed from games_with_counts.total_players (DO NOT recalculate)

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '@/core/database/supabase';
 
 interface NetworkConfig {
   maxRetries: number;

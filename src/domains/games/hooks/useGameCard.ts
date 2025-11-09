@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useGameJoinToggle } from './useGameJoinToggle';
+import { useGameJoinToggle } from '@/domains/games/hooks/useGameJoinToggle';
 
 interface Game {
   id: string;

@@ -1,5 +1,5 @@
 import { supabase } from '@/core/database/supabase';
-import { EloService } from './eloService';
+import { EloService } from '@/domains/users/services/eloService';
 
 // Types for moderation system
 export interface PlayerBehavior {

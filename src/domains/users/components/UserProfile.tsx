@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui
 import { Settings, Trophy, Calendar, MapPin } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
-import { AchievementGrid } from './AchievementBadge';
+import { AchievementGrid } from '@/domains/users/components/AchievementBadge';
 import { formatTimeString } from '@/shared/utils/dateUtils';
 
 function UserProfile() {

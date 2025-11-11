@@ -384,7 +384,7 @@ function GameDetails() {
       // Verify the update worked by fetching the updated row
       const { data: updatedGame } = await supabase
         .from('games')
-        .select('id, duration, duration_minutes')
+        .select('id, duration_minutes, duration')
         .eq('id', gameId)
         .single();
       

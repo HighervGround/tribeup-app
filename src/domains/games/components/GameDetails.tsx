@@ -46,6 +46,7 @@ import { supabase } from '@/core/database/supabase';
 import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '@/shared/utils/dateUtils';
 
 function GameDetails() {
+  console.log('🔥 GAMEDETAILS COMPONENT LOADED - CACHE REFRESH WORKED!');
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { user } = useAppStore();
@@ -326,33 +327,37 @@ function GameDetails() {
   };
 
   const handleEditGame = () => {
-    console.log('[Edit] Initializing form with game data:', {
-      gameDuration: game.duration,
-      gameDurationType: typeof game.duration,
-      gameData: game
-    });
+    console.log('🚨 [EDIT] Edit button clicked!');
+    console.log('🚨 [EDIT] Game object:', game);
+    console.log('🚨 [EDIT] Game duration:', game.duration, typeof game.duration);
     
-    setEditFormData({
+    const formData = {
       title: game.title || '',
       description: game.description || '',
       location: game.location || '',
       date: game.date || '',
       time: game.time || '',
-      duration: Number(game.duration) || 60, // Ensure it's a number
+      duration: Number(game.duration) || 60,
       maxPlayers: game.maxPlayers || 0,
       cost: game.cost || ''
-    });
+    };
+    
+    console.log('🚨 [EDIT] Setting form data:', formData);
+    setEditFormData(formData);
     setShowEditDialog(true);
+    console.log('🚨 [EDIT] Dialog should be open now');
   };
 
   const handleSaveEdit = async () => {
     if (!gameId) return;
     
-    // Debug logging - check form state before submit
-    console.log('[Edit] Form data just before submit:', {
-      duration: editFormData.duration,
-      durationType: typeof editFormData.duration,
-      fullFormData: editFormData
+    console.log('🚨 [SAVE] Save button clicked!');
+    console.log('🚨 [SAVE] Current form data:', editFormData);
+    console.log('🚨 [SAVE] Duration specifically:', {
+      value: editFormData.duration,
+      type: typeof editFormData.duration,
+      isNumber: typeof editFormData.duration === 'number',
+      isValid: !isNaN(Number(editFormData.duration))
     });
     
     // Harden parsing and validation - no silent fallbacks
@@ -398,6 +403,13 @@ function GameDetails() {
       window.location.reload(); // TODO: Replace with proper React Query invalidation
     } catch (error: any) {
       console.error('[Edit] Update failed:', error);
+      console.error('[Edit] Full error details:', {
+        error,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code
+      });
       toast.error('Failed to update game', {
         description: error.message || 'Please try again later'
       });

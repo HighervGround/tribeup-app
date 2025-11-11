@@ -160,8 +160,9 @@ function GameDetails() {
       game: game?.id,
       creatorId: game?.creatorId,
       createdBy: game?.createdBy,
-      isGameCreator,
-      shouldShowDropdown: isGameCreator
+      isGameCreator: isGameCreator,
+      showDropdown: isGameCreator,
+      canEdit: user?.id === game?.creatorId
     });
   }
 
@@ -485,7 +486,7 @@ function GameDetails() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="z-[99999] relative">
                 <DropdownMenuItem onClick={(e) => {
-                  console.log('Edit game clicked');
+                  console.log('🚨 DROPDOWN EDIT CLICKED!');
                   e.stopPropagation();
                   handleEditGame();
                 }}>

@@ -700,7 +700,7 @@ export class SupabaseService {
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-          max_players, creator_id, created_at, duration,
+          max_players, creator_id, created_at, duration_minutes,
           total_players, available_spots, current_players, public_rsvp_count,
           creator_profile(id, full_name, username, avatar_url)
         `)
@@ -782,7 +782,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, total_players, available_spots, current_players, public_rsvp_count')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration_minutes, total_players, available_spots, current_players, public_rsvp_count')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -837,7 +837,7 @@ export class SupabaseService {
       .from('games_with_counts')
       .select(`
         id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-        max_players, creator_id, created_at, duration,
+        max_players, creator_id, created_at, duration_minutes,
         total_players, available_spots, current_players, public_rsvp_count,
         creator_profile(id, full_name, username, avatar_url)
       `)
@@ -1039,6 +1039,7 @@ export class SupabaseService {
     date: string;
     time: string;
     duration: number;
+    duration_minutes: number;
     location: string;
     latitude: number | null;
     longitude: number | null;
@@ -1084,16 +1085,22 @@ export class SupabaseService {
 
     // Prepare update object
     const updateData: any = {};
+    
+    // Write minutes only - let trigger handle duration interval
+    if (typeof updates.duration === 'number') {
+      updateData.duration_minutes = updates.duration; // e.g., 90
+      console.log('🚨 [SERVICE] Setting duration_minutes:', updates.duration);
+    } else if (typeof updates.duration_minutes === 'number') {
+      updateData.duration_minutes = updates.duration_minutes;
+      console.log('🚨 [SERVICE] Setting duration_minutes from duration_minutes:', updates.duration_minutes);
+    }
+    
+    // All other fields
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.sport !== undefined) updateData.sport = updates.sport;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.date !== undefined) updateData.date = updates.date;
     if (updates.time !== undefined) updateData.time = updates.time;
-    if (updates.duration !== undefined) {
-      // Try duration_minutes first (new column), fallback to duration (old column)
-      updateData.duration_minutes = updates.duration;
-      updateData.duration = updates.duration; // Fallback for backward compatibility
-    }
     if (updates.location !== undefined) updateData.location = updates.location;
     if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
     if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
@@ -1101,12 +1108,16 @@ export class SupabaseService {
     if (cost !== undefined) updateData.cost = cost;
     if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
 
+    console.log('🚨 [SERVICE] Final updateData being sent to database:', updateData);
+    
     const { data, error } = await supabase
       .from('games')
       .update(updateData)
       .eq('id', gameId)
-      .select()
+      .select('id, duration_minutes')
       .single();
+      
+    console.log('🚨 [SERVICE] Database response:', { data, error });
 
     if (error) throw error;
 
@@ -1277,8 +1288,6 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             *,
-            planned_route,
-            duration,
             creator_profile(id, full_name, username, avatar_url)
           `)
           .eq('id', gameId)
@@ -1322,8 +1331,6 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             *,
-            planned_route,
-            duration,
             creator_profile(id, full_name, username, avatar_url)
           `)
           .eq('id', gameId)

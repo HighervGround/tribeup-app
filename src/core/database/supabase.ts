@@ -80,6 +80,34 @@ if (typeof window !== 'undefined') {
 // Re-export the generated database types
 export type { Database } from './database.types';
 
+// Helper function to parse PostgreSQL interval to minutes
+const parseInterval = (interval: string): number => {
+  if (!interval) return 60;
+  
+  // Handle common PostgreSQL interval formats like "01:30:00" or "90 minutes"
+  if (interval.includes(':')) {
+    const parts = interval.split(':');
+    const hours = parseInt(parts[0]) || 0;
+    const minutes = parseInt(parts[1]) || 0;
+    return hours * 60 + minutes;
+  }
+  
+  // Handle "X minutes" format
+  const minutesMatch = interval.match(/(\d+)\s*minutes?/i);
+  if (minutesMatch) {
+    return parseInt(minutesMatch[1]);
+  }
+  
+  // Handle "X hours" format  
+  const hoursMatch = interval.match(/(\d+)\s*hours?/i);
+  if (hoursMatch) {
+    return parseInt(hoursMatch[1]) * 60;
+  }
+  
+  // Fallback
+  return 60;
+};
+
 // Helper functions for data transformation
 export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any => {
   // Defensive fallback for creator display
@@ -121,7 +149,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     sport: dbGame.sport,
     date: dbGame.date,
     time: dbGame.time,
-    duration: (dbGame as any).duration_minutes || 60,
+    duration: dbGame.duration_minutes || (dbGame.duration ? parseInterval(dbGame.duration) : 60),
     location: dbGame.location,
     latitude: dbGame.latitude,
     longitude: dbGame.longitude,
@@ -204,5 +232,5 @@ const getSportColor = (sport: string): string => {
     cycling: '#6366F1',
     yoga: '#EC4899',
   };
-  return sportColors[sport.toLowerCase()] || '#6B7280';
+  return sportColors[sport?.toLowerCase()] || '#6B7280';
 };

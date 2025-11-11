@@ -1089,7 +1089,11 @@ export class SupabaseService {
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.date !== undefined) updateData.date = updates.date;
     if (updates.time !== undefined) updateData.time = updates.time;
-    if (updates.duration !== undefined) updateData.duration_minutes = updates.duration;
+    if (updates.duration !== undefined) {
+      // Try duration_minutes first (new column), fallback to duration (old column)
+      updateData.duration_minutes = updates.duration;
+      updateData.duration = updates.duration; // Fallback for backward compatibility
+    }
     if (updates.location !== undefined) updateData.location = updates.location;
     if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
     if (updates.longitude !== undefined) updateData.longitude = updates.longitude;

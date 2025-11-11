@@ -625,6 +625,8 @@ function GameDetails() {
             latitude={game.latitude}
             longitude={game.longitude}
             location={game.location}
+            duration={game.duration || 60}
+            sport={game.sport}
             gameDateTime={(() => {
               // Create proper datetime from game date and time
               const dateStr = game.date; // e.g., "2024-10-12"
@@ -1186,7 +1188,13 @@ function GameDetails() {
                 min="15"
                 max="480"
                 value={editFormData.duration}
-                onChange={(e) => setEditFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 60 }))}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  setEditFormData(prev => ({ 
+                    ...prev, 
+                    duration: isNaN(value) ? prev.duration : value 
+                  }));
+                }}
                 placeholder="60"
               />
             </div>

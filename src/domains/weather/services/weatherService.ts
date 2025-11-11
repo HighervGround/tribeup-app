@@ -279,6 +279,129 @@ export class WeatherService {
       : 'Check current conditions before heading out.';
   }
 
+  // Get enhanced weather recommendation with temperature trends and time-aware suggestions
+  static async getEnhancedWeatherRecommendation(
+    lat: number, 
+    lng: number, 
+    gameDateTime: Date, 
+    duration: number = 60,
+    sport: string = 'general'
+  ): Promise<string> {
+    if (!this.API_KEY) {
+      return 'Weather data unavailable - dress appropriately for current conditions.';
+    }
+
+    try {
+      const hoursDiff = (gameDateTime.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+      const days = Math.max(1, Math.ceil(hoursDiff / 24) + 1);
+      
+      const response = await fetch(
+        `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${lat},${lng}&days=${days}&aqi=no&alerts=no`
+      );
+
+      if (!response.ok) {
+        return 'Weather data unavailable - dress appropriately for current conditions.';
+      }
+
+      const data = await response.json();
+      const gameEndTime = new Date(gameDateTime.getTime() + (duration * 60 * 1000));
+      
+      // Get weather at start and end of game
+      const startWeather = this.findBestForecastMatch(data, gameDateTime);
+      const endWeather = this.findBestForecastMatch(data, gameEndTime);
+      
+      if (!startWeather || !endWeather) {
+        return this.getWeatherRecommendation(startWeather || endWeather || this.getMockWeatherData());
+      }
+
+      return this.generateEnhancedRecommendations(startWeather, endWeather, gameDateTime, duration, sport);
+    } catch (error) {
+      console.error('Error generating enhanced weather recommendations:', error);
+      return 'Weather data unavailable - dress appropriately for current conditions.';
+    }
+  }
+
+  // Generate detailed recommendations based on weather trends
+  private static generateEnhancedRecommendations(
+    startWeather: WeatherData,
+    endWeather: WeatherData,
+    gameDateTime: Date,
+    duration: number,
+    sport: string
+  ): string {
+    const recommendations = [];
+    const tempDrop = startWeather.temperature - endWeather.temperature;
+    const avgTemp = (startWeather.temperature + endWeather.temperature) / 2;
+    const isNightTime = gameDateTime.getHours() >= 18 || gameDateTime.getHours() <= 6;
+    const isEvening = gameDateTime.getHours() >= 17 && gameDateTime.getHours() <= 21;
+
+    // Temperature trend analysis
+    if (tempDrop > 3) {
+      recommendations.push(`🌡️ Temperature will drop ${tempDrop.toFixed(0)}°F during your ${duration}-minute game (${startWeather.temperature}°F → ${endWeather.temperature}°F)`);
+    } else if (tempDrop > 1) {
+      recommendations.push(`🌡️ Expect a ${tempDrop.toFixed(0)}°F temperature drop during the game`);
+    }
+
+    // Night-time specific advice
+    if (isNightTime) {
+      if (avgTemp < 55) {
+        recommendations.push('🌙 Night games get chilly - bring layers you can add as you cool down');
+      }
+      if (isEvening && avgTemp < 60) {
+        recommendations.push('🌅 Evening temperatures drop quickly after sunset');
+      }
+    }
+
+    // Temperature-specific clothing advice
+    if (avgTemp >= 45 && avgTemp <= 55) {
+      recommendations.push('🧥 Ideal layers: Long sleeves + light jacket/hoodie you can remove when warmed up');
+    } else if (avgTemp >= 35 && avgTemp < 45) {
+      recommendations.push('🧥 Dress warmly: Base layer + insulating layer + wind-resistant outer layer');
+    } else if (avgTemp >= 55 && avgTemp <= 65) {
+      recommendations.push('👕 Light layers recommended: T-shirt + light long sleeve or hoodie');
+    }
+
+    // Sport-specific advice
+    if (sport.toLowerCase().includes('pickleball') || sport.toLowerCase().includes('tennis')) {
+      if (avgTemp < 55) {
+        recommendations.push('🏓 Pickleball tip: Ball bounces less in cold air - expect slower play');
+      }
+      if (startWeather.windSpeed > 8) {
+        recommendations.push('🏓 Windy conditions will affect ball trajectory - adjust your game');
+      }
+    }
+
+    // Wind and comfort factors
+    if (startWeather.windSpeed > 10 || endWeather.windSpeed > 10) {
+      const maxWind = Math.max(startWeather.windSpeed, endWeather.windSpeed);
+      recommendations.push(`💨 Wind up to ${maxWind.toFixed(0)} mph - consider wind-resistant layers`);
+    }
+
+    // Hydration advice
+    if (avgTemp < 50 && isNightTime) {
+      recommendations.push('💧 Stay hydrated - you may not feel thirsty in cool weather but still need fluids');
+    }
+
+    // Gear recommendations
+    if (isNightTime) {
+      recommendations.push('🔦 Bring extra lighting if courts aren\'t well-lit');
+    }
+
+    // Warm-up advice
+    if (avgTemp < 60) {
+      recommendations.push('🏃‍♀️ Extra warm-up recommended - muscles take longer to loosen up in cool weather');
+    }
+
+    // Overall assessment
+    if (recommendations.length === 0) {
+      return startWeather.isOutdoorFriendly ? 
+        'Perfect conditions for outdoor sports! 🌟' : 
+        'Conditions are playable with proper preparation.';
+    }
+
+    return recommendations.join('\n• ');
+  }
+
   // Mock weather data fallback
   private static getMockWeatherData(): WeatherData {
     return {

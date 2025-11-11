@@ -1,23 +1,14 @@
-import React, { forwardRef } from 'react';
-// import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
+import { forwardRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
-import { ClickableAvatar } from '@/shared/components/ui/clickable-avatar';
 import { CurrentUserAvatar } from '@/shared/components/common/current-user-avatar';
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { useAppStore } from '@/store/appStore';
-import { Home, Search, Plus, Bell, User } from 'lucide-react';
+import { getMobileNavItems } from '@/shared/config/navigation';
 
-const navItems = [
-  { path: '/', icon: Home, label: 'Home' },
-  { path: '/search', icon: Search, label: 'Search' },
-  { path: '/create', icon: Plus, label: 'Create' },
-  { path: '/notifications', icon: Bell, label: 'Notifications', showBadge: true },
-  { path: '/profile', icon: User, label: 'Profile' },
-];
 
-export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
+export const BottomNavigation = forwardRef<HTMLDivElement>((_props, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -28,6 +19,8 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((props, ref) => {
   // Provide fallbacks if hooks return undefined/null
   const unreadCount = notifications?.unreadCount || 0;
   const safeUser = user || null;
+  
+  const navItems = getMobileNavItems();
 
   return (
     <div ref={ref} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">

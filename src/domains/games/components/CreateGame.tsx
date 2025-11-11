@@ -131,7 +131,7 @@ function CreateGame() {
     loadSystemConfig();
   }, []);
 
-  // Update sport-specific defaults when sport changes
+  // Update sport-specific defaults when sport changes (only if duration hasn't been manually set)
   useEffect(() => {
     const updateSportDefaults = async () => {
       if (formData.sport) {
@@ -141,10 +141,19 @@ function CreateGame() {
             60
           );
           
-          setFormData(prev => ({
-            ...prev,
-            duration: defaultDuration ? defaultDuration.toString() : '60'
-          }));
+          // Only update duration if it's still the default value (60) or empty
+          // This prevents overriding user's manual input
+          setFormData(prev => {
+            const currentDuration = parseInt(prev.duration) || 60;
+            const shouldUpdateDuration = currentDuration === 60 || !prev.duration;
+            
+            return {
+              ...prev,
+              duration: shouldUpdateDuration 
+                ? (defaultDuration ? defaultDuration.toString() : '60')
+                : prev.duration // Keep user's manual input
+            };
+          });
         } catch (error) {
           console.error('Error loading sport defaults:', error);
         }
@@ -395,6 +404,15 @@ function CreateGame() {
   };
 
   const handleInputChange = (name: string, value: string) => {
+    // Log duration changes specifically
+    if (name === 'duration') {
+      console.log('[CreateGame] Duration changed:', {
+        oldValue: formData.duration,
+        newValue: value,
+        valueType: typeof value
+      });
+    }
+    
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
       
@@ -526,16 +544,27 @@ function CreateGame() {
         throw new Error('You must be logged in to create an activity');
       }
 
+      // Parse duration more carefully to avoid losing user input
+      const parsedDuration = parseInt(String(formData.duration).trim(), 10);
+      const finalDuration = Number.isNaN(parsedDuration) ? 60 : Math.max(1, parsedDuration);
+      
+      console.log('[CreateGame] Duration parsing:', {
+        formDataDuration: formData.duration,
+        parsedDuration,
+        finalDuration,
+        formDataType: typeof formData.duration
+      });
+
       const gameData = {
         title: formData.title,
         sport: formData.sport,
         date: formData.date,
         time: formData.time,
-        duration: parseInt(formData.duration) || 60,
+        duration: finalDuration,
         location: formData.location,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        maxPlayers: parseInt(formData.maxPlayers) || 10,
+        maxPlayers: parseInt(String(formData.maxPlayers).trim(), 10) || 10,
         cost: formData.cost || 'Free',
         description: '', // Default empty description
         imageUrl: formData.imageUrl,

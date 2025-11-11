@@ -1,51 +1,14 @@
 import React, { useState } from 'react';
-// import { motion } from 'framer-motion'; // TEMPORARILY DISABLED
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { useAppStore } from '@/store/appStore';
-import { 
-  Home, 
-  Search, 
-  Plus, 
-  Bell, 
-  User, 
-  Menu, 
-  Settings,
-  MapPin,
-  Users,
-  Calendar
-} from 'lucide-react';
+import { Plus, Menu } from 'lucide-react';
+import { getDesktopNavItems } from '@/shared/config/navigation';
+import { brandColors, layoutConstants } from '@/shared/config/theme';
 
-const sidebarItems = [
-  { 
-    path: '/', 
-    icon: Home, 
-    label: 'Home', 
-    description: 'Discover activities' 
-  },
-  { 
-    path: '/search', 
-    icon: Search, 
-    label: 'Search', 
-    description: 'Find activities' 
-  },
-  { 
-    path: '/notifications', 
-    icon: Bell, 
-    label: 'Notifications', 
-    description: 'Stay updated',
-    showBadge: true 
-  },
-  { 
-    path: '/profile', 
-    icon: User, 
-    label: 'Profile', 
-    description: 'Your account' 
-  },
-];
 
 export function DesktopLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -53,13 +16,15 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
   const { unreadCount } = useNotifications();
   const { user } = useAppStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const sidebarItems = getDesktopNavItems();
 
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <aside 
-        className={`bg-card border-r border-border transition-all duration-300 ${
-          sidebarCollapsed ? 'w-16' : 'w-64'
+        className={`bg-card border-r border-border ${layoutConstants.sidebar.transition} ${
+          sidebarCollapsed ? layoutConstants.sidebar.collapsed : layoutConstants.sidebar.expanded
         }`}
       >
         {/* Sidebar Header */}
@@ -100,7 +65,10 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                 ? 'w-10 h-10 p-0 justify-center mx-auto' 
                 : 'w-full justify-start'
             }`}
-            style={{ backgroundColor: '#FA4616', borderColor: '#FA4616' }}
+            style={{ 
+              backgroundColor: brandColors.primary, 
+              borderColor: brandColors.primary 
+            }}
             aria-label="Create new game"
           >
             <Plus className="w-5 h-5" />

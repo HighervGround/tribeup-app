@@ -1009,7 +1009,7 @@ export class SupabaseService {
         description: gameData.description,
         image_url: gameData.imageUrl,
         creator_id: currentUser.id,
-        duration: gameData.duration || 60,
+        duration: gameData.duration,
         planned_route: (gameData as any).plannedRoute || null,
       }])
       .select()

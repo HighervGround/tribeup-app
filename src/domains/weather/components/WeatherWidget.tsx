@@ -7,8 +7,10 @@ import { WeatherService, WeatherData } from '@/domains/weather/services/weatherS
 interface WeatherWidgetProps {
   latitude?: number;
   longitude?: number;
-  location: string;
+  location?: string;
   gameDateTime: Date;
+  duration?: number; // Game duration in minutes
+  sport?: string; // Sport type for specific recommendations
   className?: string;
 }
 
@@ -16,10 +18,13 @@ export function WeatherWidget({
   latitude, 
   longitude, 
   location, 
-  gameDateTime, 
-  className = '' 
+  gameDateTime,
+  duration = 60,
+  sport = 'general',
+  className 
 }: WeatherWidgetProps) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [enhancedRecommendation, setEnhancedRecommendation] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +93,12 @@ export function WeatherWidget({
           if (weatherData) {
             console.log(`🎯 GAME weather: ${weatherData.temperature}°F, ${weatherData.condition} - ${weatherData.description}`);
             console.log(`📍 Compare with: https://openweathermap.org/find?q=${finalLat},${finalLng}`);
+            
+            // Get enhanced recommendations
+            const enhanced = await WeatherService.getEnhancedWeatherRecommendation(
+              finalLat, finalLng, gameDateTime, duration, sport
+            );
+            setEnhancedRecommendation(enhanced);
           }
         }
         
@@ -97,6 +108,12 @@ export function WeatherWidget({
           if (zipcode) {
             console.log(`🌤️ Fallback: Using zipcode ${zipcode}`);
             weatherData = await WeatherService.getWeatherByZipcode(zipcode, gameDateTime);
+            
+            if (weatherData) {
+              // Try to get enhanced recommendations with zipcode fallback
+              const enhanced = WeatherService.getWeatherRecommendation(weatherData);
+              setEnhancedRecommendation(enhanced);
+            }
           }
         }
         
@@ -223,11 +240,17 @@ export function WeatherWidget({
           </Badge>
         </div>
 
-
-        {/* Weather Recommendation */}
-        <div className="text-xs text-muted-foreground border-t pt-2">
-          {WeatherService.getWeatherRecommendation(weather)}
-        </div>
+        {/* Enhanced Weather Recommendations */}
+        {enhancedRecommendation && (
+          <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+            <div className="font-medium text-foreground mb-1">Recommendations:</div>
+            <div className="whitespace-pre-line leading-relaxed">
+              {enhancedRecommendation.split('\n').map((line, index) => (
+                <div key={index} className="mb-1">{line}</div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

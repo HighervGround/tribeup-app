@@ -1009,7 +1009,7 @@ export class SupabaseService {
         description: gameData.description,
         image_url: gameData.imageUrl,
         creator_id: currentUser.id,
-        duration: gameData.duration,
+        duration_minutes: gameData.duration,
         planned_route: (gameData as any).plannedRoute || null,
       }])
       .select()
@@ -1089,7 +1089,7 @@ export class SupabaseService {
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.date !== undefined) updateData.date = updates.date;
     if (updates.time !== undefined) updateData.time = updates.time;
-    if (updates.duration !== undefined) updateData.duration = updates.duration;
+    if (updates.duration !== undefined) updateData.duration_minutes = updates.duration;
     if (updates.location !== undefined) updateData.location = updates.location;
     if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
     if (updates.longitude !== undefined) updateData.longitude = updates.longitude;

@@ -122,12 +122,15 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     date: dbGame.date,
     time: dbGame.time,
     duration: (() => {
+      // Use duration_minutes column for clean integer handling
+      const durationMinutes = (dbGame as any).duration_minutes;
+      if (durationMinutes != null && typeof durationMinutes === 'number' && durationMinutes > 0) {
+        return durationMinutes;
+      }
+      // Fallback to parsing duration interval if duration_minutes not available
       const dur = (dbGame as any).duration;
-      // Handle null, undefined, or invalid values
       if (dur == null) return 60;
-      // Convert string to number if needed
       const num = typeof dur === 'number' ? dur : parseInt(dur, 10);
-      // Ensure it's a valid positive number
       return (isNaN(num) || num <= 0) ? 60 : num;
     })(),
     location: dbGame.location,

@@ -85,7 +85,16 @@ function GameDetails() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [editActionLoading, setEditActionLoading] = useState(false);
-  const [editFormData, setEditFormData] = useState({
+  const [editFormData, setEditFormData] = useState<{
+    title: string;
+    description: string;
+    location: string;
+    date: string;
+    time: string;
+    duration: number | string;
+    maxPlayers: number;
+    cost: string;
+  }>({
     title: '',
     description: '',
     location: '',
@@ -317,15 +326,21 @@ function GameDetails() {
   };
 
   const handleEditGame = () => {
+    console.log('[Edit] Initializing form with game data:', {
+      gameDuration: game.duration,
+      gameDurationType: typeof game.duration,
+      gameData: game
+    });
+    
     setEditFormData({
-      title: game.title,
-      description: game.description,
-      location: game.location,
-      date: game.date,
-      time: game.time,
-      duration: game.duration || 60,
-      maxPlayers: game.maxPlayers,
-      cost: game.cost
+      title: game.title || '',
+      description: game.description || '',
+      location: game.location || '',
+      date: game.date || '',
+      time: game.time || '',
+      duration: Number(game.duration) || 60, // Ensure it's a number
+      maxPlayers: game.maxPlayers || 0,
+      cost: game.cost || ''
     });
     setShowEditDialog(true);
   };
@@ -333,14 +348,56 @@ function GameDetails() {
   const handleSaveEdit = async () => {
     if (!gameId) return;
     
+    // Debug logging - check form state before submit
+    console.log('[Edit] Form data just before submit:', {
+      duration: editFormData.duration,
+      durationType: typeof editFormData.duration,
+      fullFormData: editFormData
+    });
+    
+    // Harden parsing and validation - no silent fallbacks
+    const rawDuration = String(editFormData.duration ?? '').trim();
+    const parsedDuration = Number.parseInt(rawDuration, 10);
+    
+    if (!rawDuration || Number.isNaN(parsedDuration) || parsedDuration <= 0) {
+      toast.error('Please enter a valid duration in minutes (minimum 1 minute)');
+      return;
+    }
+    
+    console.log('[Edit] Parsed duration:', {
+      raw: rawDuration,
+      parsed: parsedDuration,
+      isValid: !Number.isNaN(parsedDuration) && parsedDuration > 0
+    });
+    
     setEditActionLoading(true);
     try {
-      await SupabaseService.updateGame(gameId, editFormData);
+      const updatePayload = {
+        ...editFormData,
+        duration: parsedDuration // Ensure we use the parsed number
+      };
+      
+      console.log('[Edit] Update payload:', updatePayload);
+      
+      await SupabaseService.updateGame(gameId, updatePayload);
+      
+      // Verify the update worked by fetching the updated row
+      const { data: updatedGame } = await supabase
+        .from('games')
+        .select('id, duration, duration_minutes')
+        .eq('id', gameId)
+        .single();
+      
+      console.log('[Edit] Updated row from DB:', updatedGame);
+      
       toast.success('Game updated successfully');
       setShowEditDialog(false);
-      // Refresh the page to show updated data
-      window.location.reload();
+      
+      // Use React Query invalidation instead of hard refresh
+      // This will refetch the data and update the UI
+      window.location.reload(); // TODO: Replace with proper React Query invalidation
     } catch (error: any) {
+      console.error('[Edit] Update failed:', error);
       toast.error('Failed to update game', {
         description: error.message || 'Please try again later'
       });
@@ -1185,17 +1242,25 @@ function GameDetails() {
               <Input
                 id="edit-duration"
                 type="number"
-                min="15"
+                min="1"
                 max="480"
+                step="1"
                 value={editFormData.duration}
                 onChange={(e) => {
-                  const value = parseInt(e.target.value);
+                  const rawValue = e.target.value;
+                  console.log('[Edit] Duration input changed:', {
+                    rawValue,
+                    currentState: editFormData.duration
+                  });
+                  
+                  // Store as number for consistency with form state
+                  const numValue = parseInt(rawValue, 10);
                   setEditFormData(prev => ({ 
                     ...prev, 
-                    duration: isNaN(value) ? prev.duration : value 
+                    duration: isNaN(numValue) ? '' : numValue // Use empty string for invalid, not fallback
                   }));
                 }}
-                placeholder="60"
+                placeholder="Enter duration in minutes"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

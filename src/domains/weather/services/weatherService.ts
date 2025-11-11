@@ -321,85 +321,56 @@ export class WeatherService {
     }
   }
 
-  // Generate detailed recommendations based on weather trends
+  // Generate concise, actionable recommendations
   private static generateEnhancedRecommendations(
     startWeather: WeatherData,
     endWeather: WeatherData,
     gameDateTime: Date,
-    duration: number,
+    _duration: number,
     sport: string
   ): string {
     const recommendations = [];
     const tempDrop = startWeather.temperature - endWeather.temperature;
     const avgTemp = (startWeather.temperature + endWeather.temperature) / 2;
     const isNightTime = gameDateTime.getHours() >= 18 || gameDateTime.getHours() <= 6;
-    const isEvening = gameDateTime.getHours() >= 17 && gameDateTime.getHours() <= 21;
 
-    // Temperature trend analysis
-    if (tempDrop > 3) {
-      recommendations.push(`🌡️ Temperature will drop ${tempDrop.toFixed(0)}°F during your ${duration}-minute game (${startWeather.temperature}°F → ${endWeather.temperature}°F)`);
-    } else if (tempDrop > 1) {
-      recommendations.push(`🌡️ Expect a ${tempDrop.toFixed(0)}°F temperature drop during the game`);
+    // Only show temperature drop if significant (>2°F)
+    if (tempDrop > 2) {
+      recommendations.push(`🌡️ ${tempDrop.toFixed(0)}°F drop expected - bring layers`);
     }
 
-    // Night-time specific advice
-    if (isNightTime) {
-      if (avgTemp < 55) {
-        recommendations.push('🌙 Night games get chilly - bring layers you can add as you cool down');
-      }
-      if (isEvening && avgTemp < 60) {
-        recommendations.push('🌅 Evening temperatures drop quickly after sunset');
-      }
+    // Concise clothing advice based on temperature
+    if (avgTemp < 45) {
+      recommendations.push('🧥 Dress warmly - multiple layers recommended');
+    } else if (avgTemp >= 45 && avgTemp <= 60) {
+      recommendations.push('👕 Light layers - long sleeves + removable jacket');
     }
 
-    // Temperature-specific clothing advice
-    if (avgTemp >= 45 && avgTemp <= 55) {
-      recommendations.push('🧥 Ideal layers: Long sleeves + light jacket/hoodie you can remove when warmed up');
-    } else if (avgTemp >= 35 && avgTemp < 45) {
-      recommendations.push('🧥 Dress warmly: Base layer + insulating layer + wind-resistant outer layer');
-    } else if (avgTemp >= 55 && avgTemp <= 65) {
-      recommendations.push('👕 Light layers recommended: T-shirt + light long sleeve or hoodie');
-    }
-
-    // Sport-specific advice
-    if (sport.toLowerCase().includes('pickleball') || sport.toLowerCase().includes('tennis')) {
-      if (avgTemp < 55) {
-        recommendations.push('🏓 Pickleball tip: Ball bounces less in cold air - expect slower play');
-      }
-      if (startWeather.windSpeed > 8) {
-        recommendations.push('🏓 Windy conditions will affect ball trajectory - adjust your game');
-      }
-    }
-
-    // Wind and comfort factors
-    if (startWeather.windSpeed > 10 || endWeather.windSpeed > 10) {
+    // Wind warning (only if significant)
+    if (startWeather.windSpeed > 15 || endWeather.windSpeed > 15) {
       const maxWind = Math.max(startWeather.windSpeed, endWeather.windSpeed);
-      recommendations.push(`💨 Wind up to ${maxWind.toFixed(0)} mph - consider wind-resistant layers`);
+      recommendations.push(`💨 Windy (${maxWind.toFixed(0)} mph) - secure loose items`);
     }
 
-    // Hydration advice
-    if (avgTemp < 50 && isNightTime) {
-      recommendations.push('💧 Stay hydrated - you may not feel thirsty in cool weather but still need fluids');
+    // Sport-specific tip (only one, most important)
+    if ((sport.toLowerCase().includes('pickleball') || sport.toLowerCase().includes('tennis')) && avgTemp < 55) {
+      recommendations.push('🏓 Ball bounces less in cold - adjust play');
     }
 
-    // Gear recommendations
-    if (isNightTime) {
-      recommendations.push('🔦 Bring extra lighting if courts aren\'t well-lit');
+    // Night game essentials
+    if (isNightTime && avgTemp < 55) {
+      recommendations.push('🌙 Night + cool = extra warm-up needed');
     }
 
-    // Warm-up advice
-    if (avgTemp < 60) {
-      recommendations.push('🏃‍♀️ Extra warm-up recommended - muscles take longer to loosen up in cool weather');
-    }
-
-    // Overall assessment
+    // Default if no specific recommendations
     if (recommendations.length === 0) {
       return startWeather.isOutdoorFriendly ? 
-        'Perfect conditions for outdoor sports! 🌟' : 
-        'Conditions are playable with proper preparation.';
+        'Great conditions for outdoor play! 🌟' : 
+        'Playable conditions - dress appropriately';
     }
 
-    return recommendations.join('\n• ');
+    // Limit to max 3 recommendations
+    return recommendations.slice(0, 3).join(' • ');
   }
 
   // Mock weather data fallback

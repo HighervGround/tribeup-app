@@ -240,14 +240,11 @@ export function WeatherWidget({
           </Badge>
         </div>
 
-        {/* Enhanced Weather Recommendations */}
+        {/* Weather Tips */}
         {enhancedRecommendation && (
-          <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
-            <div className="font-medium text-foreground mb-1">Recommendations:</div>
-            <div className="whitespace-pre-line leading-relaxed">
-              {enhancedRecommendation.split('\n').map((line, index) => (
-                <div key={index} className="mb-1">{line}</div>
-              ))}
+          <div className="text-xs text-muted-foreground border-t pt-2">
+            <div className="leading-relaxed">
+              {enhancedRecommendation}
             </div>
           </div>
         )}

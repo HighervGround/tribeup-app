@@ -121,18 +121,7 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     sport: dbGame.sport,
     date: dbGame.date,
     time: dbGame.time,
-    duration: (() => {
-      // Use duration_minutes column for clean integer handling
-      const durationMinutes = (dbGame as any).duration_minutes;
-      if (durationMinutes != null && typeof durationMinutes === 'number' && durationMinutes > 0) {
-        return durationMinutes;
-      }
-      // Fallback to parsing duration interval if duration_minutes not available
-      const dur = (dbGame as any).duration;
-      if (dur == null) return 60;
-      const num = typeof dur === 'number' ? dur : parseInt(dur, 10);
-      return (isNaN(num) || num <= 0) ? 60 : num;
-    })(),
+    duration: (dbGame as any).duration_minutes || 60,
     location: dbGame.location,
     latitude: dbGame.latitude,
     longitude: dbGame.longitude,

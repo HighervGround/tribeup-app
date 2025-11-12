@@ -65,8 +65,11 @@ export function UnifiedGameCard({
     getButtonVariant,
     getCategoryBadge,
     getPlayerCount,
-    getJoinStatus
+    getJoinStatus,
+    currentIsJoined,
+    displayGame
   } = useGameCard(game, { onSelect, onJoinLeave });
+  const isGameFull = (displayGame?.totalPlayers ?? 0) >= (displayGame?.maxPlayers ?? 0);
 
   // Full variant (original GameCard)
   if (variant === 'full') {
@@ -122,7 +125,7 @@ export function UnifiedGameCard({
             </div>
 
             {/* Join status indicator */}
-            {game.isJoined && (
+            {currentIsJoined && (
               <div className="absolute bottom-3 right-3 w-6 h-6 bg-success rounded-full flex items-center justify-center">
                 <div className="w-2 h-2 bg-white rounded-full" />
               </div>
@@ -163,12 +166,12 @@ export function UnifiedGameCard({
                   {showJoinButton && (
                     <Button 
                       size="sm" 
-                      variant={getButtonVariant(game)}
+                      variant={getButtonVariant(displayGame)}
                       onClick={handleJoinClick}
                       className="transition-all duration-200 flex-1"
-                      disabled={isLoading || (totalPlayers >= game.maxPlayers && !game.isJoined)}
+                      disabled={isLoading || (isGameFull && !currentIsJoined)}
                     >
-                      {totalPlayers >= game.maxPlayers && !game.isJoined ? 'Game Full' : getButtonText(game)}
+                      {isGameFull && !currentIsJoined ? 'Game Full' : getButtonText(displayGame)}
                     </Button>
                   )}
                   <SimpleCalendarButton 
@@ -248,12 +251,12 @@ export function UnifiedGameCard({
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               isLoading 
                 ? 'opacity-50 cursor-not-allowed' 
-                : game.isJoined 
+                : currentIsJoined 
                   ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
             }`}
           >
-            {getButtonText(game)}
+            {getButtonText(displayGame)}
           </button>
         </div>
       )}

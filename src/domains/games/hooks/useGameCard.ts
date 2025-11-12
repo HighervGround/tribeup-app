@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameJoinToggle } from './useGameJoinToggle';
 
@@ -30,6 +31,16 @@ interface UseGameCardOptions {
 export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   const navigate = useNavigate();
   const joinToggle = useGameJoinToggle();
+  const [optimisticIsJoined, setOptimisticIsJoined] = useState<boolean>(game.isJoined);
+  
+  useEffect(() => {
+    setOptimisticIsJoined(game.isJoined);
+  }, [game.id, game.isJoined]);
+  
+  const displayGame = useMemo(() => ({
+    ...game,
+    isJoined: optimisticIsJoined
+  }), [game, optimisticIsJoined]);
   
   const handleCardClick = () => {
     if (options.onSelect) {
@@ -47,7 +58,18 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
       options.onJoinLeave(game.id);
     } else {
       // Use the centralized toggle logic
-      joinToggle.toggleJoin(game, e);
+      const previousState = optimisticIsJoined;
+      setOptimisticIsJoined(!previousState);
+      
+      joinToggle.toggleJoin(
+        { ...game, isJoined: previousState },
+        undefined,
+        {
+          onError: () => {
+            setOptimisticIsJoined(previousState);
+          }
+        }
+      );
     }
   };
   
@@ -98,7 +120,7 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
    * Get join status indicator props
    */
   const getJoinStatus = () => {
-    if (!game.isJoined) return null;
+    if (!optimisticIsJoined) return null;
     
     return {
       text: 'Joined ✓',
@@ -119,6 +141,10 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
     isFull,
     getPlayerCount,
     getJoinStatus,
+    
+    // Optimistic state
+    currentIsJoined: optimisticIsJoined,
+    displayGame,
     
     // Game data
     game,

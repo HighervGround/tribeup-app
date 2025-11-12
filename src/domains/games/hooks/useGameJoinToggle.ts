@@ -9,6 +9,12 @@ interface Game {
   [key: string]: any;
 }
 
+interface ToggleCallbacks {
+  onSuccess?: () => void;
+  onError?: (error: unknown) => void;
+  onSettled?: () => void;
+}
+
 /**
  * Custom hook to handle game join/leave toggle functionality
  * Eliminates duplication of join/leave logic across components
@@ -36,7 +42,7 @@ export function useGameJoinToggle() {
    * @param game - Game object with id and isJoined status
    * @param e - Optional React MouseEvent to prevent propagation
    */
-  const toggleJoin = useCallback((game: Game, e?: React.MouseEvent) => {
+  const toggleJoin = useCallback((game: Game, e?: React.MouseEvent, callbacks: ToggleCallbacks = {}) => {
     // Prevent event bubbling if provided (useful for cards)
     e?.stopPropagation();
     
@@ -48,6 +54,8 @@ export function useGameJoinToggle() {
         toast.error('Cannot leave your own activity', {
           description: 'Use the menu options to delete the activity instead.'
         });
+        callbacks.onError?.(new Error('Cannot leave your own activity'));
+        callbacks.onSettled?.();
         return;
       }
       
@@ -56,9 +64,14 @@ export function useGameJoinToggle() {
         onSuccess: () => {
           console.log('✅ Leave activity success callback');
           toast.success('Left activity successfully');
+          callbacks.onSuccess?.();
         },
         onError: (error) => {
           console.error('❌ Leave game error callback:', error);
+          callbacks.onError?.(error);
+        },
+        onSettled: () => {
+          callbacks.onSettled?.();
         }
       });
     } else {
@@ -67,9 +80,14 @@ export function useGameJoinToggle() {
         onSuccess: () => {
           console.log('✅ Join activity success callback');
           toast.success('Joined activity successfully!');
+          callbacks.onSuccess?.();
         },
         onError: (error) => {
           console.error('❌ Join game error callback:', error);
+          callbacks.onError?.(error);
+        },
+        onSettled: () => {
+          callbacks.onSettled?.();
         }
       });
     }

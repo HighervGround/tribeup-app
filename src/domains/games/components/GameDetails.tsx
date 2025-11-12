@@ -28,6 +28,8 @@ import {
   Navigation,
   Loader2,
   Edit3,
+  Route,
+  Mountain,
   Trash2,
   MoreVertical,
   RefreshCw,
@@ -40,17 +42,30 @@ import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
+import { RouteDisplayMap } from '@/domains/locations/components/RouteDisplayMap';
 import { toast } from 'sonner';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { supabase } from '@/core/database/supabase';
 import { formatEventHeader, formatCalendarInfo, formatTimeString, formatCost } from '@/shared/utils/dateUtils';
 
 function GameDetails() {
+  console.log(' GAMEDETAILS COMPONENT LOADED - CACHE REFRESH WORKED!');
   console.log('🔥 GAMEDETAILS COMPONENT LOADED - CACHE REFRESH WORKED!');
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { user } = useAppStore();
   
+  // Helper function for difficulty color coding
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'Easy': return 'bg-green-100 text-green-800';
+      case 'Moderate': return 'bg-yellow-100 text-yellow-800';
+      case 'Hard': return 'bg-orange-100 text-orange-800';
+      case 'Expert': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   // Use React Query for game data and mutations
   const { data: game, isLoading, error: gameError } = useGame(gameId || '');
   const { data: participants = [], isLoading: loadingPlayers, error: participantsError } = useGameParticipants(gameId || '');
@@ -774,47 +789,88 @@ function GameDetails() {
                   </div>
                 )}
                 
-                {/* Show distance - handle multiple formats */}
-                {(game.plannedRoute.distance || game.plannedRoute.distance_meters || game.plannedRoute.distance_km) && (
-                  <div className="flex items-center gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">
-                        {(() => {
-                          if (game.plannedRoute.distance) return game.plannedRoute.distance;
-                          if (game.plannedRoute.distance_meters) return `${(game.plannedRoute.distance_meters / 1000).toFixed(2)} km`;
-                          if (game.plannedRoute.distance_km) return `${game.plannedRoute.distance_km} km`;
-                          return 'N/A';
-                        })()}
-                      </span>
-                      <span className="text-muted-foreground ml-1">distance</span>
+                {/* Enhanced Route Analysis Display */}
+                {game.plannedRoute.analysis ? (
+                  <div className="space-y-4">
+                    {/* Route Metrics */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Route className="w-5 h-5 mx-auto mb-2 text-blue-600" />
+                        <p className="text-sm text-muted-foreground">Distance</p>
+                        <p className="font-semibold">{game.plannedRoute.analysis.distance}</p>
+                      </div>
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Clock className="w-5 h-5 mx-auto mb-2 text-green-600" />
+                        <p className="text-sm text-muted-foreground">Est. Time</p>
+                        <p className="font-semibold">{game.plannedRoute.analysis.duration}</p>
+                      </div>
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Mountain className="w-5 h-5 mx-auto mb-2 text-orange-600" />
+                        <p className="text-sm text-muted-foreground">Elevation Gain</p>
+                        <p className="font-semibold">{game.plannedRoute.analysis.elevationGain}m</p>
+                      </div>
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Badge className={getDifficultyColor(game.plannedRoute.analysis.difficulty)}>
+                          {game.plannedRoute.analysis.difficulty}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground mt-1">Difficulty</p>
+                      </div>
                     </div>
-                    {(game.plannedRoute.elevation || game.plannedRoute.elevation_gain) && (
+
+                    {/* Additional Route Details */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Max Elevation:</span>
+                        <span className="ml-2 font-medium">{game.plannedRoute.analysis.maxElevation}m</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Avg Gradient:</span>
+                        <span className="ml-2 font-medium">{game.plannedRoute.analysis.avgGradient}%</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Elevation Loss:</span>
+                        <span className="ml-2 font-medium">{game.plannedRoute.analysis.elevationLoss}m</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Waypoints:</span>
+                        <span className="ml-2 font-medium">{game.plannedRoute.path?.length || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Fallback to basic distance display */
+                  (game.plannedRoute.distance || game.plannedRoute.distance_meters || game.plannedRoute.distance_km) && (
+                    <div className="flex items-center gap-4 text-sm">
                       <div>
                         <span className="font-medium">
                           {(() => {
-                            if (game.plannedRoute.elevation) return game.plannedRoute.elevation;
-                            if (game.plannedRoute.elevation_gain) return `${game.plannedRoute.elevation_gain}m`;
+                            if (game.plannedRoute.distance) return game.plannedRoute.distance;
+                            if (game.plannedRoute.distance_meters) return `${(game.plannedRoute.distance_meters / 1000).toFixed(2)} km`;
+                            if (game.plannedRoute.distance_km) return `${game.plannedRoute.distance_km} km`;
                             return 'N/A';
                           })()}
                         </span>
-                        <span className="text-muted-foreground ml-1">elevation</span>
+                        <span className="text-muted-foreground ml-1">distance</span>
                       </div>
-                    )}
-                    {(game.plannedRoute.duration || game.plannedRoute.estimated_duration) && (
-                      <div>
-                        <span className="font-medium">
-                          {game.plannedRoute.duration || game.plannedRoute.estimated_duration}
-                        </span>
-                        <span className="text-muted-foreground ml-1">estimated time</span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )
                 )}
                 
-                {/* Show route path/coordinates using Google Maps Static API */}
-                {(() => {
-                  // Try different path structures
-                  const path = game.plannedRoute.path || game.plannedRoute.coordinates || game.plannedRoute.waypoints;
+                {/* Interactive Route Map */}
+                {game.plannedRoute.path && game.plannedRoute.path.length > 0 ? (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">Route Map</h4>
+                    <RouteDisplayMap 
+                      waypoints={game.plannedRoute.path}
+                      sport={game.sport}
+                      analysis={game.plannedRoute.analysis || undefined}
+                    />
+                  </div>
+                ) : (
+                  /* Fallback: Show route path/coordinates using Google Maps Static API only if no interactive map */
+                  (() => {
+                    // Try different path structures
+                    const path = game.plannedRoute.coordinates || game.plannedRoute.waypoints;
                   
                   if (path && Array.isArray(path) && path.length > 0) {
                     // Normalize coordinate format helper
@@ -970,7 +1026,8 @@ function GameDetails() {
                   }
                   
                   return null;
-                })()}
+                })()
+                )}
                 
                 {/* Fallback message if no route data available */}
                 {!game.plannedRoute.path && !game.plannedRoute.polyline && !game.plannedRoute.coordinates && !game.plannedRoute.waypoints && (

@@ -700,7 +700,7 @@ export class SupabaseService {
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-          max_players, creator_id, created_at, duration_minutes,
+          max_players, creator_id, created_at, duration_minutes, planned_route,
           total_players, available_spots, current_players, public_rsvp_count,
           creator_profile(id, full_name, username, avatar_url)
         `)
@@ -710,7 +710,40 @@ export class SupabaseService {
         
       if (gamesError) {
         console.error('❌ Games query failed:', gamesError);
-        return [];
+        console.error('❌ Error details:', {
+          code: gamesError.code,
+          message: gamesError.message,
+          details: gamesError.details,
+          hint: gamesError.hint
+        });
+        
+        // Try fallback query without planned_route if the view doesn't have it yet
+        console.log('🔄 Trying fallback query without planned_route...');
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('games_with_counts')
+            .select(`
+              id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
+              max_players, creator_id, created_at, duration_minutes,
+              total_players, available_spots, current_players, public_rsvp_count,
+              creator_profile(id, full_name, username, avatar_url)
+            `)
+            .gte('date', new Date().toISOString().split('T')[0])
+            .order('date', { ascending: true })
+            .limit(50);
+            
+          if (fallbackError) {
+            console.error('❌ Fallback query also failed:', fallbackError);
+            return [];
+          }
+          
+          console.log('✅ Fallback query succeeded, using data without planned_route');
+          const transformedGames = fallbackData.map((game: any) => transformGameFromDB(game, false));
+          return transformedGames;
+        } catch (fallbackErr) {
+          console.error('❌ Fallback query exception:', fallbackErr);
+          return [];
+        }
       }
       
       const queryTime = performance.now() - queryStart;
@@ -955,6 +988,7 @@ export class SupabaseService {
     maxPlayers: number;
     description: string;
     imageUrl?: string;
+    plannedRoute?: any;
   }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1283,7 +1317,7 @@ export class SupabaseService {
         console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
         
         // Step 1: Get basic game data with creator_profile relationship from users table
-        // Use games_with_counts view for optimized current_players count
+        // Use games_with_counts view for optimized current_players count (now includes planned_route)
         const { data: gameData, error: gameError } = await supabase
           .from('games_with_counts')
           .select(`
@@ -1326,7 +1360,7 @@ export class SupabaseService {
         console.log('🔍 [getGameById] Fetching for anonymous user');
         
         // For anonymous users: query with creator_profile relationship from users table
-        // Use games_with_counts view for optimized current_players count
+        // Use games_with_counts view for optimized current_players count (now includes planned_route)
         const { data: gameData, error: gameError } = await supabase
           .from('games_with_counts')
           .select(`

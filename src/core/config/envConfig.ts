@@ -61,7 +61,7 @@ class EnvironmentConfig {
       appUrl: env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'),
       
       // Weather API (optional)
-      weatherApiKey: env.VITE_WEATHERAPI_KEY,
+      weatherApiKey: env.VITE_OPENWEATHER_API_KEY,
       weatherTempUnit: env.VITE_WEATHER_TEMP_UNIT || 'fahrenheit',
       weatherUpdateInterval: parseInt(env.VITE_WEATHER_UPDATE_INTERVAL || '3600'),
       weatherIncludeHourly: env.VITE_WEATHER_INCLUDE_HOURLY !== 'false',
@@ -150,7 +150,7 @@ class EnvironmentConfig {
     const warnings: string[] = [];
     
     if (!this.config.weatherApiKey) {
-      warnings.push('VITE_WEATHERAPI_KEY not set - weather features will use mock data');
+      warnings.push('VITE_OPENWEATHER_API_KEY not set - weather features will use mock data');
     }
     
     if (!this.config.vapidPublicKey) {

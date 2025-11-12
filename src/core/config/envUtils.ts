@@ -34,6 +34,7 @@ export const env = {
   
   // Weather API
   get WEATHERAPI_KEY() { return getEnvVar('WEATHERAPI_KEY'); },
+  get OPENWEATHER_API_KEY() { return getEnvVar('OPENWEATHER_API_KEY'); },
   
   // Google Maps
   get GOOGLE_MAPS_API_KEY() { return getEnvVar('GOOGLE_MAPS_API_KEY'); },

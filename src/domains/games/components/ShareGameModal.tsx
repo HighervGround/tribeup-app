@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -9,14 +9,13 @@ import {
   Copy, 
   Mail, 
   MessageSquare, 
-  ExternalLink,
-  QrCode,
   Calendar,
   MapPin,
   Users,
   Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatTimeString } from '@/shared/utils/dateUtils';
 
 interface ShareGameModalProps {
   game: any;
@@ -68,7 +67,7 @@ Hi!
 I'm organizing a ${game.sport} game and would love for you to join:
 
 📍 ${game.location}
-📅 ${game.date} at ${game.time}
+📅 ${game.date} at ${formatTimeString(game.time)}
 💰 ${game.cost || 'Free'}
 👥 ${game.totalPlayers ?? 0}/${game.maxPlayers ?? 0} players
 
@@ -118,7 +117,7 @@ Hope to see you there!
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="w-4 h-4" />
-                <span>{game.time}</span>
+                <span>{formatTimeString(game.time)}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="w-4 h-4" />

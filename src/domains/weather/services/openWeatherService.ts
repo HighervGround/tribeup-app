@@ -11,24 +11,24 @@ export interface WeatherData {
   isOutdoorFriendly: boolean;
 }
 
-export class WeatherService {
-  private static readonly BASE_URL = 'https://api.weatherapi.com/v1';
-  private static readonly API_KEY = env.WEATHERAPI_KEY;
+export class OpenWeatherService {
+  private static readonly BASE_URL = 'https://api.openweathermap.org/data/2.5';
+  private static readonly API_KEY = env.OPENWEATHER_API_KEY;
 
   // Get current weather for coordinates
   static async getCurrentWeather(lat: number, lng: number): Promise<WeatherData | null> {
     if (!this.API_KEY) {
-      console.warn('WeatherAPI key not configured, using mock data');
+      console.warn('OpenWeatherMap API key not configured, using mock data');
       return this.getMockWeatherData();
     }
 
     try {
       const response = await fetch(
-        `${this.BASE_URL}/current.json?key=${this.API_KEY}&q=${lat},${lng}&aqi=no`
+        `${this.BASE_URL}/weather?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
       );
 
       if (!response.ok) {
-        console.error(`WeatherAPI current error: ${response.status} ${response.statusText}`);
+        console.error(`OpenWeatherMap current error: ${response.status} ${response.statusText}`);
         return this.getMockWeatherData();
       }
 
@@ -43,7 +43,7 @@ export class WeatherService {
   // Get weather forecast for game time
   static async getGameWeather(lat: number, lng: number, gameDateTime: Date): Promise<WeatherData | null> {
     if (!this.API_KEY) {
-      console.warn('WeatherAPI key not configured, using mock data');
+      console.warn('OpenWeatherMap API key not configured, using mock data');
       return this.getMockWeatherData();
     }
 
@@ -66,14 +66,13 @@ export class WeatherService {
         }
       }
 
-      // For future games, get forecast
-      const days = Math.min(Math.ceil(hoursDiff / 24), 10); // WeatherAPI supports up to 10 days
+      // For future games, get 5-day forecast
       const response = await fetch(
-        `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${lat},${lng}&days=${days}&aqi=no&alerts=no`
+        `${this.BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
       );
 
       if (!response.ok) {
-        console.error(`WeatherAPI forecast error: ${response.status} ${response.statusText}`);
+        console.error(`OpenWeatherMap forecast error: ${response.status} ${response.statusText}`);
         return await this.getCurrentWeather(lat, lng);
       }
 
@@ -88,7 +87,7 @@ export class WeatherService {
   // Get weather by zipcode (fallback method)
   static async getWeatherByZipcode(zipcode: string, gameDateTime: Date): Promise<WeatherData | null> {
     if (!this.API_KEY) {
-      console.warn('WeatherAPI key not configured, using mock data');
+      console.warn('OpenWeatherMap API key not configured, using mock data');
       return this.getMockWeatherData();
     }
 
@@ -98,7 +97,7 @@ export class WeatherService {
       if (hoursDiff < -1) {
         // Past game - get current weather
         const response = await fetch(
-          `${this.BASE_URL}/current.json?key=${this.API_KEY}&q=${zipcode}&aqi=no`
+          `${this.BASE_URL}/weather?zip=${zipcode}&appid=${this.API_KEY}&units=imperial`
         );
         
         if (response.ok) {
@@ -111,9 +110,8 @@ export class WeatherService {
         }
       } else {
         // Future game - get forecast
-        const days = Math.min(Math.ceil(hoursDiff / 24), 10);
         const response = await fetch(
-          `${this.BASE_URL}/forecast.json?key=${this.API_KEY}&q=${zipcode}&days=${days}&aqi=no&alerts=no`
+          `${this.BASE_URL}/forecast?zip=${zipcode}&appid=${this.API_KEY}&units=imperial`
         );
         
         if (response.ok) {
@@ -129,20 +127,22 @@ export class WeatherService {
     }
   }
 
-  // Transform WeatherAPI current weather data to our format
+  // Transform OpenWeatherMap current weather data to our format
   private static transformCurrentWeatherData(data: any): WeatherData {
-    const current = data.current;
-    const temp = Math.round(current.temp_f);
+    const main = data.main;
+    const weather = data.weather[0];
+    const wind = data.wind || {};
+    const temp = Math.round(main.temp);
     
     return {
       temperature: temp,
-      condition: current.condition.text,
-      description: current.condition.text,
-      humidity: current.humidity,
-      windSpeed: Math.round(current.wind_mph),
-      precipitation: current.precip_in || 0,
-      icon: this.getWeatherIcon(current.condition.text),
-      isOutdoorFriendly: this.isOutdoorFriendly(temp, current.condition.text, current.wind_mph)
+      condition: weather.main,
+      description: weather.description,
+      humidity: main.humidity,
+      windSpeed: Math.round(wind.speed || 0),
+      precipitation: data.rain?.['1h'] || data.snow?.['1h'] || 0,
+      icon: this.getWeatherIcon(weather.main, weather.description),
+      isOutdoorFriendly: this.isOutdoorFriendly(temp, weather.main, wind.speed || 0)
     };
   }
 
@@ -150,69 +150,73 @@ export class WeatherService {
   private static findBestForecastMatch(data: any, gameDateTime: Date): WeatherData {
     console.log(`🎯 Looking for forecast match for: ${gameDateTime.toISOString()}`);
     
-    // Look through forecast days and hours to find closest match
+    // Look through forecast list to find closest match
     let bestMatch = null;
     let smallestDiff = Infinity;
     
-    for (const day of data.forecast.forecastday) {
-      for (const hour of day.hour) {
-        const forecastTime = new Date(hour.time);
-        const gameTime = gameDateTime.getTime();
-        const diff = Math.abs(forecastTime.getTime() - gameTime);
-        
-        if (diff < smallestDiff) {
-          smallestDiff = diff;
-          bestMatch = hour;
-          console.log(`⏰ Better match found: ${forecastTime.toISOString()} (diff: ${(diff / (1000 * 60 * 60)).toFixed(1)}h)`);
-        }
+    for (const forecast of data.list) {
+      // Parse the forecast time
+      const forecastTime = new Date(forecast.dt * 1000);
+      const gameTime = gameDateTime.getTime();
+      const diff = Math.abs(forecastTime.getTime() - gameTime);
+      
+      if (diff < smallestDiff) {
+        smallestDiff = diff;
+        bestMatch = forecast;
+        console.log(`⏰ Better match found: ${forecastTime.toISOString()} (diff: ${(diff / (1000 * 60 * 60)).toFixed(1)}h)`);
       }
     }
     
     if (bestMatch) {
-      const temp = Math.round(bestMatch.temp_f);
+      const temp = Math.round(bestMatch.main.temp);
       const timeDiff = smallestDiff / (1000 * 60 * 60);
       
-      console.log(`🎯 Found forecast match: ${bestMatch.time} (${timeDiff.toFixed(1)}h from game)`);
+      console.log(`🎯 Found forecast match: ${new Date(bestMatch.dt * 1000).toISOString()} (${timeDiff.toFixed(1)}h from game)`);
       
       return {
         temperature: temp,
-        condition: bestMatch.condition.text,
-        description: bestMatch.condition.text,
-        humidity: bestMatch.humidity,
-        windSpeed: Math.round(bestMatch.wind_mph),
-        precipitation: bestMatch.precip_in || 0,
-        icon: this.getWeatherIcon(bestMatch.condition.text),
-        isOutdoorFriendly: this.isOutdoorFriendly(temp, bestMatch.condition.text, bestMatch.wind_mph)
+        condition: bestMatch.weather[0].main,
+        description: bestMatch.weather[0].description,
+        humidity: bestMatch.main.humidity,
+        windSpeed: Math.round(bestMatch.wind?.speed || 0),
+        precipitation: bestMatch.rain?.['3h'] || bestMatch.snow?.['3h'] || 0,
+        icon: this.getWeatherIcon(bestMatch.weather[0].main, bestMatch.weather[0].description),
+        isOutdoorFriendly: this.isOutdoorFriendly(temp, bestMatch.weather[0].main, bestMatch.wind?.speed || 0)
       };
     }
     
-    // Fallback to first day's average if no hourly match
-    const fallback = data.forecast.forecastday[0].day;
-    const temp = Math.round(fallback.avgtemp_f);
+    // Fallback to first forecast if no match
+    const fallback = data.list[0];
+    const temp = Math.round(fallback.main.temp);
     
     return {
       temperature: temp,
-      condition: fallback.condition.text,
-      description: fallback.condition.text,
-      humidity: fallback.avghumidity,
-      windSpeed: Math.round(fallback.maxwind_mph),
-      precipitation: fallback.totalprecip_in || 0,
-      icon: this.getWeatherIcon(fallback.condition.text),
-      isOutdoorFriendly: this.isOutdoorFriendly(temp, fallback.condition.text, fallback.maxwind_mph)
+      condition: fallback.weather[0].main,
+      description: fallback.weather[0].description,
+      humidity: fallback.main.humidity,
+      windSpeed: Math.round(fallback.wind?.speed || 0),
+      precipitation: fallback.rain?.['3h'] || fallback.snow?.['3h'] || 0,
+      icon: this.getWeatherIcon(fallback.weather[0].main, fallback.weather[0].description),
+      isOutdoorFriendly: this.isOutdoorFriendly(temp, fallback.weather[0].main, fallback.wind?.speed || 0)
     };
   }
 
   // Get weather icon based on condition
-  private static getWeatherIcon(condition: string): string {
-    const conditionLower = condition.toLowerCase();
+  private static getWeatherIcon(main: string, description: string): string {
+    const mainLower = main.toLowerCase();
+    const descLower = description.toLowerCase();
     
-    if (conditionLower.includes('sunny') || conditionLower.includes('clear')) return '☀️';
-    if (conditionLower.includes('partly cloudy')) return '⛅';
-    if (conditionLower.includes('cloudy') || conditionLower.includes('overcast')) return '☁️';
-    if (conditionLower.includes('rain') || conditionLower.includes('drizzle')) return '🌧️';
-    if (conditionLower.includes('snow')) return '❄️';
-    if (conditionLower.includes('thunder')) return '⛈️';
-    if (conditionLower.includes('mist') || conditionLower.includes('fog')) return '🌫️';
+    if (mainLower === 'clear') return '☀️';
+    if (mainLower === 'clouds') {
+      if (descLower.includes('few')) return '🌤️';
+      if (descLower.includes('scattered') || descLower.includes('broken')) return '⛅';
+      return '☁️';
+    }
+    if (mainLower === 'rain' || mainLower === 'drizzle') return '🌧️';
+    if (mainLower === 'snow') return '❄️';
+    if (mainLower === 'thunderstorm') return '⛈️';
+    if (mainLower === 'mist' || mainLower === 'fog') return '🌫️';
+    if (mainLower === 'haze' || mainLower === 'dust') return '🌫️';
     
     return '🌤️'; // Default
   }
@@ -228,10 +232,10 @@ export class WeatherService {
     if (windSpeed > 25) return false;
     
     // Precipitation check
-    if (conditionLower.includes('rain') || 
-        conditionLower.includes('thunder') || 
-        conditionLower.includes('snow') ||
-        conditionLower.includes('drizzle')) return false;
+    if (conditionLower === 'rain' || 
+        conditionLower === 'thunderstorm' || 
+        conditionLower === 'snow' ||
+        conditionLower === 'drizzle') return false;
     
     return true;
   }
@@ -270,7 +274,7 @@ export class WeatherService {
       : 'Check current conditions before heading out.';
   }
 
-  // Get enhanced weather recommendation
+  // Get enhanced weather recommendation with temperature trends and time-aware suggestions
   static async getEnhancedWeatherRecommendation(
     lat: number, 
     lng: number, 
@@ -283,14 +287,23 @@ export class WeatherService {
     }
 
     try {
+      const response = await fetch(
+        `${this.BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${this.API_KEY}&units=imperial`
+      );
+
+      if (!response.ok) {
+        return 'Weather data unavailable - dress appropriately for current conditions.';
+      }
+
+      const data = await response.json();
       const gameEndTime = new Date(gameDateTime.getTime() + (duration * 60 * 1000));
       
       // Get weather at start and end of game
-      const startWeather = await this.getGameWeather(lat, lng, gameDateTime);
-      const endWeather = await this.getGameWeather(lat, lng, gameEndTime);
+      const startWeather = this.findBestForecastMatch(data, gameDateTime);
+      const endWeather = this.findBestForecastMatch(data, gameEndTime);
       
-      if (!startWeather) {
-        return 'Weather data unavailable - dress appropriately for current conditions.';
+      if (!startWeather || !endWeather) {
+        return this.getWeatherRecommendation(startWeather || endWeather || this.getMockWeatherData());
       }
 
       return this.generateEnhancedRecommendations(startWeather, endWeather, gameDateTime, duration, sport);
@@ -300,42 +313,43 @@ export class WeatherService {
     }
   }
 
-  // Generate enhanced recommendations
+  // Generate concise, actionable recommendations
   private static generateEnhancedRecommendations(
     startWeather: WeatherData,
-    endWeather: WeatherData | null,
+    endWeather: WeatherData,
     gameDateTime: Date,
     _duration: number,
     sport: string
   ): string {
     const recommendations = [];
-    const tempDrop = endWeather ? startWeather.temperature - endWeather.temperature : 0;
-    const avgTemp = endWeather ? (startWeather.temperature + endWeather.temperature) / 2 : startWeather.temperature;
+    const tempDrop = startWeather.temperature - endWeather.temperature;
+    const avgTemp = (startWeather.temperature + endWeather.temperature) / 2;
     const isNightTime = gameDateTime.getHours() >= 18 || gameDateTime.getHours() <= 6;
 
-    // Temperature drop warning
-    if (tempDrop > 3) {
+    // Only show temperature drop if significant (>2°F)
+    if (tempDrop > 2) {
       recommendations.push(`🌡️ ${tempDrop.toFixed(0)}°F drop expected - bring layers`);
     }
 
-    // Clothing advice
+    // Concise clothing advice based on temperature
     if (avgTemp < 45) {
       recommendations.push('🧥 Dress warmly - multiple layers recommended');
     } else if (avgTemp >= 45 && avgTemp <= 60) {
       recommendations.push('👕 Light layers - long sleeves + removable jacket');
     }
 
-    // Wind warning
-    if (startWeather.windSpeed > 15) {
-      recommendations.push(`💨 Windy (${startWeather.windSpeed} mph) - secure loose items`);
+    // Wind warning (only if significant)
+    if (startWeather.windSpeed > 15 || endWeather.windSpeed > 15) {
+      const maxWind = Math.max(startWeather.windSpeed, endWeather.windSpeed);
+      recommendations.push(`💨 Windy (${maxWind.toFixed(0)} mph) - secure loose items`);
     }
 
-    // Sport-specific advice
+    // Sport-specific tip (only one, most important)
     if ((sport.toLowerCase().includes('pickleball') || sport.toLowerCase().includes('tennis')) && avgTemp < 55) {
       recommendations.push('🏓 Ball bounces less in cold - adjust play');
     }
 
-    // Night game advice
+    // Night game essentials
     if (isNightTime && avgTemp < 55) {
       recommendations.push('🌙 Night + cool = extra warm-up needed');
     }
@@ -347,6 +361,7 @@ export class WeatherService {
         'Playable conditions - dress appropriately';
     }
 
+    // Limit to max 3 recommendations
     return recommendations.slice(0, 3).join(' • ');
   }
 

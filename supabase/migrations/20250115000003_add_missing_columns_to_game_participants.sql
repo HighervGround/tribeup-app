@@ -9,7 +9,7 @@ BEGIN
                    AND column_name = 'status' 
                    AND table_schema = 'public') THEN
         ALTER TABLE public.game_participants 
-        ADD COLUMN status TEXT DEFAULT 'joined' CHECK (status IN ('joined', 'left', 'completed'));
+        ADD COLUMN status TEXT DEFAULT 'joined' CHECK (status IN ('joined', 'left', 'completed', 'no_show'));
         
         -- Update existing records to have 'joined' status
         UPDATE public.game_participants SET status = 'joined' WHERE status IS NULL;

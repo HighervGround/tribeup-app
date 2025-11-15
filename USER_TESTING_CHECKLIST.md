@@ -4,14 +4,25 @@
 
 ### **Environment Check**
 - [ ] Development server running (`npm run dev`)
-- [ ] App accessible at `http://localhost:3000`
+- [ ] App accessible at `http://localhost:3000` (or production URL)
 - [ ] No console errors on page load
 - [ ] All recent fixes applied (ratings, presence, dropdowns)
+- [ ] Database schema verified (see PRODUCTION_SETUP.md)
+- [ ] Environment variables configured correctly
+
+### **Database Schema Verification (CRITICAL)**
+Before testing, verify database schema is correct:
+- [ ] Run `scripts/verify-schema.sql` in Supabase SQL Editor
+- [ ] Verify `status` column exists in `game_participants` table
+- [ ] Check all required columns are present
+- [ ] Verify RLS is enabled on all tables
+- [ ] If schema issues found, run migration: `supabase/migrations/20250203000000_verify_and_fix_game_participants_status.sql`
 
 ### **Test Accounts**
 - [ ] Create 2-3 test user accounts for multi-user scenarios
 - [ ] Test both email/password and Google OAuth signup
 - [ ] Verify user profiles are created properly
+- [ ] Test accounts can authenticate successfully
 
 ---
 
@@ -45,12 +56,15 @@
   - Weather integration showing
   - Game appears in listings after creation
 
-### **3. Game Interaction (15-20 minutes)**
-- [ ] **Join/Leave Games**
+### **3. Game Interaction (15-20 minutes) - CRITICAL PATH**
+- [ ] **Join/Leave Games** ⚠️ **BLOCKING ISSUE IF BROKEN**
   - Join button works for available games
   - Leave button works for joined games
-  - Player count updates correctly
+  - Player count updates correctly (verify in real-time)
   - Host vs participant permissions
+  - **Database Check**: Verify `status` column updates to 'joined' when user joins
+  - **Database Check**: Verify `status` column updates to 'left' when user leaves
+  - No errors about missing 'status' column in console
 
 - [ ] **Game Details Page**
   - All game information displays
@@ -140,11 +154,21 @@
 - [ ] **Presence system**: May show demo data instead of real users
 - [ ] **Service worker**: May cache old versions, hard refresh if needed
 
+### **Critical Database Issues (BLOCKING)**
+- [ ] **"Column 'status' does not exist" error**: 
+  - **Action**: Run migration `supabase/migrations/20250203000000_verify_and_fix_game_participants_status.sql`
+  - **Verify**: Check with `scripts/verify-schema.sql`
+- [ ] **Join/Leave not working**: 
+  - Check database schema first
+  - Verify RLS policies allow INSERT/UPDATE
+  - Check console for specific error messages
+
 ### **Red Flags to Stop Testing**
 - [ ] Infinite loading screens (should timeout in 3-10 seconds)
 - [ ] Complete app crashes or white screens
 - [ ] Unable to create or join games
 - [ ] Authentication completely broken
+- [ ] Database schema errors (missing status column)
 
 ---
 
@@ -204,6 +228,51 @@
 
 **Contact for technical issues**: [Your contact info]
 
+## 🔍 Critical Path Validation
+
+### **Must-Pass Tests (Blocking Issues)**
+
+These tests MUST pass for the app to be launch-ready:
+
+1. **Database Schema** ✅
+   - [ ] `status` column exists in `game_participants`
+   - [ ] No "column does not exist" errors
+   - [ ] All migrations applied successfully
+
+2. **User Authentication** ✅
+   - [ ] Users can sign up
+   - [ ] Users can sign in
+   - [ ] Users can sign out
+   - [ ] Session persists across page refreshes
+
+3. **Game Creation** ✅
+   - [ ] Users can create games
+   - [ ] Games appear in listings
+   - [ ] Game data saves correctly
+
+4. **Game Participation** ✅ **CRITICAL**
+   - [ ] Users can join games
+   - [ ] Users can leave games
+   - [ ] Player count updates correctly
+   - [ ] Status column updates in database
+   - [ ] No database errors in console
+
+5. **Real-time Updates** ✅
+   - [ ] Game updates appear in real-time (see REALTIME_TESTING.md)
+   - [ ] Join/leave updates appear immediately
+   - [ ] Chat messages appear instantly
+
+### **High Priority Tests**
+
+These should work but are not blocking:
+- [ ] Search and filtering
+- [ ] Map view functionality
+- [ ] Weather integration
+- [ ] User profiles
+- [ ] Notifications
+
+---
+
 ## 📋 Survey Implementation Options
 
 **Two survey options have been created:**
@@ -241,4 +310,19 @@ openSurvey('game_creation');
 
 ---
 
-**🎯 Success Criteria**: Users can successfully sign up, create/join games, and navigate the app without major frustration. Minor bugs are acceptable - focus on overall user experience and core functionality!
+## 📚 Related Documentation
+
+- **Production Setup**: See `PRODUCTION_SETUP.md` for deployment checklist
+- **Real-time Testing**: See `REALTIME_TESTING.md` for detailed real-time feature tests
+- **Schema Verification**: Run `scripts/verify-schema.sql` to check database
+
+---
+
+**🎯 Success Criteria**: 
+- ✅ All critical path tests pass
+- ✅ Database schema is correct (no missing columns)
+- ✅ Users can successfully sign up, create/join games, and navigate the app
+- ✅ Real-time features work correctly
+- ✅ No blocking console errors
+
+**Minor bugs are acceptable - focus on overall user experience and core functionality!**

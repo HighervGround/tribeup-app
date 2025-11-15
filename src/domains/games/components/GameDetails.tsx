@@ -1131,7 +1131,9 @@ function GameDetails() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle>Players ({game.totalPlayers ?? players.length}/{game.maxPlayers ?? 0})</CardTitle>
+                {/* Use players.length as source of truth since it's from participants query (gets optimistic updates) */}
+                {/* Fall back to game.totalPlayers only if participants haven't loaded yet */}
+                <CardTitle>Players ({!loadingPlayers ? players.length : (game.totalPlayers ?? 0)}/{game.maxPlayers ?? 0})</CardTitle>
               </div>
             </div>
           </CardHeader>

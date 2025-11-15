@@ -214,37 +214,60 @@ export function useJoinGame() {
       // Snapshot previous values
       const previousGames = queryClient.getQueryData(gameKeys.lists());
       const previousGame = queryClient.getQueryData(gameKeys.detail(gameId));
-      const previousParticipants = queryClient.getQueryData(gameKeys.participants(gameId));
+      const previousParticipants = queryClient.getQueryData<any[]>(gameKeys.participants(gameId));
       
-      // Optimistically update games list (isJoined only, counts come from DB)
-      queryClient.setQueryData(gameKeys.lists(), (old: any) => {
-        if (!old) return old;
-        return old.map((game: any) => 
-          game.id === gameId 
-            ? { 
-                ...game, 
-                isJoined: true
-              }
-            : game
-        );
-      });
-
-      // Optimistically update game detail (isJoined only, counts come from DB)
-      queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          isJoined: true
-        };
-      });
-
+      // Check if user is already in participants list to prevent double-counting
+      const isAlreadyInList = user && previousParticipants?.some((p: any) => p.id === user.id);
+      
       // Optimistically update participants list
-      if (user) {
+      if (user && !isAlreadyInList) {
         queryClient.setQueryData(gameKeys.participants(gameId), (old: any) => {
           if (!old) return [{ id: user.id, name: user.name, avatar: user.avatar }];
-          const isAlreadyJoined = old.some((p: any) => p.id === user.id);
-          if (isAlreadyJoined) return old;
           return [...old, { id: user.id, name: user.name, avatar: user.avatar }];
+        });
+      }
+
+      // Optimistically update games list (isJoined and totalPlayers)
+      // Only increment count if user is not already in the list
+      if (!isAlreadyInList) {
+        queryClient.setQueryData(gameKeys.lists(), (old: any) => {
+          if (!old) return old;
+          return old.map((game: any) => 
+            game.id === gameId 
+              ? { 
+                  ...game, 
+                  isJoined: true,
+                  // Increment totalPlayers optimistically only if not already joined
+                  totalPlayers: game.isJoined ? game.totalPlayers : (game.totalPlayers ?? 0) + 1,
+                  currentPlayers: game.isJoined ? game.currentPlayers : (game.currentPlayers ?? 0) + 1
+                }
+              : game
+          );
+        });
+
+        // Optimistically update game detail (isJoined and totalPlayers)
+        queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
+          if (!old || old.isJoined) return old;
+          return {
+            ...old,
+            isJoined: true,
+            // Increment totalPlayers optimistically only if not already joined
+            totalPlayers: (old.totalPlayers ?? 0) + 1,
+            currentPlayers: (old.currentPlayers ?? 0) + 1
+          };
+        });
+      } else {
+        // User already in list, just update isJoined flag
+        queryClient.setQueryData(gameKeys.lists(), (old: any) => {
+          if (!old) return old;
+          return old.map((game: any) => 
+            game.id === gameId ? { ...game, isJoined: true } : game
+          );
+        });
+        
+        queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
+          if (!old) return old;
+          return { ...old, isJoined: true };
         });
       }
       
@@ -319,36 +342,61 @@ export function useLeaveGame() {
       // Snapshot previous values
       const previousGames = queryClient.getQueryData(gameKeys.lists());
       const previousGame = queryClient.getQueryData(gameKeys.detail(gameId));
-      const previousParticipants = queryClient.getQueryData(gameKeys.participants(gameId));
+      const previousParticipants = queryClient.getQueryData<any[]>(gameKeys.participants(gameId));
       
-      // Optimistically update games list (isJoined only, counts come from DB)
-      queryClient.setQueryData(gameKeys.lists(), (old: any) => {
-        if (!old) return old;
-        return old.map((game: any) => 
-          game.id === gameId 
-            ? { 
-                ...game, 
-                isJoined: false
-              }
-            : game
-        );
-      });
-
-      // Optimistically update game detail (isJoined only, counts come from DB)
-      queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          isJoined: false
-        };
-      });
-
-      // Optimistically update participants list by removing current user
+      // Check if user is actually in participants list before decrementing
       const { user } = useAppStore.getState();
-      if (user) {
+      const isUserInList = user && previousParticipants?.some((p: any) => p.id === user.id);
+      
+      // Optimistically update participants list by removing current user
+      if (user && isUserInList) {
         queryClient.setQueryData(gameKeys.participants(gameId), (old: any) => {
           if (!old) return [];
           return old.filter((p: any) => p.id !== user.id);
+        });
+      }
+
+      // Optimistically update games list (isJoined and totalPlayers)
+      // Only decrement count if user was actually in the list
+      if (isUserInList) {
+        queryClient.setQueryData(gameKeys.lists(), (old: any) => {
+          if (!old) return old;
+          return old.map((game: any) => 
+            game.id === gameId 
+              ? { 
+                  ...game, 
+                  isJoined: false,
+                  // Decrement totalPlayers optimistically only if user was in list
+                  totalPlayers: Math.max(0, (game.totalPlayers ?? 1) - 1),
+                  currentPlayers: Math.max(0, (game.currentPlayers ?? 1) - 1)
+                }
+              : game
+          );
+        });
+
+        // Optimistically update game detail (isJoined and totalPlayers)
+        queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            isJoined: false,
+            // Decrement totalPlayers optimistically only if user was in list
+            totalPlayers: Math.max(0, (old.totalPlayers ?? 1) - 1),
+            currentPlayers: Math.max(0, (old.currentPlayers ?? 1) - 1)
+          };
+        });
+      } else {
+        // User not in list, just update isJoined flag
+        queryClient.setQueryData(gameKeys.lists(), (old: any) => {
+          if (!old) return old;
+          return old.map((game: any) => 
+            game.id === gameId ? { ...game, isJoined: false } : game
+          );
+        });
+        
+        queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
+          if (!old) return old;
+          return { ...old, isJoined: false };
         });
       }
       

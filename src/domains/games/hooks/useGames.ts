@@ -232,26 +232,29 @@ export function useJoinGame() {
       if (!isAlreadyInList) {
         queryClient.setQueryData(gameKeys.lists(), (old: any) => {
           if (!old) return old;
-          return old.map((game: any) => 
-            game.id === gameId 
-              ? { 
-                  ...game, 
-                  isJoined: true,
-                  // Increment totalPlayers optimistically only if not already joined
-                  totalPlayers: game.isJoined ? game.totalPlayers : (game.totalPlayers ?? 0) + 1,
-                  currentPlayers: game.isJoined ? game.currentPlayers : (game.currentPlayers ?? 0) + 1
-                }
-              : game
-          );
+          return old.map((game: any) => {
+            if (game.id === gameId) {
+              // User is joining - increment count if not already marked as joined
+              const shouldIncrement = !game.isJoined;
+              return {
+                ...game,
+                isJoined: true,
+                totalPlayers: shouldIncrement ? (game.totalPlayers ?? 0) + 1 : game.totalPlayers,
+                currentPlayers: shouldIncrement ? (game.currentPlayers ?? 0) + 1 : game.currentPlayers
+              };
+            }
+            return game;
+          });
         });
 
         // Optimistically update game detail (isJoined and totalPlayers)
         queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
-          if (!old || old.isJoined) return old;
+          if (!old) return old;
+          // Only increment if not already joined
+          if (old.isJoined) return old;
           return {
             ...old,
             isJoined: true,
-            // Increment totalPlayers optimistically only if not already joined
             totalPlayers: (old.totalPlayers ?? 0) + 1,
             currentPlayers: (old.currentPlayers ?? 0) + 1
           };
@@ -294,28 +297,12 @@ export function useJoinGame() {
     onSuccess: async (_, gameId) => {
       console.log('✅ Successfully joined activity:', gameId);
       
-      // Log state before refetch
-      const gameBefore = queryClient.getQueryData(gameKeys.detail(gameId));
-      console.log('📊 Game state BEFORE refetch:', { 
-        isJoined: (gameBefore as any)?.isJoined, 
-        currentPlayers: (gameBefore as any)?.currentPlayers 
-      });
+      // Invalidate React Query cache
+      queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       
-      // Force immediate refetch to get fresh data from database
-      // This ensures triggers have completed and we get accurate state
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId), exact: true }),
-        queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId), exact: true }),
-        queryClient.refetchQueries({ queryKey: gameKeys.lists(), exact: true })
-      ]);
-      
-      // Log state after refetch
-      const gameAfter = queryClient.getQueryData(gameKeys.detail(gameId));
-      console.log('📊 Game state AFTER refetch:', { 
-        isJoined: (gameAfter as any)?.isJoined, 
-        currentPlayers: (gameAfter as any)?.currentPlayers 
-      });
-      console.log('🔄 Refetched all game queries with fresh data');
+      // Trigger parent refetch via callback if provided
+      // Parent will pass refetch callback if needed
     },
   });
 }
@@ -361,26 +348,29 @@ export function useLeaveGame() {
       if (isUserInList) {
         queryClient.setQueryData(gameKeys.lists(), (old: any) => {
           if (!old) return old;
-          return old.map((game: any) => 
-            game.id === gameId 
-              ? { 
-                  ...game, 
-                  isJoined: false,
-                  // Decrement totalPlayers optimistically only if user was in list
-                  totalPlayers: Math.max(0, (game.totalPlayers ?? 1) - 1),
-                  currentPlayers: Math.max(0, (game.currentPlayers ?? 1) - 1)
-                }
-              : game
-          );
+          return old.map((game: any) => {
+            if (game.id === gameId) {
+              // User is leaving - decrement count if currently marked as joined
+              const shouldDecrement = game.isJoined;
+              return {
+                ...game,
+                isJoined: false,
+                totalPlayers: shouldDecrement ? Math.max(0, (game.totalPlayers ?? 1) - 1) : game.totalPlayers,
+                currentPlayers: shouldDecrement ? Math.max(0, (game.currentPlayers ?? 1) - 1) : game.currentPlayers
+              };
+            }
+            return game;
+          });
         });
 
         // Optimistically update game detail (isJoined and totalPlayers)
         queryClient.setQueryData(gameKeys.detail(gameId), (old: any) => {
           if (!old) return old;
+          // Only decrement if currently joined
+          if (!old.isJoined) return old;
           return {
             ...old,
             isJoined: false,
-            // Decrement totalPlayers optimistically only if user was in list
             totalPlayers: Math.max(0, (old.totalPlayers ?? 1) - 1),
             currentPlayers: Math.max(0, (old.currentPlayers ?? 1) - 1)
           };
@@ -430,21 +420,12 @@ export function useLeaveGame() {
         currentPlayers: (gameBefore as any)?.currentPlayers 
       });
       
-      // Force immediate refetch to get fresh data from database
-      // This ensures triggers have completed and we get accurate state
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId), exact: true }),
-        queryClient.refetchQueries({ queryKey: gameKeys.participants(gameId), exact: true }),
-        queryClient.refetchQueries({ queryKey: gameKeys.lists(), exact: true })
-      ]);
+      // Invalidate React Query cache
+      queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
       
-      // Log state after refetch
-      const gameAfter = queryClient.getQueryData(gameKeys.detail(gameId));
-      console.log('📊 Game state AFTER refetch:', { 
-        isJoined: (gameAfter as any)?.isJoined, 
-        currentPlayers: (gameAfter as any)?.currentPlayers 
-      });
-      console.log('🔄 Refetched all game queries with fresh data');
+      // Trigger parent refetch via callback if provided
+      // Parent will pass refetch callback if needed
     },
   });
 }

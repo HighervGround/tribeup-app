@@ -47,6 +47,12 @@ function HomeScreen() {
     navigate(`/game/${gameId}`);
   };
   
+  // Refetch handler to pass to game cards
+  const handleGameUpdate = async () => {
+    // Refetch games after join/leave mutation completes
+    await refetch();
+  };
+  
 
   // Calculate basic stats
   const stats = useMemo(() => {
@@ -120,14 +126,14 @@ function HomeScreen() {
     
     setRefreshing(true);
     try {
-      await refetch();
+      await refetch(); // React Query's refetch
     } finally {
       setRefreshing(false);
     }
   };
 
   // Sort games chronologically with smart grouping
-  const sortedGames = games
+  const sortedGames = (games || [])
     .map(game => {
       // Parse game date properly - game.date is like "2025-10-15"
       const [year, month, day] = game.date.split('-').map(Number);
@@ -174,7 +180,7 @@ function HomeScreen() {
     });
 
   // Show loading state with timeout handling
-  if ((isLoading || isLoading) && games.length === 0 && !forceTimeout) {
+  if (isLoading && games.length === 0 && !forceTimeout) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -245,9 +251,11 @@ function HomeScreen() {
     hasError: !!error,
     refreshing,
     forceTimeout,
-    gamesCount: games.length,
+    gamesCount: games?.length || 0,
+    gamesType: Array.isArray(games) ? 'array' : typeof games,
     errorMessage: error?.message,
-    userId: user?.id || 'anonymous'
+    userId: user?.id || 'anonymous',
+    gamesData: games?.slice(0, 2) // Log first 2 games for debugging
   });
 
   return (
@@ -306,16 +314,24 @@ function HomeScreen() {
                 Array.from({ length: 6 }).map((_, index) => (
                   <GameCardSkeleton key={index} />
                 ))
-              ) : (
+              ) : sortedGames.length > 0 ? (
                 sortedGames.map((game) => (
                   <div key={game.id}>
                     <UnifiedGameCard
                       game={game}
                       variant="simple"
                       onSelect={() => handleGameSelect(game.id)}
+                      onJoinLeave={handleGameUpdate}
                     />
                   </div>
                 ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground">No games found. Check back later!</p>
+                  {error && (
+                    <p className="text-sm text-destructive mt-2">{error.message}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/core/database/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { gameKeys } from './useGames';
 
 // Helper function to get sport colors
 const getSportColor = (sport: string): string => {
@@ -63,7 +65,9 @@ export function useGamesWithCreators() {
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const inFlight = useRef(false);
-
+  const queryClient = useQueryClient(); // React Query client to populate cache
+  const [refetchTrigger, setRefetchTrigger] = useState(0); // Trigger for refetch
+  
   useEffect(() => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -224,6 +228,9 @@ export function useGamesWithCreators() {
 
         setGames(transformedGames);
         
+        // Also populate React Query cache so mutations and useGameCard can use it
+        queryClient.setQueryData(gameKeys.lists(), transformedGames);
+        
       } catch (err) {
         console.error('❌ useGamesWithCreators error:', err);
         setError(err instanceof Error ? err : new Error('Failed to load games'));
@@ -232,14 +239,15 @@ export function useGamesWithCreators() {
         inFlight.current = false;
       }
     })();
-  }, []);
+  }, [refetchTrigger]); // Re-run when refetchTrigger changes
 
   const refetch = () => {
     if (inFlight.current) return;
     setLoading(true);
     setError(null);
     inFlight.current = false; // Reset to allow refetch
-    // Trigger useEffect by changing a dependency (we'll use a counter)
+    // Trigger useEffect by incrementing refetchTrigger
+    setRefetchTrigger(prev => prev + 1);
   };
 
   return { games, userById, usersLoaded, loading, error, refetch };

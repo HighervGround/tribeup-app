@@ -383,14 +383,14 @@ function HomeScreen() {
           {/* Main Content */}
           <div className="lg:col-span-8">
             {/* Header */}
-            <div className="relative mb-8">
+            <div className="relative mb-6">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl -z-10" />
-              <div className="flex items-center justify-between p-6">
+              <div className="flex items-center justify-between p-4 md:p-6">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent mb-2">
+                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
                     TribeUp
                   </h1>
-                  <p className="text-muted-foreground text-base">Find your next activity</p>
+                  <p className="text-muted-foreground text-sm">Find your next activity</p>
                 </div>
                 <div className="flex gap-2">
                   <FeedbackButton variant="outline" size="default" />
@@ -399,10 +399,10 @@ function HomeScreen() {
             </div>
 
             {/* Activities List Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold mb-1">Upcoming Activities</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="text-lg md:text-xl font-bold">Upcoming Activities</h2>
+                <p className="text-xs text-muted-foreground">
                   {sortedGames.length} {sortedGames.length === 1 ? 'activity' : 'activities'} available
                 </p>
               </div>
@@ -429,7 +429,7 @@ function HomeScreen() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2 mb-6 flex-wrap">
+            <div className="flex gap-2 mb-4 flex-wrap">
               <Button
                 variant={showCampusVenuesOnly ? "default" : "outline"}
                 size="sm"
@@ -464,7 +464,7 @@ function HomeScreen() {
             </div>
 
             {/* Activity Feed with Sections */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               {isLoading ? (
                 // Show skeleton loading
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -476,16 +476,16 @@ function HomeScreen() {
                 <>
                   {/* Today Section */}
                   {gamesBySection.today.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-3 mb-5">
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <Flame className="w-5 h-5 text-primary" />
+                          <div className="p-1.5 bg-primary/10 rounded-lg">
+                            <Flame className="w-4 h-4 text-primary" />
                           </div>
-                          <h3 className="text-xl font-bold">Today</h3>
+                          <h3 className="text-lg font-bold">Today</h3>
                         </div>
-                        <Badge variant="secondary" className="text-xs font-medium px-2.5 py-1">
-                          {gamesBySection.today.length} {gamesBySection.today.length !== 1 ? 'activities' : 'activity'}
+                        <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5">
+                          {gamesBySection.today.length}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -525,16 +525,16 @@ function HomeScreen() {
                   
                   {/* Tomorrow Section */}
                   {gamesBySection.tomorrow.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-3 mb-5">
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 bg-blue-500/10 rounded-lg">
-                            <CalendarIcon className="w-5 h-5 text-blue-500" />
+                          <div className="p-1.5 bg-blue-500/10 rounded-lg">
+                            <CalendarIcon className="w-4 h-4 text-blue-500" />
                           </div>
-                          <h3 className="text-xl font-bold">Tomorrow</h3>
+                          <h3 className="text-lg font-bold">Tomorrow</h3>
                         </div>
-                        <Badge variant="secondary" className="text-xs font-medium px-2.5 py-1">
-                          {gamesBySection.tomorrow.length} {gamesBySection.tomorrow.length !== 1 ? 'activities' : 'activity'}
+                        <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5">
+                          {gamesBySection.tomorrow.length}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -568,16 +568,16 @@ function HomeScreen() {
                   
                   {/* This Week Section */}
                   {gamesBySection.thisWeek.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-3 mb-5">
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 bg-purple-500/10 rounded-lg">
-                            <CalendarIcon className="w-5 h-5 text-purple-500" />
+                          <div className="p-1.5 bg-purple-500/10 rounded-lg">
+                            <CalendarIcon className="w-4 h-4 text-purple-500" />
                           </div>
-                          <h3 className="text-xl font-bold">This Week</h3>
+                          <h3 className="text-lg font-bold">This Week</h3>
                         </div>
-                        <Badge variant="secondary" className="text-xs font-medium px-2.5 py-1">
-                          {gamesBySection.thisWeek.length} {gamesBySection.thisWeek.length !== 1 ? 'activities' : 'activity'}
+                        <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5">
+                          {gamesBySection.thisWeek.length}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -611,16 +611,16 @@ function HomeScreen() {
                   
                   {/* Upcoming Section */}
                   {gamesBySection.upcoming.length > 0 && (
-                    <div className="mb-8">
-                      <div className="flex items-center gap-3 mb-5">
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 bg-muted rounded-lg">
-                            <CalendarIcon className="w-5 h-5 text-muted-foreground" />
+                          <div className="p-1.5 bg-muted rounded-lg">
+                            <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                           </div>
-                          <h3 className="text-xl font-bold">Upcoming</h3>
+                          <h3 className="text-lg font-bold">Upcoming</h3>
                         </div>
-                        <Badge variant="secondary" className="text-xs font-medium px-2.5 py-1">
-                          {gamesBySection.upcoming.length} {gamesBySection.upcoming.length !== 1 ? 'activities' : 'activity'}
+                        <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5">
+                          {gamesBySection.upcoming.length}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

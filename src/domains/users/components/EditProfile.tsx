@@ -397,7 +397,6 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Full Name</label>
               <Input
-                placeholder="Full Name"
                 value={formData.fullName}
                 onChange={(e) => handleInputChange('fullName', e.target.value)}
               />
@@ -406,7 +405,6 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Username <span className="text-muted-foreground font-normal">(3–20 chars)</span></label>
               <Input
-                placeholder="Username"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 onBlur={handleUsernameBlur}
@@ -428,7 +426,6 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Location</label>
               <Input
-                placeholder="Location"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
               />
@@ -437,7 +434,6 @@ function EditProfile() {
             <div>
               <label className="text-sm font-medium mb-2 block">Bio <span className="text-muted-foreground font-normal">(max {BIO_MAX} chars)</span></label>
               <Textarea
-                placeholder="Bio"
                 value={formData.bio}
                 onChange={(e) => handleInputChange('bio', e.target.value)}
                 rows={3}

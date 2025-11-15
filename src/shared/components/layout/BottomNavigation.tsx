@@ -23,8 +23,8 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((_props, ref) => {
   const navItems = getMobileNavItems();
 
   return (
-    <div ref={ref} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
-      <div className="flex items-center justify-between max-w-lg mx-auto">
+    <div ref={ref} className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-40">
+      <div className="flex items-center max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
@@ -34,7 +34,7 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((_props, ref) => {
               key={item.path}
               variant="ghost"
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 py-3 px-4 h-auto flex-1 rounded-none transition-all duration-200 ${
+              className={`flex flex-col items-center gap-1 py-3 px-0 h-auto flex-1 rounded-none transition-all duration-200 focus:ring-0 focus:ring-offset-0 shadow-none ${
                 isActive 
                   ? 'text-primary' 
                   : 'text-gray-700 dark:text-muted-foreground hover:text-black dark:hover:text-foreground'
@@ -45,10 +45,10 @@ export const BottomNavigation = forwardRef<HTMLDivElement>((_props, ref) => {
               <div className="relative">
                 {item.path === '/profile' && safeUser ? (
                   <div onClick={() => navigate('/profile')} className="cursor-pointer">
-                    <CurrentUserAvatar size="sm" className="w-6 h-6" />
+                    <CurrentUserAvatar size="sm" className="w-8 h-8" />
                   </div>
                 ) : (
-                  <Icon className="w-6 h-6" />
+                  <Icon className="w-8 h-8" />
                 )}
                 {item.showBadge && unreadCount > 0 && (
                   <Badge 

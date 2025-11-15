@@ -1168,10 +1168,21 @@ export class SupabaseService {
 
     if (error) throw error;
 
+    // Fetch the full game title if not returned in update response
+    let activityTitle = data?.title;
+    if (!activityTitle) {
+      const { data: gameData } = await supabase
+        .from('games')
+        .select('title')
+        .eq('id', gameId)
+        .single();
+      activityTitle = gameData?.title;
+    }
+
     // Notify participants of changes
     await this.notifyGameParticipants(gameId, 'game_updated', {
       title: 'Activity Updated',
-      message: `The activity "${data.title || 'your activity'}" has been updated by the organizer.`
+      message: `The activity "${activityTitle || 'your activity'}" has been updated by the organizer.`
     });
 
     return transformGameFromDB(data, false);

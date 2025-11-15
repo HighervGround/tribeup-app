@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { SupabaseService } from '@/core/database/supabaseService';
 
@@ -243,8 +243,14 @@ export function useNotifications() {
     }
   }, [settings.pushNotifications, requestPermission]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const recentNotifications = notifications.slice(0, 10); // Show last 10
+  // Memoize unreadCount to ensure it updates reactively when notifications change
+  const unreadCount = useMemo(() => {
+    return notifications.filter(n => !n.read).length;
+  }, [notifications]);
+  
+  const recentNotifications = useMemo(() => {
+    return notifications.slice(0, 10); // Show last 10
+  }, [notifications]);
   
   // Debug logging for unread count changes
   useEffect(() => {

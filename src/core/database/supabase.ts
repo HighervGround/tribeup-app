@@ -155,10 +155,16 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     longitude: dbGame.longitude,
     cost: dbGame.cost,
     maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
-    // SINGLE SOURCE OF TRUTH: Only use pre-computed view fields from games_with_counts
-    // View fields: total_players (current_players + public_rsvp_count), available_spots
-    totalPlayers: Number(dbGame.total_players ?? 0),
-    availableSpots: Number(dbGame.available_spots ?? Math.max(0, Number(dbGame.max_players ?? 0) - Number(dbGame.total_players ?? 0))),
+    // Calculate total_players from current_players + public_rsvp_count (view doesn't have total_players or available_spots columns)
+    totalPlayers: Number(
+      dbGame.total_players ?? 
+      ((dbGame.current_players || 0) + (dbGame.public_rsvp_count || 0))
+    ),
+    // Calculate available_spots from max_players - total_players
+    availableSpots: Number(
+      dbGame.available_spots ?? 
+      Math.max(0, Number(dbGame.max_players ?? 0) - Number((dbGame.current_players || 0) + (dbGame.public_rsvp_count || 0)))
+    ),
     
     description: dbGame.description,
     imageUrl: dbGame.image_url || '',

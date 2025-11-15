@@ -17,10 +17,13 @@ import {
   Star, 
   Shield,
   Flag,
-  Share
+  Share,
+  UserPlus,
+  UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserProfile, useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
+import { useIsFollowing, useFollowUser } from '@/domains/users/hooks/useFriends';
 import { AchievementGrid } from './AchievementBadge';
 import { initialsFrom } from '@/shared/utils/initials';
 import { supabase } from '@/core/database/supabase';
@@ -62,6 +65,15 @@ function OtherUserProfile() {
   const { data: userStats, isLoading: statsLoading } = useUserStats(userId || '');
   const { data: recentGames = [], isLoading: recentGamesLoading } = useUserRecentGames(userId || '', 5);
   const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(userId || '');
+
+  // Follow functionality
+  const { data: isFriend, isLoading: isFriendLoading } = useIsFollowing(userId || '');
+  const friendMutation = useFollowUser();
+
+  const handleFriendToggle = async () => {
+    if (!userId) return;
+    await friendMutation.mutateAsync(userId);
+  };
 
   // Show loading state
   if (loading) {
@@ -145,7 +157,7 @@ function OtherUserProfile() {
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success('Profile link copied!', {
-        description: 'Share with your friends',
+        description: 'Share with followers',
       });
     }
   };
@@ -265,15 +277,32 @@ function OtherUserProfile() {
                 </div>
               </div>
 
-              <Button
-                disabled
-                variant="outline"
-                size="lg"
-                className="w-full max-w-xs opacity-50 cursor-not-allowed"
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                Messaging Coming Soon
-              </Button>
+              <div className="flex gap-2 w-full max-w-xs">
+                <Button
+                  onClick={handleFriendToggle}
+                  disabled={friendMutation.isPending || isFriendLoading}
+                  variant={isFriend ? "outline" : "default"}
+                  size="lg"
+                  className="flex-1"
+                >
+                  {friendMutation.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      {isFriend ? 'Unfollowing...' : 'Following...'}
+                    </>
+                  ) : isFriend ? (
+                    <>
+                      <UserCheck className="w-5 h-5 mr-2" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-5 h-5 mr-2" />
+                      Follow
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

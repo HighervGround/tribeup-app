@@ -1161,7 +1161,7 @@ export class SupabaseService {
       .from('games')
       .update(updateData)
       .eq('id', gameId)
-      .select('id, duration_minutes')
+      .select('id, title, duration_minutes')
       .single();
       
     console.log('🚨 [SERVICE] Database response:', { data, error });
@@ -1170,8 +1170,8 @@ export class SupabaseService {
 
     // Notify participants of changes
     await this.notifyGameParticipants(gameId, 'game_updated', {
-      title: 'Game Updated',
-      message: `The game "${data.title}" has been updated by the organizer.`
+      title: 'Activity Updated',
+      message: `The activity "${data.title || 'your activity'}" has been updated by the organizer.`
     });
 
     return transformGameFromDB(data, false);
@@ -1363,10 +1363,12 @@ export class SupabaseService {
           
         const isJoined = !!participantData;
         
+        // Use server-provided duration_minutes directly (no client-side recomputation)
+        // duration_minutes is the source of truth from the database
         const result = transformGameFromDB({
           ...gameData,
           creator: creator,
-          duration_minutes: gameData.duration ? (typeof gameData.duration === 'string' ? parseInt(gameData.duration) || 60 : gameData.duration) : 60
+          duration_minutes: gameData.duration_minutes != null ? gameData.duration_minutes : 60
         }, isJoined);
         
         const duration = performance.now() - startTime;

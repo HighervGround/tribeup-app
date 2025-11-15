@@ -149,7 +149,9 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     sport: dbGame.sport,
     date: dbGame.date,
     time: dbGame.time,
-    duration: dbGame.duration_minutes || (dbGame.duration ? parseInterval(dbGame.duration) : 60),
+    // Use server-provided duration_minutes directly (no client-side recomputation)
+    // duration_minutes is the source of truth from the database
+    duration: dbGame.duration_minutes != null ? dbGame.duration_minutes : 60,
     location: dbGame.location,
     latitude: dbGame.latitude,
     longitude: dbGame.longitude,

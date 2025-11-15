@@ -67,7 +67,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
             }`}
             style={{ 
               backgroundColor: brandColors.primary, 
-              borderColor: brandColors.primary 
+              borderColor: brandColors.primary
             }}
             aria-label="Create new game"
           >

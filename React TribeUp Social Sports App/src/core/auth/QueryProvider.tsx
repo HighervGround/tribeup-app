@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { queryDebugger } from '@/shared/utils/queryDebugger';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 // Create a client with enhanced error handling
 const queryClient = new QueryClient({
@@ -54,14 +55,18 @@ interface QueryProviderProps {
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
+    setIsMounted(true);
+    
     // Expose queryClient to window for debugging
     if (typeof window !== 'undefined') {
       (window as any).queryClient = queryClient;
       console.log('🔍 [QueryProvider] QueryClient exposed to window.queryClient');
     }
     
-    // Check if we're in development
+    // Start debugging in development
     const isDev = typeof window !== 'undefined' && 
       (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development');
     
@@ -80,12 +85,21 @@ export function QueryProvider({ children }: QueryProviderProps) {
       // };
     }
   }, []);
+  
+  // Check if we're in development
+  const isDev = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || process.env.NODE_ENV === 'development');
 
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {/* React Query DevTools disabled temporarily due to context issues */}
-      {/* Access via window.queryClient in browser console for debugging */}
+      {/* React Query DevTools - only in development and after mount */}
+      {isDev && isMounted && (
+        <ReactQueryDevtools 
+          initialIsOpen={false}
+          buttonPosition="bottom-left"
+        />
+      )}
     </QueryClientProvider>
   );
 }

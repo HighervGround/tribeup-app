@@ -35,8 +35,10 @@ export function useGameJoinToggle() {
    * Toggle join/leave status for a game
    * @param game - Game object with id and isJoined status
    * @param e - Optional React MouseEvent to prevent propagation
+   * @param onError - Optional callback for handling errors (e.g., rollback optimistic state)
+   * @param onSuccess - Optional callback for handling success (e.g., trigger parent refetch)
    */
-  const toggleJoin = useCallback((game: Game, e?: React.MouseEvent) => {
+  const toggleJoin = useCallback((game: Game, e?: React.MouseEvent, onError?: () => void, onSuccess?: () => void) => {
     // Prevent event bubbling if provided (useful for cards)
     e?.stopPropagation();
     
@@ -56,9 +58,13 @@ export function useGameJoinToggle() {
         onSuccess: () => {
           console.log('✅ Leave activity success callback');
           toast.success('Left activity successfully');
+          // Call success callback to trigger parent refetch
+          if (onSuccess) onSuccess();
         },
         onError: (error) => {
           console.error('❌ Leave game error callback:', error);
+          // Call error callback to rollback optimistic state
+          if (onError) onError();
         }
       });
     } else {
@@ -67,9 +73,13 @@ export function useGameJoinToggle() {
         onSuccess: () => {
           console.log('✅ Join activity success callback');
           toast.success('Joined activity successfully!');
+          // Call success callback to trigger parent refetch
+          if (onSuccess) onSuccess();
         },
         onError: (error) => {
           console.error('❌ Join game error callback:', error);
+          // Call error callback to rollback optimistic state
+          if (onError) onError();
         }
       });
     }

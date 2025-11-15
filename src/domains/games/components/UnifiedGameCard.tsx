@@ -248,7 +248,10 @@ export function UnifiedGameCard({
           )}
           
           <button
-            onClick={handleJoinClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleJoinClick(e);
+            }}
             disabled={isLoading}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               isLoading 

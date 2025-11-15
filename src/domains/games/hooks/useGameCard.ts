@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useSyncExternalStore } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameJoinToggle } from './useGameJoinToggle';
-import { gameKeys } from './useGames';
 
 interface Game {
   id: string;
@@ -33,90 +31,91 @@ interface UseGameCardOptions {
  */
 export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const joinToggle = useGameJoinToggle();
   
-  // Subscribe to cache updates using useSyncExternalStore (what React Query uses internally)
-  // This ensures we react to optimistic updates immediately
-  const gamesList = useSyncExternalStore(
-    (onStoreChange) => {
-      // Subscribe to cache changes for games list
-      const unsubscribeList = queryClient.getQueryCache().subscribe((event) => {
-        if (event?.query?.queryKey && 
-            JSON.stringify(event.query.queryKey) === JSON.stringify(gameKeys.lists())) {
-          onStoreChange();
-        }
-      });
-      
-      // Subscribe to cache changes for game detail
-      const unsubscribeDetail = queryClient.getQueryCache().subscribe((event) => {
-        if (event?.query?.queryKey && 
-            JSON.stringify(event.query.queryKey) === JSON.stringify(gameKeys.detail(game.id))) {
-          onStoreChange();
-        }
-      });
-      
-      return () => {
-        unsubscribeList();
-        unsubscribeDetail();
-      };
-    },
-    () => {
-      // Get latest data from cache
-      return queryClient.getQueryData<Game[]>(gameKeys.lists()) || [];
-    },
-    () => queryClient.getQueryData<Game[]>(gameKeys.lists()) || [] // Server snapshot
-  );
+  // Optimistic local state - updates immediately on button click
+  // Props will override this when parent re-renders with fresh data
+  const [optimisticIsJoined, setOptimisticIsJoined] = useState(game.isJoined ?? false);
+  const [optimisticTotalPlayers, setOptimisticTotalPlayers] = useState(game.totalPlayers ?? 0);
   
-  // Subscribe to game detail cache as well
-  const gameDetail = useSyncExternalStore(
-    (onStoreChange) => {
-      const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-        if (event?.query?.queryKey && 
-            JSON.stringify(event.query.queryKey) === JSON.stringify(gameKeys.detail(game.id))) {
-          onStoreChange();
-        }
-      });
-      return unsubscribe;
-    },
-    () => queryClient.getQueryData<Game>(gameKeys.detail(game.id)),
-    () => queryClient.getQueryData<Game>(gameKeys.detail(game.id))
-  );
-  
-  // Get the latest game data from React Query cache
-  // This ensures we use optimistic updates immediately
-  const currentGame: Game = (() => {
-    // First, try to get the game from the games list cache
-    const cachedGame = gamesList?.find(g => g.id === game.id);
-    
-    // If not found in list, try the detail cache
-    if (!cachedGame && gameDetail) {
-      // Merge detail data with prop to preserve all fields
-      return { ...game, ...gameDetail };
+  // Sync optimistic state with props when they change (parent refetched after mutation success)
+  useEffect(() => {
+    // Only sync if not currently mutating (avoid race conditions)
+    if (!joinToggle.isLoading) {
+      // When mutation completes and parent refetches, props will have new values
+      // Sync optimistic state to match props (this happens after successful mutation)
+      setOptimisticIsJoined(game.isJoined ?? false);
+      setOptimisticTotalPlayers(game.totalPlayers ?? 0);
     }
-    
-    // Return cached game if found (with updated isJoined), otherwise use prop
-    // Merge to preserve all fields from prop while updating with cache values
-    return cachedGame ? { ...game, ...cachedGame } : game;
-  })();
+  }, [game.isJoined, game.totalPlayers, joinToggle.isLoading]);
+  
+  // Use optimistic values if mutation is pending, otherwise use props
+  // This gives immediate UI feedback while mutation runs
+  const isJoined = joinToggle.isLoading ? optimisticIsJoined : (game.isJoined ?? false);
+  const totalPlayers = joinToggle.isLoading ? optimisticTotalPlayers : (game.totalPlayers ?? 0);
+  
+  // Merge game with optimistic values for display
+  const currentGame = {
+    ...game,
+    isJoined,
+    totalPlayers,
+  };
   
   const handleCardClick = () => {
+    const gameId = currentGame.id || game.id;
+    if (!gameId) {
+      console.error('❌ [useGameCard] No game ID found for card click', { currentGame, game });
+      return;
+    }
+    
     if (options.onSelect) {
-      options.onSelect(game.id);
+      options.onSelect(gameId);
     } else {
-      navigate(`/game/${game.id}`);
+      navigate(`/game/${gameId}`);
     }
   };
   
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     
+    // Update optimistic state immediately for instant UI feedback
+    const willBeJoined = !isJoined;
+    const newTotalPlayers = willBeJoined 
+      ? totalPlayers + 1 
+      : Math.max(0, totalPlayers - 1);
+    
+    setOptimisticIsJoined(willBeJoined);
+    setOptimisticTotalPlayers(newTotalPlayers);
+    
     if (options.onJoinLeave) {
       // Use custom join/leave handler if provided (legacy support)
-      options.onJoinLeave(game.id);
+      // For custom handlers, we still need to call mutation but pass refetch callback
+      joinToggle.toggleJoin(
+        { ...game, isJoined },
+        e,
+        () => {
+          // Rollback optimistic state on error
+          setOptimisticIsJoined(game.isJoined ?? false);
+          setOptimisticTotalPlayers(game.totalPlayers ?? 0);
+        },
+        () => {
+          // Trigger parent refetch on success
+          options.onJoinLeave?.(game.id);
+        }
+      );
     } else {
-      // Use the centralized toggle logic with current game state
-      joinToggle.toggleJoin(currentGame, e);
+      // Use the centralized toggle logic
+      // Optimistic state already updated above, mutation runs in background
+      // Pass error callback to rollback optimistic state on mutation error
+      joinToggle.toggleJoin(
+        { ...game, isJoined }, 
+        e,
+        () => {
+          // Rollback optimistic state on error
+          setOptimisticIsJoined(game.isJoined ?? false);
+          setOptimisticTotalPlayers(game.totalPlayers ?? 0);
+        }
+      );
     }
   };
   
@@ -140,26 +139,13 @@ export function useGameCard(game: Game, options: UseGameCardOptions = {}) {
   };
   
   /**
-   * SINGLE SOURCE OF TRUTH: Only use pre-computed view fields
-   * Use currentGame (from cache) instead of game prop for real-time updates
+   * SINGLE SOURCE OF TRUTH: Use optimistic values during mutations, props otherwise
+   * Compute availableSpots from maxPlayers - totalPlayers to ensure accuracy
    */
-  const totalPlayers = currentGame.totalPlayers ?? 0;
   const maxPlayers = currentGame.maxPlayers ?? 0;
-  const availableSpots = currentGame.availableSpots ?? 0;
+  // Compute availableSpots from current values to ensure accuracy when cache updates
+  const availableSpots = Math.max(0, maxPlayers - totalPlayers);
   const isFull = totalPlayers >= maxPlayers;
-  
-  // Debug logging
-  console.log('useGameCard data:', {
-    game_id: currentGame.id,
-    total_players: currentGame.totalPlayers,
-    available_spots: currentGame.availableSpots,
-    max_players: currentGame.maxPlayers,
-    isJoined: currentGame.isJoined,
-    totalPlayers,
-    maxPlayers,
-    availableSpots,
-    isFull
-  });
   
   /**
    * Get formatted player count string

@@ -98,20 +98,35 @@ function NotificationCenter() {
     
     if (!url) {
       // Build URL from data fields based on notification type
-      if (notification.gameId || notification.data?.gameId) {
-        const gameId = notification.gameId || notification.data?.gameId;
+      // Check for gameId in multiple possible locations
+      const gameId = notification.gameId || 
+                     notification.data?.gameId || 
+                     notification.data?.game_id ||
+                     notification.data?.game_uuid;
+      
+      if (gameId) {
         if (notification.type === 'new_message') {
           // Game chat messages
           url = `/chat/game/${gameId}`;
         } else {
-          // Game-related notifications
+          // All other game-related notifications (join_request, game_update, game_reminder, etc.)
           url = `/game/${gameId}`;
         }
-      } else if (notification.userId || notification.data?.userId) {
-        const userId = notification.userId || notification.data?.userId;
-        url = `/user/${userId}`;
-      } else if (notification.data?.chatId && notification.data?.chatType) {
-        url = `/chat/${notification.data.chatType}/${notification.data.chatId}`;
+      } else {
+        // Fallback: Check if notification type is game-related and try to extract gameId from message or other fields
+        const gameRelatedTypes = ['join_request', 'game_update', 'game_reminder', 'game_cancelled'];
+        if (gameRelatedTypes.includes(notification.type)) {
+          // Try to find gameId in the notification message or other data fields
+          const messageGameId = notification.message?.match(/game[\/\s]+([a-f0-9-]{36})/i)?.[1];
+          if (messageGameId) {
+            url = `/game/${messageGameId}`;
+          }
+        } else if (notification.userId || notification.data?.userId) {
+          const userId = notification.userId || notification.data?.userId;
+          url = `/user/${userId}`;
+        } else if (notification.data?.chatId && notification.data?.chatType) {
+          url = `/chat/${notification.data.chatType}/${notification.data.chatId}`;
+        }
       }
     }
 
@@ -163,6 +178,22 @@ function NotificationCenter() {
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
+  };
+
+  // Helper function to properly capitalize notification titles
+  const capitalizeTitle = (title: string): string => {
+    if (!title) return title;
+    // Capitalize first letter of each word, but preserve existing capitalization for proper nouns
+    return title
+      .split(' ')
+      .map(word => {
+        // If word is all lowercase or starts with lowercase, capitalize first letter
+        if (word.length > 0 && word[0] === word[0].toLowerCase()) {
+          return word[0].toUpperCase() + word.slice(1);
+        }
+        return word;
+      })
+      .join(' ');
   };
 
   return (
@@ -306,9 +337,20 @@ function NotificationCenter() {
                     className={`cursor-pointer transition-all hover:shadow-md ${
                       !notification.read ? 'border-l-4 border-l-primary' : ''
                     } ${getNotificationBackground(notification.type)}`}
-                    onClick={() => handleNotificationClick(notification)}
                   >
-                    <CardContent className="p-4">
+                    <CardContent 
+                      className="p-4"
+                      onClick={() => handleNotificationClick(notification)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleNotificationClick(notification);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Notification: ${capitalizeTitle(notification.title)}`}
+                    >
                       <div className="flex gap-3">
                         <div className="flex-shrink-0 mt-1">
                           {getNotificationIcon(notification.type)}
@@ -318,7 +360,7 @@ function NotificationCenter() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <div className={`font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {notification.title}
+                                {capitalizeTitle(notification.title)}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {notification.message}

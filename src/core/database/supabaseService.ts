@@ -693,16 +693,18 @@ export class SupabaseService {
       const userId = user?.id;
       console.log(`🔍 Getting games for user: ${userId || 'anonymous'}`);
       
-      // Fetch games with creator_profile relationship from users table
-      // Use games_with_counts view for optimized current_players count
+      // Fetch games from games_with_counts view
+      // Note: Views don't support relationships, so we'll fetch creator data separately
+      // The view has: id, title, sport, description, location, latitude, longitude, date, time, 
+      // cost, max_players, image_url, creator_id, created_at, duration,
+      // current_players, public_rsvp_count
       const queryStart = performance.now();
       const { data: gamesData, error: gamesError } = await supabase
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-          max_players, creator_id, created_at, duration_minutes, planned_route,
-          total_players, available_spots, current_players, public_rsvp_count,
-          creator_profile(id, full_name, username, avatar_url)
+          max_players, creator_id, created_at, duration,
+          current_players, public_rsvp_count
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -716,34 +718,7 @@ export class SupabaseService {
           details: gamesError.details,
           hint: gamesError.hint
         });
-        
-        // Try fallback query without planned_route if the view doesn't have it yet
-        console.log('🔄 Trying fallback query without planned_route...');
-        try {
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('games_with_counts')
-            .select(`
-              id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-              max_players, creator_id, created_at, duration_minutes,
-              total_players, available_spots, current_players, public_rsvp_count,
-              creator_profile(id, full_name, username, avatar_url)
-            `)
-            .gte('date', new Date().toISOString().split('T')[0])
-            .order('date', { ascending: true })
-            .limit(50);
-            
-          if (fallbackError) {
-            console.error('❌ Fallback query also failed:', fallbackError);
-            return [];
-          }
-          
-          console.log('✅ Fallback query succeeded, using data without planned_route');
-          const transformedGames = fallbackData.map((game: any) => transformGameFromDB(game, false));
-          return transformedGames;
-        } catch (fallbackErr) {
-          console.error('❌ Fallback query exception:', fallbackErr);
-          return [];
-        }
+        return [];
       }
       
       const queryTime = performance.now() - queryStart;
@@ -767,15 +742,34 @@ export class SupabaseService {
         }
       }
       
-      // Transform games with creator_profile from the relationship
+      // Step 3: Fetch creator profiles separately (views don't support relationships)
+      let creatorProfiles = new Map<string, any>();
+      if (gamesData && gamesData.length > 0) {
+        const creatorIds = [...new Set(gamesData.map((g: any) => g.creator_id).filter(Boolean))];
+        if (creatorIds.length > 0) {
+          const { data: creators } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .in('id', creatorIds);
+          
+          if (creators) {
+            creators.forEach((creator: any) => {
+              creatorProfiles.set(creator.id, creator);
+            });
+          }
+        }
+      }
+      
+      // Transform games with creator data
       const games = (gamesData || []).map((game: any) => {
         const isJoined = participantsByGame.has(game.id);
-        const creator = game.creator_profile || null;
+        const creator = creatorProfiles.get(game.creator_id) || null;
         
         // Enhanced game object with proper creator data
         const enhancedGame = {
           ...game,
-          creator: creator
+          creator: creator,
+          duration_minutes: game.duration ? (typeof game.duration === 'string' ? parseInt(game.duration) || 60 : game.duration) : 60
         };
         
         console.log(`🎯 Game "${game.title}" creator:`, {
@@ -815,7 +809,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration_minutes, total_players, available_spots, current_players, public_rsvp_count')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, current_players, public_rsvp_count')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -834,8 +828,8 @@ export class SupabaseService {
           longitude: game.longitude,
           cost: game.cost,
           maxPlayers: game.max_players,
-          totalPlayers: game.total_players || 0,
-          availableSpots: game.available_spots || 0,
+          totalPlayers: (game.current_players || 0) + (game.public_rsvp_count || 0),
+          availableSpots: Math.max(0, (game.max_players || 0) - ((game.current_players || 0) + (game.public_rsvp_count || 0))),
           description: game.description,
           imageUrl: game.image_url || '',
           sportColor: '#6B7280',
@@ -856,23 +850,21 @@ export class SupabaseService {
       } catch (fallbackError) {
         console.error('❌ Fallback query also failed:', fallbackError);
         
-        // Return mock games as final fallback
-        console.log('📦 Returning mock games as final fallback');
-        return this.getMockGames();
+        // Return empty array instead of mock games
+        console.log('📦 Returning empty array');
+        return [];
       }
     }
   }
 
   static async getMyGames(userId: string): Promise<Game[]> {
-    // Fetch games with creator_profile relationship from users table
-    // Use games_with_counts view for optimized current_players count
-    const { data: gamesData, error } = await supabase
+    // Fetch games from games_with_counts view (views don't support relationships)
+      const { data: gamesData, error } = await supabase
       .from('games_with_counts')
       .select(`
         id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
-        max_players, creator_id, created_at, duration_minutes,
-        total_players, available_spots, current_players, public_rsvp_count,
-        creator_profile(id, full_name, username, avatar_url)
+        max_players, creator_id, created_at, duration,
+        current_players, public_rsvp_count
       `)
       .eq('creator_id', userId)
       .gte('date', new Date().toISOString().split('T')[0])
@@ -880,11 +872,33 @@ export class SupabaseService {
 
     if (error) throw error;
 
-    // Transform games with creator_profile from the relationship
-    const data = (gamesData || []).map((game: any) => ({
-      ...game,
-      creator: game.creator_profile || null
-    }));
+    // Fetch creator profiles separately (views don't support relationships)
+    let creatorProfiles = new Map<string, any>();
+    if (gamesData && gamesData.length > 0) {
+      const creatorIds = [...new Set(gamesData.map((g: any) => g.creator_id).filter(Boolean))];
+      if (creatorIds.length > 0) {
+        const { data: creators } = await supabase
+          .from('users')
+          .select('id, full_name, username, avatar_url')
+          .in('id', creatorIds);
+        
+        if (creators) {
+          creators.forEach((creator: any) => {
+            creatorProfiles.set(creator.id, creator);
+          });
+        }
+      }
+    }
+
+    // Transform games with creator data
+    const data = (gamesData || []).map((game: any) => {
+      const creator = creatorProfiles.get(game.creator_id) || null;
+      return {
+        ...game,
+        creator: creator,
+        duration_minutes: game.duration ? (typeof game.duration === 'string' ? parseInt(game.duration) || 60 : game.duration) : 60
+      };
+    });
 
     return data.map(game => transformGameFromDB(game, true));
   }
@@ -908,12 +922,11 @@ export class SupabaseService {
           max_players,
           current_players,
           public_rsvp_count,
-          total_players,
-          available_spots,
           description,
           image_url,
           creator_id,
-          creator_profile(id, full_name, username, avatar_url)
+          latitude,
+          longitude
         `);
 
       // Default to future games only unless specific date range is provided
@@ -1313,17 +1326,14 @@ export class SupabaseService {
       }
       
       // OPTIMIZED APPROACH: Use simpler, faster queries
+      // Note: Views don't support relationships, so fetch creator separately
       if (userId) {
         console.log('🔍 [getGameById] Fetching for authenticated user:', userId);
         
-        // Step 1: Get basic game data with creator_profile relationship from users table
-        // Use games_with_counts view for optimized current_players count (now includes planned_route)
+        // Step 1: Get basic game data from games_with_counts view
         const { data: gameData, error: gameError } = await supabase
           .from('games_with_counts')
-          .select(`
-            *,
-            creator_profile(id, full_name, username, avatar_url)
-          `)
+          .select('*')
           .eq('id', gameId)
           .single();
 
@@ -1332,7 +1342,18 @@ export class SupabaseService {
           throw gameError;
         }
         
-        // Step 2: Check if user joined (separate fast query)
+        // Step 2: Fetch creator profile separately (views don't support relationships)
+        let creator = null;
+        if (gameData.creator_id) {
+          const { data: creatorData } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .eq('id', gameData.creator_id)
+            .maybeSingle();
+          creator = creatorData || null;
+        }
+        
+        // Step 3: Check if user joined (separate fast query)
         const { data: participantData } = await supabase
           .from('game_participants')
           .select('user_id')
@@ -1342,10 +1363,10 @@ export class SupabaseService {
           
         const isJoined = !!participantData;
         
-        // Creator info is already included via creator_profile relationship
         const result = transformGameFromDB({
           ...gameData,
-          creator: gameData.creator_profile || null
+          creator: creator,
+          duration_minutes: gameData.duration ? (typeof gameData.duration === 'string' ? parseInt(gameData.duration) || 60 : gameData.duration) : 60
         }, isJoined);
         
         const duration = performance.now() - startTime;
@@ -1359,14 +1380,10 @@ export class SupabaseService {
       } else {
         console.log('🔍 [getGameById] Fetching for anonymous user');
         
-        // For anonymous users: query with creator_profile relationship from users table
-        // Use games_with_counts view for optimized current_players count (now includes planned_route)
+        // For anonymous users: query games_with_counts view (no relationships)
         const { data: gameData, error: gameError } = await supabase
           .from('games_with_counts')
-          .select(`
-            *,
-            creator_profile(id, full_name, username, avatar_url)
-          `)
+          .select('*')
           .eq('id', gameId)
           .single();
 
@@ -1375,16 +1392,28 @@ export class SupabaseService {
           throw gameError;
         }
         
-        if (gameData.creator_id && !gameData.creator_profile) {
-          console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in users table`);
-        } else if (gameData.creator_profile) {
-          const displayName = gameData.creator_profile.full_name?.trim() || gameData.creator_profile.username?.trim() || 'Host';
-          console.log(`✅ [getGameById] Creator found:`, { id: gameData.creator_profile.id, name: displayName });
+        // Fetch creator profile separately
+        let creator = null;
+        if (gameData.creator_id) {
+          const { data: creatorData } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .eq('id', gameData.creator_id)
+            .maybeSingle();
+          creator = creatorData || null;
+          
+          if (!creator) {
+            console.warn(`⚠️ [getGameById] Creator ${gameData.creator_id} not found in users table`);
+          } else {
+            const displayName = creator.full_name?.trim() || creator.username?.trim() || 'Host';
+            console.log(`✅ [getGameById] Creator found:`, { id: creator.id, name: displayName });
+          }
         }
         
         const result = transformGameFromDB({
           ...gameData,
-          creator: gameData.creator_profile || null
+          creator: creator,
+          duration_minutes: gameData.duration ? (typeof gameData.duration === 'string' ? parseInt(gameData.duration) || 60 : gameData.duration) : 60
         }, false);
         
         const duration = performance.now() - startTime;
@@ -1697,7 +1726,7 @@ export class SupabaseService {
       // Use games_with_counts view for optimized current_players count
       let query = supabase
         .from('games_with_counts')
-        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,total_players,available_spots')
+        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players,public_rsvp_count')
 ;
 
       // Default to future games only unless specific date range is provided
@@ -1791,7 +1820,7 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,
-            total_players,available_spots
+            current_players,public_rsvp_count
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1822,7 +1851,7 @@ export class SupabaseService {
         // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
           .from('games_with_counts')
-          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,total_players,available_spots')
+          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players,public_rsvp_count')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })

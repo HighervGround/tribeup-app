@@ -15,6 +15,7 @@ import { SupabaseService } from '@/core/database/supabaseService';
 import { useLocationSearch } from '@/domains/locations/hooks/useLocationSearch';
 import { useGeolocation } from '@/domains/locations/hooks/useGeolocation';
 import { systemConfig } from '@/core/config/systemConfig';
+import { ufVenues, searchVenues, UFVenue } from '@/domains/locations/data/ufVenues';
 
 interface FormData {
   sport: string;
@@ -70,6 +71,7 @@ function CreateGame() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [quickTimes, setQuickTimes] = useState<string[]>(DEFAULT_QUICK_TIMES);
+  const [ufVenueSuggestions, setUfVenueSuggestions] = useState<UFVenue[]>([]);
   
   // Location hooks
   const { latitude: userLat, longitude: userLng, error: geoError } = useGeolocation();
@@ -876,13 +878,24 @@ function CreateGame() {
                       onChange={(e) => {
                         handleInputChange('location', e.target.value);
                         console.log('Location input changed:', e.target.value);
-                        if (e.target.value.length > 2) {
-                          console.log('Triggering location search for:', e.target.value);
-                          searchLocations(e.target.value, userLat || undefined, userLng || undefined);
-                          setShowLocationSuggestions(true);
+                        if (e.target.value.length > 0) {
+                          // Show UF venue suggestions for any input
+                          const ufMatches = searchVenues(e.target.value);
+                          setUfVenueSuggestions(ufMatches);
+
+                          // Show regular location suggestions for longer queries
+                          if (e.target.value.length > 2) {
+                            console.log('Triggering location search for:', e.target.value);
+                            searchLocations(e.target.value, userLat || undefined, userLng || undefined);
+                            setShowLocationSuggestions(true);
+                          } else {
+                            console.log('Hiding location suggestions');
+                            setShowLocationSuggestions(false);
+                          }
                         } else {
-                          console.log('Hiding location suggestions');
+                          console.log('Hiding all location suggestions');
                           setShowLocationSuggestions(false);
+                          setUfVenueSuggestions([]);
                         }
                       }}
                       placeholder="Enter location or address"
@@ -929,49 +942,107 @@ function CreateGame() {
                   </div>
                   
                   {/* Location Suggestions */}
-                  {showLocationSuggestions && (
+                  {(ufVenueSuggestions.length > 0 || showLocationSuggestions) && (
                     <div className="border border-border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto">
-                      {suggestions.length > 0 ? (
-                        suggestions.map((suggestion) => (
-                          <button
-                            key={suggestion.place_id}
-                            type="button"
-                            className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
-                            onClick={async () => {
-                              setFormData(prev => {
-                                // Generate auto title when location is selected
-                                const newTitle = prev.sport && prev.time ? 
-                                  generateGameTitle(prev.sport, prev.time, suggestion.description) : 
-                                  prev.title;
-                                
-                                return { 
-                                  ...prev, 
-                                  location: suggestion.description,
-                                  title: newTitle || prev.title
-                                };
-                              });
-                              setShowLocationSuggestions(false);
-                              
-                              const coords = await geocodeLocation(suggestion.description);
-                              if (coords) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  latitude: coords.lat,
-                                  longitude: coords.lng
-                                }));
-                              }
-                            }}
-                          >
-                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            <div>
-                              <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                              <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
+                      {/* UF Campus Venues - Show first */}
+                      {ufVenueSuggestions.length > 0 && (
+                        <div className="border-b border-border">
+                          <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/50">
+                            🎓 UF Campus Venues
+                          </div>
+                          {ufVenueSuggestions.map((venue) => (
+                            <button
+                              key={`uf-${venue.id}`}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
+                              onClick={() => {
+                                setFormData(prev => {
+                                  // Generate auto title when venue is selected
+                                  const newTitle = prev.sport && prev.time ?
+                                    generateGameTitle(prev.sport, prev.time, venue.name) :
+                                    prev.title;
+
+                                  return {
+                                    ...prev,
+                                    location: venue.name,
+                                    title: newTitle || prev.title,
+                                    latitude: venue.latitude,
+                                    longitude: venue.longitude
+                                  };
+                                });
+                                setShowLocationSuggestions(false);
+                                setUfVenueSuggestions([]);
+                              }}
+                            >
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <MapPin className="w-4 h-4 text-orange-600" />
+                                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full font-medium">
+                                  {venue.type === 'indoor' ? '🏢' : '🌳'} {venue.shortName}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="font-medium">{venue.name}</div>
+                                <div className="text-sm text-muted-foreground">{venue.description}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Regular Location Suggestions */}
+                      {showLocationSuggestions && (
+                        <div>
+                          {ufVenueSuggestions.length > 0 && (
+                            <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/50">
+                              📍 Other Locations
                             </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          {isLocationLoading ? 'Searching...' : 'No suggestions found. Try typing a more specific location.'}
+                          )}
+                          {suggestions.length > 0 ? (
+                            suggestions.map((suggestion) => (
+                              <button
+                                key={suggestion.place_id}
+                                type="button"
+                                className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
+                                onClick={async () => {
+                                  setFormData(prev => {
+                                    // Generate auto title when location is selected
+                                    const newTitle = prev.sport && prev.time ?
+                                      generateGameTitle(prev.sport, prev.time, suggestion.description) :
+                                      prev.title;
+
+                                    return {
+                                      ...prev,
+                                      location: suggestion.description,
+                                      title: newTitle || prev.title
+                                    };
+                                  });
+                                  setShowLocationSuggestions(false);
+                                  setUfVenueSuggestions([]);
+
+                                  const coords = await geocodeLocation(suggestion.description);
+                                  if (coords) {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      latitude: coords.lat,
+                                      longitude: coords.lng
+                                    }));
+                                  }
+                                }}
+                              >
+                                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <div>
+                                  <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
+                                  <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
+                                </div>
+                              </button>
+                            ))
+                          ) : (
+                            showLocationSuggestions && !isLocationLoading && (
+                              <div className="px-3 py-2 text-sm text-muted-foreground">
+                                {isLocationLoading ? 'Searching...' : 'No suggestions found. Try typing a more specific location.'}
+                              </div>
+                            )
+                          )}
                         </div>
                       )}
                     </div>

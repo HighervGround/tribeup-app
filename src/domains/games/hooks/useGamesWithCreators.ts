@@ -33,10 +33,10 @@ export interface GameWithCreator {
   longitude?: number;
   cost: string;
   maxPlayers: number;
-  currentPlayers: number;
-  publicRsvpCount?: number;
-  totalPlayers?: number;
-  availableSpots?: number;
+  currentPlayers: number; // Authenticated participants with status='joined'
+  publicRsvpCount?: number; // Public RSVPs
+  totalPlayers: number; // current_players + public_rsvp_count
+  availableSpots: number; // max_players - total_players
   description: string;
   imageUrl?: string;
   sportColor: string;
@@ -44,6 +44,11 @@ export interface GameWithCreator {
   createdBy: string;
   creatorId: string;
   creatorData: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  host?: {
     id: string;
     name: string;
     avatar: string;
@@ -83,9 +88,9 @@ export function useGamesWithCreators() {
         const { data: gamesData, error: gamesErr } = await supabase
           .from('games_with_counts')
           .select(`
-            id, title, sport, date, time, duration, location, latitude, longitude,
+            id, title, sport, date, time, duration, duration_minutes, location, latitude, longitude,
             cost, max_players, description, image_url, creator_id, created_at,
-            current_players, participant_count
+            current_players, total_players, public_rsvp_count, available_spots
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
@@ -195,20 +200,26 @@ export function useGamesWithCreators() {
             };
           }
 
+          // Use server-provided duration_minutes directly (no client-side recomputation)
+          // duration_minutes is the source of truth from the database
+          const duration = game.duration_minutes != null ? game.duration_minutes : 60;
+          
           return {
             id: game.id,
             title: game.title,
             sport: game.sport,
             date: game.date,
             time: game.time,
-            duration: game.duration || 60,
+            duration: Number(duration),
             location: game.location,
             latitude: game.latitude,
             longitude: game.longitude,
             cost: game.cost,
             maxPlayers: Number(game.max_players ?? 0),
-            totalPlayers: Number(game.participant_count ?? 0),
-            availableSpots: Math.max(0, Number(game.max_players ?? 0) - Number(game.participant_count ?? 0)),
+            currentPlayers: Number(game.current_players ?? 0),
+            totalPlayers: Number(game.total_players ?? game.current_players ?? 0),
+            availableSpots: Number(game.available_spots ?? 0),
+            publicRsvpCount: Number(game.public_rsvp_count ?? 0),
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),

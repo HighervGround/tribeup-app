@@ -55,12 +55,10 @@ The Game Management System is the core feature of TribeUp, handling the full lif
 - `useGameRealtime.ts` - Real-time game updates via Supabase
 - `useGameParticipants.ts` - Participant list management
 - `useGameCard.ts` - Shared game card logic
-- `useSimpleGames.ts` - Simplified game queries
 - `usePublicGame.ts` - Public game access without auth
 
 ### Services
 - `gameParticipantService.ts` - Participant CRUD operations
-- `simpleGameService.ts` - Core game database operations
 
 ## Business Rules
 

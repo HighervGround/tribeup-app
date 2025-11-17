@@ -15,6 +15,7 @@ import { SupabaseService } from '@/core/database/supabaseService';
 import { useLocationSearch } from '@/domains/locations/hooks/useLocationSearch';
 import { useGeolocation } from '@/domains/locations/hooks/useGeolocation';
 import { systemConfig } from '@/core/config/systemConfig';
+import { SportPicker, DEFAULT_SPORTS } from '@/domains/games/components';
 import { ufVenues, searchVenues, UFVenue } from '@/domains/locations/data/ufVenues';
 
 interface FormData {
@@ -53,8 +54,8 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'What & When', fields: ['sport', 'date', 'time', 'duration'] },
-  { id: 2, title: 'Where & Who', fields: ['location', 'maxPlayers', 'cost'] },
+  { id: 1, title: 'Activity Details', fields: ['sport', 'title', 'date', 'time', 'duration'] },
+  { id: 2, title: 'Location & Players', fields: ['location', 'maxPlayers', 'cost'] },
   { id: 3, title: 'Review & Create', fields: [] },
 ];
 
@@ -214,6 +215,29 @@ function CreateGame() {
       return [];
     }
   });
+
+  // Recent sports (stored in localStorage)
+  const [recentSports, setRecentSports] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('recentSports') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  // Handle sport selection and track recent
+  const handleSportSelect = (sport: { value: string; label: string; icon: string }) => {
+    handleInputChange('sport', sport.value);
+    
+    // Track recent sports
+    const updated = [sport.value, ...recentSports.filter(s => s !== sport.value)].slice(0, 5);
+    setRecentSports(updated);
+    try {
+      localStorage.setItem('recentSports', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save recent sports:', e);
+    }
+  };
 
   // Note: Removed auto-populate location to avoid interfering with user input
   // Users can manually click the location button to use their current location
@@ -419,16 +443,19 @@ function CreateGame() {
       const newData = { ...prev, [name]: value };
       
       // Auto-generate title when sport, time, or location changes (only if title is empty or matches previous auto-generated title)
-      const currentAutoTitle = generateGameTitle(prev.sport, prev.time, prev.location);
-      const newAutoTitle = generateGameTitle(
-        name === 'sport' ? value : prev.sport,
-        name === 'time' ? value : prev.time,
-        name === 'location' ? value : prev.location
-      );
-      
-      if ((name === 'sport' || name === 'time' || name === 'location') && 
-          (!prev.title || prev.title === currentAutoTitle) && newAutoTitle) {
-        newData.title = newAutoTitle;
+      // Only auto-generate if user hasn't manually edited the title
+      if (name !== 'title') {
+        const currentAutoTitle = generateGameTitle(prev.sport, prev.time, prev.location);
+        const newAutoTitle = generateGameTitle(
+          name === 'sport' ? value : prev.sport,
+          name === 'time' ? value : prev.time,
+          name === 'location' ? value : prev.location
+        );
+        
+        if ((name === 'sport' || name === 'time' || name === 'location') && 
+            (!prev.title || prev.title === currentAutoTitle || prev.title.trim() === '') && newAutoTitle) {
+          newData.title = newAutoTitle;
+        }
       }
       
       // Auto-set max players based on sport
@@ -491,7 +518,8 @@ function CreateGame() {
   const validateCurrentStep = (): boolean => {
     const stepErrors: Record<string, string> = {};
     if (currentStep === 1) {
-      if (!formData.sport) stepErrors.sport = 'Please select a sport.';
+      if (!formData.sport) stepErrors.sport = 'Please select an activity type.';
+      if (!formData.title || formData.title.trim().length === 0) stepErrors.title = 'Activity title is required.';
       if (!formData.date) stepErrors.date = 'Please choose a date.';
       if (!formData.time) stepErrors.time = 'Please choose a time.';
       if (!formData.duration) stepErrors.duration = 'Please set a duration.';
@@ -517,7 +545,6 @@ function CreateGame() {
     }
     // Step 3 is now "Review & Create" - no validation needed
     
-    console.log('[CreateGame] Validation - Step:', currentStep, 'Errors:', stepErrors, 'FormData:', formData);
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   };
@@ -541,21 +568,15 @@ function CreateGame() {
     setSubmitError(null);
     try {
       const { user } = useAppStore.getState();
-      console.log('[CreateGame] submit clicked. user =', user?.id);
       if (!user) {
-        throw new Error('You must be logged in to create an activity');
+        toast.error('You must be logged in to create an activity');
+        navigate('/login');
+        return;
       }
 
       // Parse duration more carefully to avoid losing user input
       const parsedDuration = parseInt(String(formData.duration).trim(), 10);
       const finalDuration = Number.isNaN(parsedDuration) ? 60 : Math.max(1, parsedDuration);
-      
-      console.log('[CreateGame] Duration parsing:', {
-        formDataDuration: formData.duration,
-        parsedDuration,
-        finalDuration,
-        formDataType: typeof formData.duration
-      });
 
       const gameData = {
         title: formData.title,
@@ -574,12 +595,14 @@ function CreateGame() {
         // Note: Removed skill-related fields as they don't exist in current database schema
         // TODO: Add skill fields to database schema if needed
       };
-      console.log('[CreateGame] creating game with data =', gameData);
+      
       await SupabaseService.createGame(gameData as any);
+      toast.success('Activity created successfully!');
       navigate('/');
     } catch (error) {
-      console.error('Error creating game:', error);
-      setSubmitError(error instanceof Error ? error.message : 'Failed to create game');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create activity. Please try again.';
+      setSubmitError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -685,9 +708,9 @@ function CreateGame() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">Create Activity</h1>
+                <h1 className="text-xl font-bold">Create Activity</h1>
                 <p className="text-sm text-muted-foreground">
-                  {steps[currentStep - 1].title}
+                  Step {currentStep} of {steps.length}: {steps[currentStep - 1].title}
                 </p>
               </div>
             </div>
@@ -735,28 +758,40 @@ function CreateGame() {
               <CardContent className="space-y-6">
                 {/* Sport Selection */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    Sport
+                  <label className="block text-sm font-medium text-foreground mb-3">
+                    Sport <span className="text-destructive">*</span>
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {sportOptions.map((sport) => (
-                      <button
-                        key={sport.value}
-                        type="button"
-                        onClick={() => handleInputChange('sport', sport.value)}
-                        className={`p-2 rounded-lg border-2 transition-all duration-200 ${
-                          formData.sport === sport.value
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-input hover:border-ring text-foreground bg-background'
-                        }`}
-                      >
-                        <div className="text-lg mb-1">{sport.icon}</div>
-                        <div className="text-xs font-medium">{sport.label}</div>
-                      </button>
-                    ))}
-                  </div>
+                  <SportPicker
+                    sports={DEFAULT_SPORTS}
+                    selectedSport={formData.sport}
+                    onSportSelect={handleSportSelect}
+                    showSearch={true}
+                    showRecent={true}
+                    recentSports={recentSports}
+                    gridCols={3}
+                    size="md"
+                  />
                   {errors.sport && (
-                    <p className="text-sm text-destructive">{errors.sport}</p>
+                    <p className="text-sm text-destructive mt-2">{errors.sport}</p>
+                  )}
+                </div>
+
+                {/* Activity Title */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Activity Title <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    placeholder="e.g., Pickup Basketball at Student Rec"
+                    className={errors.title ? 'border-destructive' : ''}
+                  />
+                  {errors.title && (
+                    <p className="text-sm text-destructive">{errors.title}</p>
+                  )}
+                  {formData.title && !errors.title && (
+                    <p className="text-xs text-muted-foreground">Give your activity a clear, descriptive name</p>
                   )}
                 </div>
 
@@ -877,7 +912,6 @@ function CreateGame() {
                       value={formData.location}
                       onChange={(e) => {
                         handleInputChange('location', e.target.value);
-                        console.log('Location input changed:', e.target.value);
                         if (e.target.value.length > 0) {
                           // Show UF venue suggestions for any input
                           const ufMatches = searchVenues(e.target.value);
@@ -1345,14 +1379,6 @@ function CreateGame() {
             </div>
           )}
           
-          {/* Debug Info - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-2 text-xs text-muted-foreground text-center">
-              Debug: Step {currentStep} complete: {isStepComplete(currentStep) ? 'Yes' : 'No'} | 
-              Errors: {Object.keys(errors).filter(key => key !== 'duplicate').length} | 
-              Submitting: {isSubmitting ? 'Yes' : 'No'}
-            </div>
-          )}
         </div>
       </div>
     </div>

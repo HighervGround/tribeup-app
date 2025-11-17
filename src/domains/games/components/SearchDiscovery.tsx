@@ -10,6 +10,8 @@ import { useGames } from '@/domains/games/hooks/useGames';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 import { formatTimeString } from '@/shared/utils/dateUtils';
+import { EmptyStateEnhanced } from '@/shared/components/ui/empty-state-enhanced';
+import { Plus } from 'lucide-react';
 
 
 
@@ -193,21 +195,24 @@ function SearchDiscovery() {
         </div>
 
         {!loading && filteredResults.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No activities found</h3>
-            <p className="text-muted-foreground mb-4">
-              Try adjusting your search or filters
-            </p>
-            <Button variant="outline" onClick={() => {
-              setSearchQuery('');
-              setSelectedSport('all');
-            }}>
-              Clear filters
-            </Button>
-          </div>
+          <EmptyStateEnhanced
+            variant="no-results"
+            title="No activities found"
+            description="Try adjusting your search or filters to find what you're looking for."
+            primaryAction={{
+              label: "Clear Filters",
+              onClick: () => {
+                setSearchQuery('');
+                setSelectedSport('all');
+              },
+              variant: "outline",
+            }}
+            secondaryAction={{
+              label: "Create Activity",
+              onClick: () => navigate('/create'),
+              icon: <Plus className="size-4" />,
+            }}
+          />
         )}
       </div>
     </div>

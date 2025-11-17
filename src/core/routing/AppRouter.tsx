@@ -20,6 +20,8 @@ const Settings = lazy(() => import('@/domains/users/components/Settings'));
 const AccessibilitySettings = lazy(() => import('@/domains/users/components/AccessibilitySettings'));
 const NotificationSettings = lazy(() => import('@/domains/users/components/NotificationSettings'));
 const DesignSystem = lazy(() => import('@/shared/components/common/DesignSystem'));
+const DesignSystemShowcase = lazy(() => import('@/pages/DesignSystemShowcase'));
+const LeaderboardPage = lazy(() => import('@/domains/users/components/LeaderboardPage'));
 const AdminDashboard = lazy(() => import('@/shared/components/common/AdminDashboard'));
 import AuthCallback from '@/core/auth/AuthCallback';
 const TermsOfService = lazy(() => import('@/core/auth/TermsOfService'));
@@ -30,6 +32,10 @@ const Onboarding = lazy(() => import('@/domains/users/components/Onboarding'));
 const NavigationTest = lazy(() => import('@/shared/components/common/NavigationTest'));
 const PublicGamePage = lazy(() => import('@/domains/games/components/PublicGamePage'));
 const Auth = lazy(() => import('@/core/auth/Auth'));
+const TribeList = lazy(() => import('@/domains/tribes/components/TribeList'));
+const TribeDetail = lazy(() => import('@/domains/tribes/components/TribeDetail'));
+const CreateTribe = lazy(() => import('@/domains/tribes/components/CreateTribe'));
+const TribeEdit = lazy(() => import('@/domains/tribes/components/TribeEdit'));
 
 // Simple loading component
 const RouteLoader = ({ text = "Loading..." }: { text?: string }) => (
@@ -76,8 +82,15 @@ export function AppRouter() {
                 {/* Game Routes */}
                 <Route path="game/:gameId" element={<GameDetails />} />
 
+                {/* Tribe Routes */}
+                <Route path="tribes" element={<TribeList />} />
+                <Route path="tribe/create" element={<CreateTribe />} />
+                <Route path="tribe/:tribeId" element={<TribeDetail />} />
+                <Route path="tribe/:tribeId/edit" element={<TribeEdit />} />
+
                 {/* User Profile Routes */}
                 <Route path="user/:userId" element={<OtherUserProfile />} />
+                <Route path="leaderboard" element={<LeaderboardPage />} />
 
                 {/* Notification Routes */}
                 <Route path="notifications" element={<NotificationCenter />} />
@@ -92,6 +105,7 @@ export function AppRouter() {
 
                 {/* Design System Routes */}
                 <Route path="design" element={<DesignSystem onBack={() => {}} />} />
+                <Route path="design-system" element={<DesignSystemShowcase />} />
     
 
                 {/* Development Routes */}

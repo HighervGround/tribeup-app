@@ -135,7 +135,7 @@ export class SupabaseSpeedTest {
       
       if (results.simpleQuery < 1000 && results.complexQuery > 5000) {
         console.log('✅ DIAGNOSIS: Simple queries are fast, complex joins are slow');
-        console.log('💡 SOLUTION: Use the SimpleGameService instead of complex joins');
+        console.log('💡 SOLUTION: Use direct queries from games table instead of complex joins');
       }
       
       return results;

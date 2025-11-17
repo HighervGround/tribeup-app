@@ -43,6 +43,8 @@ import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
 import { RouteDisplayMap } from '@/domains/locations/components/RouteDisplayMap';
+import { RSVPSection, AttendeeList, type Attendee, type RSVPStatus } from '@/domains/games/components';
+import { Facepile } from '@/shared/components/ui';
 import { toast } from 'sonner';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { supabase } from '@/core/database/supabase';
@@ -130,6 +132,48 @@ function GameDetails() {
       isHost: player.id === game?.creator_id
     }));
   }, [participants, game?.creator_id]);
+
+  // Convert players to Attendee format for RSVPSection
+  const attendees: Attendee[] = useMemo(() => {
+    if (!players || !game) return [];
+    return players.map(player => ({
+      id: player.id,
+      name: player.name,
+      avatar: player.avatar,
+      email: player.email,
+      status: 'going' as RSVPStatus, // All current participants are "going"
+      isHost: player.isHost || player.id === game?.creator_id,
+      isOrganizer: player.isHost || player.id === game?.creator_id,
+      isGuest: player.isGuest || false,
+      joinedAt: player.joinedAt,
+    }));
+  }, [players, game?.creator_id]);
+
+  // Get current user's RSVP status
+  const userRSVPStatus: RSVPStatus | undefined = useMemo(() => {
+    if (!user?.id || !game?.isJoined) return undefined;
+    return 'going';
+  }, [user?.id, game?.isJoined]);
+
+  // Handle RSVP status change
+  const handleRSVPChange = async (status: RSVPStatus) => {
+    if (!gameId || !user?.id) return;
+    
+    try {
+      if (status === 'going' && !game.isJoined) {
+        // Join the game
+        await toggleJoin();
+      } else if (status !== 'going' && game.isJoined) {
+        // Leave the game
+        await toggleJoin();
+      }
+      // Note: "maybe" and "not_going" would require additional API support
+      toast.success(status === 'going' ? 'Joined the game!' : 'Left the game');
+    } catch (error) {
+      console.error('Failed to update RSVP:', error);
+      toast.error('Failed to update RSVP status');
+    }
+  };
 
   // Debug: Log route data structure
   useEffect(() => {
@@ -1126,87 +1170,22 @@ function GameDetails() {
           </CardContent>
         </Card>
 
-        {/* Players List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {/* Use players.length as source of truth since it's from participants query (gets optimistic updates) */}
-                {/* Fall back to game.totalPlayers only if participants haven't loaded yet */}
-                <CardTitle>Players ({!loadingPlayers ? players.length : (game.totalPlayers ?? 0)}/{game.maxPlayers ?? 0})</CardTitle>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-                              {players.map((player, index) => (
-                <div key={player.id}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {player.isGuest ? (
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-muted">
-                            {player.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <ClickableAvatar
-                          userId={player.id}
-                          src={player.avatar}
-                          alt={player.name}
-                          size="md"
-                        />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          {player.isGuest ? (
-                            <span className="font-medium">{player.name}</span>
-                          ) : (
-                            <button 
-                              onClick={async () => {
-                                console.log('🔍 [GameDetails] Clicking on player:', player);
-                                
-                                // Debug: Verify session and client before navigation
-                                const { data: { session } } = await supabase.auth.getSession();
-                                console.log('🔍 [GameDetails] Session check:', {
-                                  hasSession: !!session,
-                                  userId: session?.user?.id,
-                                  targetPlayerId: player.id
-                                });
-                                console.log('🔍 [GameDetails] Client check:', {
-                                  hasClient: !!supabase,
-                                  hasAuth: !!supabase.auth
-                                });
-                                
-                                navigateToUser(player.id);
-                              }}
-                              className="hover:text-primary transition-colors cursor-pointer font-medium"
-                              data-action="view-profile"
-                            >
-                              {player.name}
-                            </button>
-                          )}
-                          {player.isHost && (
-                            <Badge variant="secondary" className="text-xs px-2 py-0">Host</Badge>
-                          )}
-                          {player.isGuest && (
-                            <Badge variant="outline" className="text-xs px-2 py-0 border-muted-foreground/30">Guest</Badge>
-                          )}
-                        </div>
-                        {/* Player rating temporarily hidden during early testing phase */}
-                        {/* <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Star className="w-3 h-3 fill-current text-warning" />
-                          {player.rating}
-                        </div> */}
-                      </div>
-                    </div>
-                  </div>
-                  {index < players.length - 1 && <Separator className="mt-3" />}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* RSVP Section */}
+        <RSVPSection
+          attendees={attendees}
+          currentUserId={user?.id}
+          userRSVPStatus={userRSVPStatus}
+          maxPlayers={game.maxPlayers}
+          currentPlayers={!loadingPlayers ? players.length : (game.totalPlayers ?? 0)}
+          onRSVPChange={handleRSVPChange}
+          onInvite={() => setShowInvite(true)}
+          onAttendeeClick={(attendee) => {
+            if (attendee.id && !attendee.id.startsWith('guest-')) {
+              navigateToUser(attendee.id);
+            }
+          }}
+          showFullList={true}
+        />
 
         {/* Join Status Alert */}
         {game.isJoined && (

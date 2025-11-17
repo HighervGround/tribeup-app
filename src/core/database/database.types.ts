@@ -259,11 +259,287 @@ export type Database = {
           stats?: Json | null
           username?: string | null
         }
-        Relationships: []
+          Relationships: []
+      }
+      tribes: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          activity: string
+          avatar_url: string | null
+          cover_image_url: string | null
+          creator_id: string
+          is_public: boolean
+          member_count: number
+          game_count: number
+          location: string | null
+          latitude: number | null
+          longitude: number | null
+          settings: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          activity: string
+          avatar_url?: string | null
+          cover_image_url?: string | null
+          creator_id: string
+          is_public?: boolean
+          member_count?: number
+          game_count?: number
+          location?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          settings?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          activity?: string
+          avatar_url?: string | null
+          cover_image_url?: string | null
+          creator_id?: string
+          is_public?: boolean
+          member_count?: number
+          game_count?: number
+          location?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          settings?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tribes_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tribe_members: {
+        Row: {
+          id: string
+          tribe_id: string
+          user_id: string
+          role: 'member' | 'moderator' | 'admin'
+          status: 'active' | 'left' | 'removed'
+          joined_at: string | null
+          invited_by: string | null
+          invite_token: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          tribe_id: string
+          user_id: string
+          role?: 'member' | 'moderator' | 'admin'
+          status?: 'active' | 'left' | 'removed'
+          joined_at?: string | null
+          invited_by?: string | null
+          invite_token?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          tribe_id?: string
+          user_id?: string
+          role?: 'member' | 'moderator' | 'admin'
+          status?: 'active' | 'left' | 'removed'
+          joined_at?: string | null
+          invited_by?: string | null
+          invite_token?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tribe_members_tribe_id_fkey"
+            columns: ["tribe_id"]
+            isOneToOne: false
+            referencedRelation: "tribes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tribe_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tribe_games: {
+        Row: {
+          id: string
+          tribe_id: string
+          game_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          tribe_id: string
+          game_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          tribe_id?: string
+          game_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tribe_games_tribe_id_fkey"
+            columns: ["tribe_id"]
+            isOneToOne: false
+            referencedRelation: "tribes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tribe_games_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tribe_channels: {
+        Row: {
+          id: string
+          tribe_id: string
+          name: string
+          description: string | null
+          type: 'general' | 'announcements' | 'games' | 'custom'
+          created_by: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          tribe_id: string
+          name: string
+          description?: string | null
+          type?: 'general' | 'announcements' | 'games' | 'custom'
+          created_by: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          tribe_id?: string
+          name?: string
+          description?: string | null
+          type?: 'general' | 'announcements' | 'games' | 'custom'
+          created_by?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tribe_channels_tribe_id_fkey"
+            columns: ["tribe_id"]
+            isOneToOne: false
+            referencedRelation: "tribes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tribe_chat_messages: {
+        Row: {
+          id: string
+          channel_id: string
+          user_id: string
+          message: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          channel_id: string
+          user_id: string
+          message: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          channel_id?: string
+          user_id?: string
+          message?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tribe_chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "tribe_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tribe_chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      tribe_member_details: {
+        Row: {
+          id: string
+          tribe_id: string
+          user_id: string
+          role: 'member' | 'moderator' | 'admin'
+          status: 'active' | 'left' | 'removed'
+          joined_at: string | null
+          invited_by: string | null
+          display_name: string | null
+          username: string | null
+          avatar_url: string | null
+          email: string | null
+        }
+      }
+      tribe_statistics: {
+        Row: {
+          tribe_id: string
+          name: string
+          activity: string
+          member_count: number
+          game_count: number
+          actual_game_count: number
+          active_member_count: number
+          last_game_date: string | null
+          next_game_date: string | null
+        }
+      }
+      tribe_chat_messages_with_author: {
+        Row: {
+          id: string
+          channel_id: string
+          user_id: string
+          message: string
+          created_at: string | null
+          display_name: string | null
+          username: string | null
+          avatar_url: string | null
+          tribe_id: string
+          channel_name: string
+        }
+      }
     }
     Functions: {
       is_joined_to_game: {

@@ -1292,16 +1292,12 @@ export class SupabaseService {
     }
   }
 
-  // Public RSVP methods
+  // Public RSVP methods - REMOVED: Public RSVP feature has been removed
+  // All participants must be authenticated users
   static async getPublicRSVPs(gameId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('public_rsvps_public')
-      .select('game_id,name_initial,created_at')
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+    // Return empty array - public RSVPs no longer supported
+    console.warn('getPublicRSVPs called but public RSVPs are no longer supported');
+    return [];
   }
 
   static async createPublicRSVP(gameId: string, rsvpData: { name: string; email: string; phone?: string; message?: string }): Promise<any> {
@@ -1528,67 +1524,49 @@ export class SupabaseService {
     const startTime = performance.now();
     
     try {
-      // Fetch authenticated participants
+      // Fetch participants
       const { data: participants, error: participantsError } = await supabase
         .from('game_participants')
-        .select('user_id, joined_at')
+        .select('user_id, joined_at, status')
         .eq('game_id', gameId)
-        .eq('status', 'joined');
+        .eq('status', 'joined')
+        .order('joined_at', { ascending: true });
 
       if (participantsError) throw participantsError;
 
-      console.log('🔍 Raw authenticated participants:', participants);
-
-      // Fetch public RSVPs (guest users)
-      console.log('🔍 [getGameParticipants] Attempting to fetch public RSVPs for game:', gameId);
-      const { data: publicRsvps, error: rsvpsError } = await supabase
-        .from('public_rsvps')
-        .select('id, name, email, created_at, attending')
-        .eq('game_id', gameId)
-        .eq('attending', true);
-
-      if (rsvpsError) {
-        console.error('⚠️ [getGameParticipants] ERROR fetching public RSVPs:', rsvpsError);
-        console.error('⚠️ [getGameParticipants] Error code:', rsvpsError.code);
-        console.error('⚠️ [getGameParticipants] Error message:', rsvpsError.message);
-        console.error('⚠️ [getGameParticipants] Error details:', rsvpsError.details);
-      } else {
-        console.log('✅ [getGameParticipants] Successfully fetched public RSVPs:', publicRsvps?.length || 0);
-      }
-
-      console.log('🔍 [getGameParticipants] Raw public RSVPs data:', publicRsvps);
+      console.log('🔍 Raw participants:', participants);
 
       const allParticipants: any[] = [];
 
       // Process authenticated participants
       if (participants && participants.length > 0) {
-        const userIds = participants.map(p => p.user_id);
+        const userIds = participants.map(p => p.user_id).filter(Boolean);
         
-        console.log('🔍 Fetching user details for IDs:', userIds);
-        
-        // Fetch user details from users table
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('id, full_name, username, avatar_url')
-          .in('id', userIds);
-        
-        console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
-
-        // Handle case where RLS blocks or users don't exist
-        const usersMap = new Map();
-        if (users && !usersError) {
-          users.forEach(u => usersMap.set(u.id, u));
+        // Fetch user profiles separately - use 'users' table, not 'user_profiles'
+        let usersMap = new Map();
+        if (userIds.length > 0) {
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .in('id', userIds);
+          
+          if (!usersError && users) {
+            users.forEach(u => usersMap.set(u.id, u));
+          }
         }
 
-        // Add authenticated participants
         participants.forEach(participant => {
           const user = usersMap.get(participant.user_id);
           
+          // Compute display name: full_name || username || 'Player'
           let name = 'Player';
           if (user) {
-            name = user.full_name?.trim() || user.username?.trim() || 'Player';
-          } else {
-            name = `Player ${participant.user_id.slice(0, 6)}`;
+            name = (user.full_name?.trim() || user.username?.trim() || 'Player');
+          }
+          
+          // Never show user IDs - always use a friendly fallback
+          if (!name || name === 'Player' || name.trim() === '') {
+            name = 'Player';
           }
           
           allParticipants.push({
@@ -1603,30 +1581,14 @@ export class SupabaseService {
         });
       }
 
-      // Add public RSVPs (guests)
-      if (publicRsvps && publicRsvps.length > 0) {
-        publicRsvps.forEach(rsvp => {
-          allParticipants.push({
-            id: `guest-${rsvp.id}`, // Prefix with 'guest-' to avoid conflicts
-            name: rsvp.name,
-            avatar: null, // Guests don't have avatars
-            isHost: false,
-            isGuest: true,
-            rating: null,
-            joinedAt: rsvp.created_at
-          });
-        });
-      }
-
       // Sort by join date (earliest first)
       allParticipants.sort((a, b) => 
         new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
       );
 
       const duration = performance.now() - startTime;
-      const guestCount = allParticipants.filter(p => p.isGuest).length;
-      const authCount = allParticipants.filter(p => !p.isGuest).length;
-      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} total (${authCount} authenticated + ${guestCount} guests) in ${duration.toFixed(2)}ms`);
+      const authCount = allParticipants.length;
+      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} participants in ${duration.toFixed(2)}ms`);
       console.log(`✅ [getGameParticipants] Returning participants:`, allParticipants.map(p => ({ 
         id: p.id, 
         name: p.name, 

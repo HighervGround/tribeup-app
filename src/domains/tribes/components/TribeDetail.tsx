@@ -36,7 +36,7 @@ export function TribeDetail() {
     await toggle(tribeId, user.id, isMember);
   };
 
-  const canManage = userRole === 'admin' || userRole === 'moderator';
+  const canManage = userRole === 'admin' || userRole === 'moderator' || tribe?.created_by === user?.id;
 
   if (isLoading) {
     return (
@@ -67,29 +67,40 @@ export function TribeDetail() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/tribes')}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{tribe.name}</h1>
-          <p className="text-muted-foreground">{tribe.description || 'No description'}</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/tribes')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">{tribe.name}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground truncate">{tribe.description || 'No description'}</p>
+          </div>
         </div>
-        {user && (
-          <Button
-            variant={isMember ? 'outline' : 'default'}
-            onClick={handleJoinLeave}
-            disabled={isToggling}
-          >
-            {isMember ? 'Leave Tribe' : 'Join Tribe'}
-          </Button>
-        )}
-        {canManage && (
-          <Button variant="outline" onClick={() => navigate(`/tribe/${tribeId}/edit`)}>
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
-          </Button>
-        )}
+        <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+          {user && (
+            <Button
+              variant={isMember ? 'outline' : 'default'}
+              onClick={handleJoinLeave}
+              disabled={isToggling}
+              className="flex-1 sm:flex-initial text-sm"
+            >
+              <span className="hidden sm:inline">{isMember ? 'Leave Tribe' : 'Join Tribe'}</span>
+              <span className="sm:hidden">{isMember ? 'Leave' : 'Join'}</span>
+            </Button>
+          )}
+          {canManage && (
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/tribe/${tribeId}/edit`)}
+              size="icon"
+              className="sm:size-auto sm:px-3"
+            >
+              <Settings className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Settings</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Cover Image */}
@@ -141,35 +152,35 @@ export function TribeDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="chat" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="chat">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Chat
-          </TabsTrigger>
-          <TabsTrigger value="members">
-            <Users className="w-4 h-4 mr-2" />
-            Members ({tribe.member_count})
-          </TabsTrigger>
-          <TabsTrigger value="games">
-            <Calendar className="w-4 h-4 mr-2" />
-            Games ({tribe.game_count})
-          </TabsTrigger>
-          <TabsTrigger value="stats">
-            <Settings className="w-4 h-4 mr-2" />
-            Statistics
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <TabsList className="w-full sm:w-fit min-w-full sm:min-w-0 inline-flex">
+            <TabsTrigger value="chat" className="!flex-shrink-0 sm:!flex-1 whitespace-nowrap min-w-[60px]">
+              <MessageCircle className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Chat</span>
+            </TabsTrigger>
+            <TabsTrigger value="members" className="!flex-shrink-0 sm:!flex-1 whitespace-nowrap min-w-[80px]">
+              <Users className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Members</span>
+              <span className="sm:ml-1">({tribe.member_count})</span>
+            </TabsTrigger>
+            <TabsTrigger value="games" className="!flex-shrink-0 sm:!flex-1 whitespace-nowrap min-w-[80px]">
+              <Calendar className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Games</span>
+              <span className="sm:ml-1">({tribe.game_count})</span>
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="!flex-shrink-0 sm:!flex-1 whitespace-nowrap min-w-[60px]">
+              <Settings className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Statistics</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="chat">
-          {defaultChannel ? (
-            <TribeChat channelId={defaultChannel.id} tribeId={tribeId || ''} canManage={canManage} />
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No channels available</p>
-              </CardContent>
-            </Card>
-          )}
+          <TribeChat 
+            channelId={defaultChannel?.id || ''} 
+            tribeId={tribeId || ''} 
+            canManage={canManage} 
+          />
         </TabsContent>
 
         <TabsContent value="members">

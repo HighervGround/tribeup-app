@@ -1,7 +1,7 @@
 import { useTribeGames } from '../hooks/useTribeGames';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
-import { Calendar, MapPin, Users } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 import { formatEventHeader } from '@/shared/utils/dateUtils';
@@ -13,6 +13,11 @@ interface TribeGamesProps {
 export function TribeGames({ tribeId }: TribeGamesProps) {
   const navigate = useNavigate();
   const { data: games, isLoading } = useTribeGames(tribeId);
+
+  const handleCreateGame = () => {
+    // Navigate to create game with tribeId in state
+    navigate('/create-game', { state: { tribeId } });
+  };
 
   if (isLoading) {
     return (
@@ -34,6 +39,13 @@ export function TribeGames({ tribeId }: TribeGamesProps) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={handleCreateGame} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Create Game for Tribe
+        </Button>
+      </div>
+
       {games.map((game: any) => (
         <Card
           key={game.id}

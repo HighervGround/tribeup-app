@@ -16,6 +16,7 @@ import { useLocationSearch } from '@/domains/locations/hooks/useLocationSearch';
 import { useGeolocation } from '@/domains/locations/hooks/useGeolocation';
 import { systemConfig } from '@/core/config/systemConfig';
 import { SportPicker, DEFAULT_SPORTS } from '@/domains/games/components';
+import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 
 interface FormData {
   sport: string;
@@ -35,6 +36,7 @@ interface FormData {
   maxEloRating: string;
   minReputation: string;
   competitiveMode: boolean;
+  tribeId: string;
 }
 
 const sportOptions = [
@@ -78,6 +80,7 @@ function CreateGame() {
   const { user } = useAppStore();
   const navigationRef = useRef<HTMLDivElement>(null);
   const [navigationHeight, setNavigationHeight] = useState(0);
+  const { data: userTribes } = useUserTribes(user?.id);
 
   // Smart defaults
   const getDefaultDate = () => {
@@ -98,7 +101,8 @@ function CreateGame() {
     maxPlayers: '10', // Will be updated from system config
     cost: 'FREE',
     imageUrl: '',
-    plannedRoute: null as any
+    plannedRoute: null as any,
+    tribeId: ''
   });
 
   // Load system configuration on component mount
@@ -636,7 +640,8 @@ function CreateGame() {
         cost: formData.cost || 'Free',
         description: '', // Default empty description
         imageUrl: formData.imageUrl || null,
-        plannedRoute: plannedRoute
+        plannedRoute: plannedRoute,
+        tribeId: formData.tribeId || undefined
       };
       
       await SupabaseService.createGame(payload as any);
@@ -917,6 +922,40 @@ function CreateGame() {
                     <p className="text-sm text-destructive">{errors.location}</p>
                   )}
                 </div>
+
+                {/* Tribe Selection (Optional) */}
+                {userTribes && userTribes.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Tribe (Optional)
+                    </label>
+                    <Select
+                      value={formData.tribeId}
+                      onValueChange={(value) => handleInputChange('tribeId', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a tribe (optional)">
+                          {formData.tribeId ? (
+                            userTribes.find(t => t.id === formData.tribeId)?.name || 'Selected tribe'
+                          ) : (
+                            'No tribe selected'
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No tribe</SelectItem>
+                        {userTribes.map((tribe) => (
+                          <SelectItem key={tribe.id} value={tribe.id}>
+                            {tribe.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Link this activity to one of your tribes
+                    </p>
+                  </div>
+                )}
 
                 {renderField('date', 'Date', 'date')}
                 

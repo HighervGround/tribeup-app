@@ -961,53 +961,52 @@ function CreateGame() {
                   </div>
                   
                   {/* Location Suggestions */}
-                  {showLocationSuggestions && suggestions.length > 0 && (
+                  {showLocationSuggestions && (
                     <div className="border border-border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto">
-                      {suggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.place_id}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
-                          onClick={async () => {
-                            const geoResult = await geocodeLocation(suggestion.place_id);
-                            if (geoResult) {
-                              setFormData(prev => {
-                                // Generate auto title when location is selected
-                                const newTitle = prev.sport && prev.time ?
-                                  generateGameTitle(prev.sport, prev.time, suggestion.description) :
-                                  prev.title;
+                      {suggestions.length > 0 ? (
+                        suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.place_id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
+                            onClick={async () => {
+                              const geoResult = await geocodeLocation(suggestion.place_id);
+                              if (geoResult) {
+                                setFormData(prev => {
+                                  // Generate auto title when location is selected
+                                  const newTitle = prev.sport && prev.time ?
+                                    generateGameTitle(prev.sport, prev.time, suggestion.description) :
+                                    prev.title;
 
-                                return {
-                                  ...prev,
-                                  location: suggestion.description,
-                                  title: newTitle || prev.title,
-                                  latitude: geoResult.latitude,
-                                  longitude: geoResult.longitude
-                                };
-                              });
-                              setShowLocationSuggestions(false);
-                            } else {
-                              toast.error('Could not get coordinates for selected location.');
-                            }
-                          }}
-                        >
-                          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <div>
-                            <div className="font-medium">{suggestion.structured_formatting?.main_text || suggestion.description}</div>
-                            {suggestion.structured_formatting?.secondary_text && (
-                              <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
-                            )}
+                                  return {
+                                    ...prev,
+                                    location: suggestion.description,
+                                    title: newTitle || prev.title,
+                                    latitude: geoResult.latitude,
+                                    longitude: geoResult.longitude
+                                  };
+                                });
+                                setShowLocationSuggestions(false);
+                              } else {
+                                toast.error('Could not get coordinates for selected location.');
+                              }
+                            }}
+                          >
+                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <div>
+                              <div className="font-medium">{suggestion.structured_formatting?.main_text || suggestion.description}</div>
+                              {suggestion.structured_formatting?.secondary_text && (
+                                <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        !isLocationLoading && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            No suggestions found. Try typing a more specific location.
                           </div>
-                        </button>
-                            ))
-                          ) : (
-                            showLocationSuggestions && !isLocationLoading && (
-                              <div className="px-3 py-2 text-sm text-muted-foreground">
-                                {isLocationLoading ? 'Searching...' : 'No suggestions found. Try typing a more specific location.'}
-                              </div>
-                            )
-                          )}
-                        </div>
+                        )
                       )}
                     </div>
                   )}

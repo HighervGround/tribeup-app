@@ -10,10 +10,8 @@ export interface GameParticipant {
 }
 
 /**
- * Join a game - creates a new participant record
- * The database triggers will automatically:
- * 1. Set user_id = auth.uid() via RLS policy
- * 2. Update games.current_players count
+ * Join a game - upserts participant record with status 'going'
+ * RLS policy will automatically set user_id = auth.uid()
  */
 export async function joinGame(gameId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -25,10 +23,15 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Must be logged in to join games' };
     }
     
-    // Use the secure v1 join function
-    const { data, error } = await supabase.rpc('join_game_v1', { 
-      p_game_id: gameId 
-    });
+    // Upsert with game_id and status, omit user_id (RLS will use auth.uid())
+    const { error } = await supabase
+      .from('game_participants')
+      .upsert({
+        game_id: gameId,
+        status: 'going'
+      }, {
+        onConflict: 'game_id,user_id'
+      });
       
     if (error) {
       console.error('❌ Join game failed:', error);
@@ -41,8 +44,7 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: error.message };
     }
     
-    console.log('✅ Successfully joined game. RPC response:', data);
-    console.log('🔄 Join complete, React Query should now refetch with status=joined');
+    console.log('✅ Successfully joined game');
     return { success: true };
     
   } catch (error) {
@@ -52,10 +54,8 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
 }
 
 /**
- * Leave a game - updates participant status to 'left'
- * The database triggers will automatically:
- * 1. Set left_at = now()
- * 2. Update games.current_players count
+ * Leave a game - deletes the RSVP row for the current user
+ * RLS policy ensures user can only delete their own participation
  */
 export async function leaveGame(gameId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -67,10 +67,12 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: 'Must be logged in to leave games' };
     }
     
-    // Use the secure v1 leave function
-    const { data, error } = await supabase.rpc('leave_game_v1', { 
-      p_game_id: gameId 
-    });
+    // Delete the RSVP row (RLS will ensure user can only delete their own)
+    const { error } = await supabase
+      .from('game_participants')
+      .delete()
+      .eq('game_id', gameId);
+      // Note: RLS policy automatically filters by auth.uid() for user_id
       
     if (error) {
       console.error('❌ Leave game failed:', error);
@@ -82,8 +84,7 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: error.message };
     }
     
-    console.log('✅ Successfully left game. RPC response:', data);
-    console.log('🔄 Leave complete, React Query should now refetch with status=left');
+    console.log('✅ Successfully left game');
     return { success: true };
     
   } catch (error) {
@@ -100,13 +101,13 @@ export async function isUserInGame(gameId: string): Promise<boolean> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
     
+    // RLS will automatically filter by auth.uid() for user_id
     const { data, error } = await supabase
       .from('game_participants')
       .select('id')
       .eq('game_id', gameId)
-      .eq('user_id', user.id)
-      .eq('status', 'joined')
-      .single();
+      .eq('status', 'going')
+      .maybeSingle();
       
     if (error && error.code !== 'PGRST116') {
       console.error('Error checking game participation:', error);
@@ -129,7 +130,7 @@ export async function getGameParticipants(gameId: string): Promise<GameParticipa
       .from('game_participants')
       .select('*')
       .eq('game_id', gameId)
-      .eq('status', 'joined')
+      .eq('status', 'going')
       .order('joined_at', { ascending: true });
       
     if (error) {

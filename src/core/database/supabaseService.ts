@@ -697,14 +697,14 @@ export class SupabaseService {
       // Note: Views don't support relationships, so we'll fetch creator data separately
       // The view has: id, title, sport, description, location, latitude, longitude, date, time, 
       // cost, max_players, image_url, creator_id, created_at, duration,
-      // current_players, public_rsvp_count
+      // current_players
       const queryStart = performance.now();
       const { data: gamesData, error: gamesError } = await supabase
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
           max_players, creator_id, created_at, duration,
-          current_players, public_rsvp_count
+          current_players
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -809,7 +809,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, current_players, public_rsvp_count')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, current_players')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -828,8 +828,8 @@ export class SupabaseService {
           longitude: game.longitude,
           cost: game.cost,
           maxPlayers: game.max_players,
-          totalPlayers: (game.current_players || 0) + (game.public_rsvp_count || 0),
-          availableSpots: Math.max(0, (game.max_players || 0) - ((game.current_players || 0) + (game.public_rsvp_count || 0))),
+          totalPlayers: game.current_players || 0,
+          availableSpots: Math.max(0, (game.max_players || 0) - (game.current_players || 0)),
           description: game.description,
           imageUrl: game.image_url || '',
           sportColor: '#6B7280',
@@ -864,7 +864,7 @@ export class SupabaseService {
       .select(`
         id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
         max_players, creator_id, created_at, duration,
-        current_players, public_rsvp_count
+        current_players
       `)
       .eq('creator_id', userId)
       .gte('date', new Date().toISOString().split('T')[0])
@@ -921,7 +921,6 @@ export class SupabaseService {
           cost,
           max_players,
           current_players,
-          public_rsvp_count,
           description,
           image_url,
           creator_id,
@@ -1039,30 +1038,75 @@ export class SupabaseService {
       console.warn('Failed to ensure user profile exists (continuing):', e);
     }
 
-    // Create the game
+    // Build payload object with proper types and column names
+    const payload: any = {
+      title: gameData.title,
+      sport: gameData.sport,
+      date: gameData.date,
+      time: gameData.time,
+      location: gameData.location,
+      max_players: gameData.maxPlayers,
+      current_players: 0, // Will be updated when creator joins
+      description: gameData.description || '',
+      cost: gameData.cost || 'Free',
+      creator_id: currentUser.id,
+      duration_minutes: gameData.duration || 60,
+    };
+
+    // Add latitude/longitude as numbers (not strings)
+    if (gameData.latitude != null) {
+      payload.latitude = typeof gameData.latitude === 'string' ? parseFloat(gameData.latitude) : Number(gameData.latitude);
+    }
+    if (gameData.longitude != null) {
+      payload.longitude = typeof gameData.longitude === 'string' ? parseFloat(gameData.longitude) : Number(gameData.longitude);
+    }
+
+    // Add image_url if provided
+    if (gameData.imageUrl) {
+      payload.image_url = gameData.imageUrl;
+    }
+
+    // Add planned_route as valid JSON or omit if null
+    if (gameData.plannedRoute) {
+      try {
+        // Ensure it's a valid JSON object
+        payload.planned_route = typeof gameData.plannedRoute === 'string' 
+          ? JSON.parse(gameData.plannedRoute) 
+          : gameData.plannedRoute;
+      } catch (e) {
+        console.warn('Invalid planned_route JSON, omitting:', e);
+        // Omit planned_route if invalid JSON
+      }
+    }
+
+    console.log('📤 [createGame] Inserting game with payload:', {
+      ...payload,
+      planned_route: payload.planned_route ? '[JSON object]' : null
+    });
+
     const { data, error } = await supabase
       .from('games')
-      .insert([{
-        title: gameData.title,
-        sport: gameData.sport,
-        date: gameData.date,
-        time: gameData.time,
-        location: gameData.location,
-        latitude: gameData.latitude,
-        longitude: gameData.longitude,
-        cost: gameData.cost,
-        max_players: gameData.maxPlayers,
-        current_players: 1, // Creator is automatically a participant
-        description: gameData.description,
-        image_url: gameData.imageUrl,
-        creator_id: currentUser.id,
-        duration_minutes: gameData.duration,
-        planned_route: (gameData as any).plannedRoute || null,
-      }])
+      .insert([payload])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [createGame] Supabase error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        status: (error as any).status,
+        statusText: (error as any).statusText,
+        payload: {
+          ...payload,
+          planned_route: payload.planned_route ? '[JSON object]' : null
+        }
+      });
+      throw new Error(error.message || `Failed to create game: ${error.code || 'Unknown error'}`);
+    }
+
+    console.log('✅ [createGame] Game created successfully:', data?.id);
 
     // Add creator as participant
     try {
@@ -1703,7 +1747,7 @@ export class SupabaseService {
       // Use games_with_counts view for optimized current_players count
       let query = supabase
         .from('games_with_counts')
-        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players,public_rsvp_count')
+        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players')
 ;
 
       // Default to future games only unless specific date range is provided
@@ -1728,7 +1772,7 @@ export class SupabaseService {
         return (gamesData || []).map((game: any) => transformGameFromDB(game, false));
       }
 
-      // For authenticated users, use optimized join query (includes public_rsvp_count from earlier select)
+      // For authenticated users, use optimized join query
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
@@ -1797,7 +1841,7 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,
-            current_players,public_rsvp_count
+            current_players
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1828,7 +1872,7 @@ export class SupabaseService {
         // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
           .from('games_with_counts')
-          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players,public_rsvp_count')
+          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })

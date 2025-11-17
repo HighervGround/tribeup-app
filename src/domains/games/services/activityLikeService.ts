@@ -38,16 +38,16 @@ export class ActivityLikeService {
       }
 
       if (existingLike) {
-        // Unlike
+        // Unlike - delete the like (RLS ensures user can only delete their own)
         const { error: deleteError } = await supabase
           .from('activity_likes')
           .delete()
-          .eq('activity_id', activityId)
-          .eq('user_id', user.id);
+          .eq('activity_id', activityId);
+          // Note: RLS policy automatically filters by auth.uid() for user_id
         
         if (deleteError) throw deleteError;
       } else {
-        // Like
+        // Like - insert with activity_id and user_id (RLS will verify user_id matches auth.uid())
         const { error: insertError } = await supabase
           .from('activity_likes')
           .insert({
@@ -55,7 +55,10 @@ export class ActivityLikeService {
             user_id: user.id,
           });
         
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Failed to insert like:', insertError);
+          throw insertError;
+        }
       }
 
       // Get updated like count (with fallback if view doesn't exist)
@@ -107,6 +110,7 @@ export class ActivityLikeService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
+      // Explicitly filter by user_id to check if current user has liked
       const { data, error } = await supabase
         .from('activity_likes')
         .select('id')
@@ -214,11 +218,12 @@ export class ActivityLikeService {
       return activityIds.reduce((acc, id) => ({ ...acc, [id]: false }), {});
     }
 
+    // Explicitly filter by user_id to get only current user's likes
     const { data } = await supabase
       .from('activity_likes')
       .select('activity_id')
-      .eq('user_id', user.id)
-      .in('activity_id', activityIds);
+      .in('activity_id', activityIds)
+      .eq('user_id', user.id);
 
     const likedIds = new Set((data || []).map((item) => item.activity_id));
     return activityIds.reduce((acc, id) => ({ ...acc, [id]: likedIds.has(id) }), {});

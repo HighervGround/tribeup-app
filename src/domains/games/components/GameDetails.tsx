@@ -1383,13 +1383,18 @@ function GameDetails() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="border-border bg-background hover:bg-muted"
+            >
               Keep Activity
             </Button>
             <Button 
               variant="destructive" 
               onClick={handleDeleteGame} 
               disabled={editActionLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {editActionLoading ? (
                 <>

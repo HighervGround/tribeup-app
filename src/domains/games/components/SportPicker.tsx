@@ -234,7 +234,7 @@ export function SportPicker({
       {/* Search Input */}
       {showSearch && (
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none z-10" />
           <Input
             ref={searchInputRef}
             type="text"
@@ -245,7 +245,7 @@ export function SportPicker({
               setFocusedIndex(null);
             }}
             onKeyDown={handleKeyDown}
-            className="pl-9 pr-9"
+            className="pl-10 pr-9"
             aria-label="Search sports"
           />
           {searchQuery && (

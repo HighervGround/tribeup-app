@@ -26,6 +26,7 @@ import { usePublicGame, usePublicRSVPs, publicGameKeys } from '@/domains/games/h
 import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { GameCapacityLine } from '@/shared/components/ui/GameCapacity';
+import { Facepile } from '@/shared/components/ui';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
@@ -410,22 +411,21 @@ export default function PublicGamePage() {
               <CardTitle>Who's Coming ({publicRsvps.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {publicRsvps.map((rsvp) => (
-                  <div key={rsvp.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">
-                        {(rsvp.name_initial || '?').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium">Guest</p>
-                      <p className="text-sm text-muted-foreground">
-                        RSVPed {new Date(rsvp.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                <Facepile
+                  users={publicRsvps.map((rsvp) => ({
+                    id: `guest-${rsvp.id}`,
+                    name: rsvp.name || 'Guest',
+                    image: null,
+                    email: rsvp.email,
+                  }))}
+                  maxVisible={5}
+                  size="md"
+                  enablePopover={true}
+                />
+                <div className="text-sm text-muted-foreground">
+                  {publicRsvps.length} {publicRsvps.length === 1 ? 'person' : 'people'} RSVPed
+                </div>
               </div>
             </CardContent>
           </Card>

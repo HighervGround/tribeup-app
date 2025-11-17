@@ -42,6 +42,17 @@ export function useGameJoinToggle() {
     // Prevent event bubbling if provided (useful for cards)
     e?.stopPropagation();
     
+    // Guard against undefined game or user
+    if (!game?.id) {
+      toast.error('Invalid activity');
+      return;
+    }
+    
+    if (!user?.id) {
+      toast.error('You must be logged in to join activities');
+      return;
+    }
+    
     console.log('🎯 toggleJoin called with game:', game.id, 'isJoined:', game.isJoined);
     
     if (game.isJoined) {

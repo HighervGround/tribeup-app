@@ -4,6 +4,7 @@ import {
   Plus, 
   Bell, 
   User,
+  Users,
   LucideIcon
 } from 'lucide-react';
 
@@ -31,18 +32,10 @@ export const navigationItems: NavigationItem[] = [
     description: 'Find activities' 
   },
   { 
-    path: '/create', 
-    icon: Plus, 
-    label: 'Create',
-    description: 'Create new activity',
-    mobileOnly: true // Only show in mobile nav, desktop has dedicated button
-  },
-  { 
-    path: '/notifications', 
-    icon: Bell, 
-    label: 'Notifications', 
-    description: 'Stay updated',
-    showBadge: true 
+    path: '/tribes', 
+    icon: Users, 
+    label: 'Tribes', 
+    description: 'Join communities' 
   },
   { 
     path: '/profile', 
@@ -50,10 +43,34 @@ export const navigationItems: NavigationItem[] = [
     label: 'Profile', 
     description: 'Your account' 
   },
+  // Create moved to floating action button
+  // Notifications moved to profile menu
+  { 
+    path: '/create', 
+    icon: Plus, 
+    label: 'Create',
+    description: 'Create new activity',
+    mobileOnly: false, // Show in both mobile and desktop
+    desktopOnly: false
+  },
+  { 
+    path: '/notifications', 
+    icon: Bell, 
+    label: 'Notifications', 
+    description: 'Stay updated',
+    showBadge: true,
+    desktopOnly: false // Show in mobile nav too
+  },
 ];
 
 // Filter helpers
-export const getMobileNavItems = () => navigationItems.filter(item => !item.desktopOnly);
+export const getMobileNavItems = () => {
+  // Show Home, Create, Notifications, Tribes, Profile in mobile bottom nav (5 items)
+  return navigationItems.filter(item => 
+    !item.desktopOnly && 
+    ['/', '/create', '/notifications', '/tribes', '/profile'].includes(item.path)
+  );
+};
 export const getDesktopNavItems = () => navigationItems.filter(item => !item.mobileOnly);
 
 // Route title mapping
@@ -66,6 +83,8 @@ export const getRouteTitle = (pathname: string): string => {
   if (pathname.startsWith('/chat/')) return 'Chat';
   if (pathname.startsWith('/user/')) return 'User Profile';
   if (pathname.startsWith('/settings')) return 'Settings';
+  if (pathname.startsWith('/tribe/')) return 'Tribe';
+  if (pathname === '/tribe/create') return 'Create Tribe';
   
   return 'Page';
 };

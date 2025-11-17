@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Badge } from '@/shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
-import { Settings, Trophy, Calendar, MapPin, Users, UserPlus } from 'lucide-react';
+import { Settings, Trophy, Calendar, MapPin, Users, UserPlus, Users2 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
 import { useUserFriends, useFriendSuggestions, useFollowUser } from '@/domains/users/hooks/useFriends';
+import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 import { AchievementGrid } from './AchievementBadge';
+import { StatGroup } from '@/shared/components/ui';
 import { formatTimeString } from '@/shared/utils/dateUtils';
 
 function UserProfile() {
@@ -30,6 +32,7 @@ function UserProfile() {
   const { data: stats, isLoading: statsLoading } = useUserStats(user?.id || '');
   const { data: recentGamesData = [], isLoading: recentGamesLoading } = useUserRecentGames(user?.id || '', 5);
   const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(user?.id || '');
+  const { data: userTribes = [], isLoading: tribesLoading } = useUserTribes(user?.id);
   
   const loading = statsLoading || recentGamesLoading || achievementsLoading;
   
@@ -107,17 +110,14 @@ function UserProfile() {
             <CardTitle>Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {userStats.map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="text-2xl font-semibold">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
-            </div>
+            <StatGroup
+              stats={userStats.map((stat) => ({
+                label: stat.label,
+                value: stat.value,
+                icon: <stat.icon className="w-5 h-5" />,
+              }))}
+              columns={2}
+            />
           </CardContent>
         </Card>
 
@@ -145,6 +145,70 @@ function UserProfile() {
                   className="mt-2"
                 >
                   Add your sports
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* My Tribes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users2 className="w-5 h-5" />
+              My Tribes ({userTribes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tribesLoading ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-sm">Loading tribes...</p>
+              </div>
+            ) : userTribes.length > 0 ? (
+              <div className="space-y-2">
+                {userTribes.map((tribe: any) => (
+                  <div
+                    key={tribe.id}
+                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => navigate(`/tribe/${tribe.id}`)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        {tribe.avatar_url ? (
+                          <img src={tribe.avatar_url} alt={tribe.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-primary font-semibold">
+                            {tribe.name.substring(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{tribe.name}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <span>{tribe.member_count} members</span>
+                          <span>•</span>
+                          <span>{tribe.activity}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {!tribe.is_public && (
+                      <Badge variant="secondary" className="ml-2">Private</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Users2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">You haven't joined any tribes yet</p>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={() => navigate('/tribes')}
+                  className="mt-2"
+                >
+                  Discover Tribes
                 </Button>
               </div>
             )}

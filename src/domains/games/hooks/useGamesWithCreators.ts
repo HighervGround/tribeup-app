@@ -99,10 +99,20 @@ export function useGamesWithCreators() {
         if (gamesErr) throw gamesErr;
 
         console.log(`📊 Step 1: Fetched ${gamesData?.length || 0} games`);
-        setGames(gamesData ?? []);
+        
+        // Filter out past activities (check both date AND time, not just date)
+        const now = new Date();
+        const futureGames = (gamesData ?? []).filter(game => {
+          if (!game.date || !game.time) return false;
+          const gameDateTime = new Date(`${game.date}T${game.time}`);
+          return gameDateTime > now;
+        });
+        
+        console.log(`📊 Filtered: ${gamesData?.length || 0} → ${futureGames.length} future activities`);
+        setGames(futureGames);
 
         // Step 2: Get participants for these games (fetch separately since view can't do nested selects)
-        const gameIds = (gamesData ?? []).map(g => g.id);
+        const gameIds = futureGames.map(g => g.id);
         console.log(`🔍 Step 2a: Fetching participants for ${gameIds.length} games`);
         
         // Fetch ALL participants (for creator list) and current user's participation (for isJoined)
@@ -117,7 +127,7 @@ export function useGamesWithCreators() {
         }
 
         // Step 2b: Build union of creator and participant ids
-        const creatorIds = new Set((gamesData ?? []).map(g => g.creator_id).filter(id => id && id !== 'null'));
+        const creatorIds = new Set(futureGames.map(g => g.creator_id).filter(id => id && id !== 'null'));
         const participantIds = new Set((allParticipants ?? []).map(p => p.user_id).filter(id => id && id !== 'null'));
         const userIds = Array.from(new Set([...creatorIds, ...participantIds]));
 
@@ -166,7 +176,7 @@ export function useGamesWithCreators() {
         }
 
         // Transform games with proper user mapping and defensive fallbacks
-        const transformedGames = (gamesData ?? []).map(game => {
+        const transformedGames = futureGames.map(game => {
           const user = finalUserMap.get(game.creator_id) as UserProfile | undefined;
           const isJoined = joinedGameIds.has(game.id);
           

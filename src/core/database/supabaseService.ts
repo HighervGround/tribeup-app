@@ -1419,10 +1419,12 @@ export class SupabaseService {
           }
         }
         
+        // Use server-provided duration_minutes directly (no client-side recomputation)
+        // duration_minutes is the source of truth from the database
         const result = transformGameFromDB({
           ...gameData,
           creator: creator,
-          duration_minutes: gameData.duration ? (typeof gameData.duration === 'string' ? parseInt(gameData.duration) || 60 : gameData.duration) : 60
+          duration_minutes: gameData.duration_minutes != null ? gameData.duration_minutes : 60
         }, false);
         
         const duration = performance.now() - startTime;

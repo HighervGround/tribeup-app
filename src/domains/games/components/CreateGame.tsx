@@ -930,20 +930,14 @@ function CreateGame() {
                       Tribe (Optional)
                     </label>
                     <Select
-                      value={formData.tribeId}
-                      onValueChange={(value) => handleInputChange('tribeId', value)}
+                      value={formData.tribeId || undefined}
+                      onValueChange={(value) => handleInputChange('tribeId', value === 'none' ? '' : value)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a tribe (optional)">
-                          {formData.tribeId ? (
-                            userTribes.find(t => t.id === formData.tribeId)?.name || 'Selected tribe'
-                          ) : (
-                            'No tribe selected'
-                          )}
-                        </SelectValue>
+                        <SelectValue placeholder="Select a tribe (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No tribe</SelectItem>
+                        <SelectItem value="none">No tribe</SelectItem>
                         {userTribes.map((tribe) => (
                           <SelectItem key={tribe.id} value={tribe.id}>
                             {tribe.name}

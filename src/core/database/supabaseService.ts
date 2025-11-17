@@ -1001,7 +1001,6 @@ export class SupabaseService {
     description: string;
     imageUrl?: string;
     plannedRoute?: any;
-    tribeId?: string;
   }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1118,35 +1117,15 @@ export class SupabaseService {
       if (joinError) {
         console.warn('Failed to add creator as participant via RPC (continuing):', joinError);
         // Fallback: direct insert if RPC fails (shouldn't happen, but handle gracefully)
-        await supabase
-          .from('game_participants')
-          .insert({
-            game_id: data.id,
-            user_id: currentUser.id
-          });
+      await supabase
+        .from('game_participants')
+        .insert({
+          game_id: data.id,
+          user_id: currentUser.id
+        });
       }
     } catch (e) {
       console.warn('Failed to add creator as participant (continuing):', e);
-    }
-
-    // Link game to tribe if tribeId is provided
-    if (gameData.tribeId) {
-      try {
-        const { error: tribeGameError } = await supabase
-          .from('tribe_games')
-          .insert({
-            tribe_id: gameData.tribeId,
-            game_id: data.id,
-          });
-
-        if (tribeGameError) {
-          console.warn('Failed to link game to tribe (continuing):', tribeGameError);
-        } else {
-          console.log('✅ [createGame] Game linked to tribe:', gameData.tribeId);
-        }
-      } catch (e) {
-        console.warn('Failed to link game to tribe (continuing):', e);
-      }
     }
 
     return data.id;
@@ -1240,15 +1219,15 @@ export class SupabaseService {
     if (error) throw error;
 
     // Fetch the full game after update to get all fields needed for transformGameFromDB
-    const { data: fullGame, error: fetchError } = await supabase
+    const { data: fullGame, error: fetchFullGameError } = await supabase
       .from('games')
       .select('*')
       .eq('id', gameId)
       .single();
       
-    if (fetchError) {
-      console.error('❌ [SERVICE] Failed to fetch updated game:', fetchError);
-      throw fetchError;
+    if (fetchFullGameError) {
+      console.error('❌ [SERVICE] Failed to fetch updated game:', fetchFullGameError);
+      throw fetchFullGameError;
     }
 
     const activityTitle = fullGame?.title;

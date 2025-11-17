@@ -3,18 +3,15 @@ import { useAppStore } from '@/store/appStore';
 import { useUserFriends } from '@/domains/users/hooks/useFriends';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/core/database/supabase';
-import { ufVenues } from '@/domains/locations/data/ufVenues';
 import { GameWithCreator } from './useGamesWithCreators';
 
 interface UseActivityFiltersProps {
   games: GameWithCreator[];
-  showCampusVenuesOnly: boolean;
   showFollowingOnly: boolean;
 }
 
 export function useActivityFilters({
   games,
-  showCampusVenuesOnly,
   showFollowingOnly,
 }: UseActivityFiltersProps) {
   const { user } = useAppStore();
@@ -51,18 +48,9 @@ export function useActivityFilters({
     return new Set(userFriends.map(f => f.id));
   }, [userFriends]);
 
-  // Filter games by campus venues and following if enabled
+  // Filter games by following if enabled
   const filteredGames = useMemo(() => {
     return (games || []).filter(game => {
-      // Campus venues filter
-      if (showCampusVenuesOnly) {
-        const isCampusVenue = ufVenues.some(venue =>
-          game.location.toLowerCase().includes(venue.name.toLowerCase()) ||
-          game.location.toLowerCase().includes(venue.shortName.toLowerCase())
-        );
-        if (!isCampusVenue) return false;
-      }
-
       // Following filter - show games created by people you follow OR with following participants
       if (showFollowingOnly && user) {
         const createdByFollowing = followingIds.has(game.creatorId);
@@ -75,7 +63,7 @@ export function useActivityFilters({
 
       return true;
     });
-  }, [games, showCampusVenuesOnly, showFollowingOnly, user, followingIds, gamesFriendCounts]);
+  }, [games, showFollowingOnly, user, followingIds, gamesFriendCounts]);
 
   return {
     filteredGames,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { RefreshCw, MapPin, Users as UsersIcon, Flame, Clock, Building2, UserPlus, Calendar as CalendarIcon, Plus, Bell } from 'lucide-react';
+import { RefreshCw, MapPin, Users as UsersIcon, Flame, Clock, UserPlus, Calendar as CalendarIcon, Plus, Bell } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
 import { useLocation } from '@/domains/locations/hooks/useLocation';
@@ -25,7 +25,6 @@ function HomeScreen() {
   const { games, userById, usersLoaded, loading: isLoading, error, refetch } = useGamesWithCreators();
   const [refreshing, setRefreshing] = useState(false);
   const [forceTimeout, setForceTimeout] = useState(false);
-  const [showCampusVenuesOnly, setShowCampusVenuesOnly] = useState(false);
   const [showFollowingOnly, setShowFollowingOnly] = useState(false);
   
   // Location services for distance calculations
@@ -40,7 +39,6 @@ function HomeScreen() {
   // Filter activities
   const { filteredGames, gamesFriendCounts } = useActivityFilters({
     games,
-    showCampusVenuesOnly,
     showFollowingOnly,
   });
   
@@ -305,15 +303,6 @@ function HomeScreen() {
             {/* Filters */}
             <div className="flex gap-2 mb-4 flex-wrap">
               <Button
-                variant={showCampusVenuesOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowCampusVenuesOnly(!showCampusVenuesOnly)}
-                className="gap-2 shadow-sm hover:shadow-md transition-all"
-              >
-                <Building2 className="w-4 h-4" />
-                UF Campus Venues
-              </Button>
-              <Button
                 variant={showFollowingOnly ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowFollowingOnly(!showFollowingOnly)}
@@ -322,12 +311,11 @@ function HomeScreen() {
                 <UserPlus className="w-4 h-4" />
                 Following
               </Button>
-              {(showCampusVenuesOnly || showFollowingOnly) && (
+              {showFollowingOnly && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    setShowCampusVenuesOnly(false);
                     setShowFollowingOnly(false);
                   }}
                   className="gap-2"
@@ -412,20 +400,12 @@ function HomeScreen() {
                   </div>
                 </div>
               ) : (
-                <CampusEmptyState
-                  onCreateGame={() => navigate('/create')}
-                  onExploreVenues={() => {
-                    // Toggle campus venues filter and scroll to top
-                    setShowCampusVenuesOnly(true);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  title={showCampusVenuesOnly ? "No campus activities found" : "No activities yet"}
-                  description={
-                    showCampusVenuesOnly
-                      ? "No activities at UF venues right now. Be the first to create one!"
-                      : "Be the first to create an activity at your favorite UF spot!"
-                  }
-                />
+                    <CampusEmptyState
+                      onCreateGame={() => navigate('/create')}
+                      onExploreVenues={() => navigate('/search')}
+                      title="No activities yet"
+                      description="Be the first to create an activity!"
+                    />
               )}
             </div>
           </div>

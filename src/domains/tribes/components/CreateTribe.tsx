@@ -8,6 +8,13 @@ import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Label } from '@/shared/components/ui/label';
 import { Switch } from '@/shared/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { DEFAULT_SPORTS } from '@/domains/games/components/SportPicker';
@@ -91,20 +98,36 @@ export function CreateTribe() {
               <Label htmlFor="activity">
                 Primary Activity <span className="text-destructive">*</span>
               </Label>
-              <select
-                id="activity"
+              <Select
                 value={formData.activity}
-                onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                onValueChange={(value) => setFormData({ ...formData, activity: value })}
                 required
               >
-                <option value="">Select an activity</option>
-                {DEFAULT_SPORTS.map((sport) => (
-                  <option key={sport.value} value={sport.value}>
-                    {sport.icon} {sport.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="activity" className="w-full">
+                  {formData.activity ? (
+                    <span className="flex items-center gap-2">
+                      <span>
+                        {DEFAULT_SPORTS.find((s) => s.value === formData.activity)?.icon}
+                      </span>
+                      <SelectValue>
+                        {DEFAULT_SPORTS.find((s) => s.value === formData.activity)?.label}
+                      </SelectValue>
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select an activity" />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {DEFAULT_SPORTS.map((sport) => (
+                    <SelectItem key={sport.value} value={sport.value}>
+                      <span className="flex items-center gap-2">
+                        <span className="text-base">{sport.icon}</span>
+                        <span>{sport.label}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

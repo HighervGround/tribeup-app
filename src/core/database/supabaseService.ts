@@ -1001,6 +1001,7 @@ export class SupabaseService {
     description: string;
     imageUrl?: string;
     plannedRoute?: any;
+    tribeId?: string;
   }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1108,16 +1109,44 @@ export class SupabaseService {
 
     console.log('✅ [createGame] Game created successfully:', data?.id);
 
-    // Add creator as participant
+    // Add creator as participant using join_game RPC to properly increment current_players
     try {
-      await supabase
-        .from('game_participants')
-        .insert({
-          game_id: data.id,
-          user_id: currentUser.id
-        });
+      const { error: joinError } = await supabase.rpc('join_game', {
+        game_uuid: data.id
+      });
+      
+      if (joinError) {
+        console.warn('Failed to add creator as participant via RPC (continuing):', joinError);
+        // Fallback: direct insert if RPC fails (shouldn't happen, but handle gracefully)
+        await supabase
+          .from('game_participants')
+          .insert({
+            game_id: data.id,
+            user_id: currentUser.id
+          });
+      }
     } catch (e) {
       console.warn('Failed to add creator as participant (continuing):', e);
+    }
+
+    // Link game to tribe if tribeId is provided
+    if (gameData.tribeId) {
+      try {
+        const { error: tribeGameError } = await supabase
+          .from('tribe_games')
+          .insert({
+            tribe_id: gameData.tribeId,
+            game_id: data.id,
+          });
+
+        if (tribeGameError) {
+          console.warn('Failed to link game to tribe (continuing):', tribeGameError);
+        } else {
+          console.log('✅ [createGame] Game linked to tribe:', gameData.tribeId);
+        }
+      } catch (e) {
+        console.warn('Failed to link game to tribe (continuing):', e);
+      }
     }
 
     return data.id;
@@ -1201,27 +1230,28 @@ export class SupabaseService {
 
     console.log('🚨 [SERVICE] Final updateData being sent to database:', updateData);
     
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('games')
       .update(updateData)
-      .eq('id', gameId)
-      .select('id, title, duration_minutes')
-      .single();
+      .eq('id', gameId);
       
-    console.log('🚨 [SERVICE] Database response:', { data, error });
+    console.log('🚨 [SERVICE] Database update response:', { error });
 
     if (error) throw error;
 
-    // Fetch the full game title if not returned in update response
-    let activityTitle = data?.title;
-    if (!activityTitle) {
-      const { data: gameData } = await supabase
-        .from('games')
-        .select('title')
-        .eq('id', gameId)
-        .single();
-      activityTitle = gameData?.title;
+    // Fetch the full game after update to get all fields needed for transformGameFromDB
+    const { data: fullGame, error: fetchError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+      
+    if (fetchError) {
+      console.error('❌ [SERVICE] Failed to fetch updated game:', fetchError);
+      throw fetchError;
     }
+
+    const activityTitle = fullGame?.title;
 
     // Notify participants of changes
     await this.notifyGameParticipants(gameId, 'game_updated', {
@@ -1229,7 +1259,7 @@ export class SupabaseService {
       message: `The activity "${activityTitle || 'your activity'}" has been updated by the organizer.`
     });
 
-    return transformGameFromDB(data, false);
+    return transformGameFromDB(fullGame, false);
   }
 
 

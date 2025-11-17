@@ -18,49 +18,49 @@ export function TribeStatistics({ statistics }: TribeStatisticsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Members</CardTitle>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+      <Card className="min-w-0">
+        <CardHeader className="pb-2 px-3 md:px-6 pt-3 md:pt-6">
+          <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground truncate">Members</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            <div>
-              <div className="text-2xl font-bold">{statistics.active_member_count || statistics.member_count}</div>
-              <p className="text-xs text-muted-foreground">Active members</p>
+        <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+          <div className="flex items-center gap-2 min-w-0">
+            <Users className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xl md:text-2xl font-bold truncate">{statistics.active_member_count || statistics.member_count}</div>
+              <p className="text-xs text-muted-foreground truncate">Active members</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Games</CardTitle>
+      <Card className="min-w-0">
+        <CardHeader className="pb-2 px-3 md:px-6 pt-3 md:pt-6">
+          <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground truncate">Games</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
-            <div>
-              <div className="text-2xl font-bold">{statistics.actual_game_count || statistics.game_count}</div>
-              <p className="text-xs text-muted-foreground">Games organized</p>
+        <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+          <div className="flex items-center gap-2 min-w-0">
+            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xl md:text-2xl font-bold truncate">{statistics.actual_game_count || statistics.game_count}</div>
+              <p className="text-xs text-muted-foreground truncate">Games organized</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Activity</CardTitle>
+      <Card className="min-w-0 sm:col-span-2 md:col-span-1">
+        <CardHeader className="pb-2 px-3 md:px-6 pt-3 md:pt-6">
+          <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground truncate">Activity</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <div>
-              <div className="text-2xl font-bold">
+        <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+          <div className="flex items-center gap-2 min-w-0">
+            <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xl md:text-2xl font-bold truncate">
                 {statistics.next_game_date ? 'Upcoming' : 'None'}
               </div>
-              <p className="text-xs text-muted-foreground">Next game</p>
+              <p className="text-xs text-muted-foreground truncate">Next game</p>
             </div>
           </div>
         </CardContent>

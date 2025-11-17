@@ -305,7 +305,7 @@ function UserProfile() {
           <TabsContent value="following" className="space-y-6">
             {/* People You Follow */}
             {userFriends.length > 0 ? (
-              <Card>
+              <Card key="following-card">
                 <CardHeader>
                   <CardTitle>Following ({userFriends.length})</CardTitle>
                 </CardHeader>
@@ -338,7 +338,7 @@ function UserProfile() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
+              <Card key="no-following-card">
                 <CardContent className="py-8 text-center">
                   <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                   <h3 className="font-medium mb-2">Not Following Anyone Yet</h3>
@@ -351,7 +351,7 @@ function UserProfile() {
 
             {/* People to Follow */}
             {friendSuggestions.length > 0 && (
-              <Card>
+              <Card key="suggestions-card">
                 <CardHeader>
                   <CardTitle>People to Follow</CardTitle>
                   <p className="text-sm text-muted-foreground">Based on activities you've joined together</p>

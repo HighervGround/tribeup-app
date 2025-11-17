@@ -46,3 +46,4 @@ ALTER VIEW friend_suggestions SET (security_barrier = true);
 -- Grant SELECT access to authenticated users (idempotent)
 GRANT SELECT ON friend_suggestions TO authenticated;
 
+

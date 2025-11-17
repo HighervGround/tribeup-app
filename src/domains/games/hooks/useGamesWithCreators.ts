@@ -33,10 +33,9 @@ export interface GameWithCreator {
   longitude?: number;
   cost: string;
   maxPlayers: number;
-  currentPlayers: number; // Authenticated participants with status='joined'
-  publicRsvpCount?: number; // Public RSVPs
-  totalPlayers: number; // current_players + public_rsvp_count
-  availableSpots: number; // max_players - total_players
+  currentPlayers: number; // Authenticated participants with status='going'
+  totalPlayers: number; // current_players only (public RSVPs removed)
+  availableSpots: number; // max_players - current_players
   description: string;
   imageUrl?: string;
   sportColor: string;
@@ -90,7 +89,7 @@ export function useGamesWithCreators() {
           .select(`
             id, title, sport, date, time, duration, duration_minutes, location, latitude, longitude,
             cost, max_players, description, image_url, creator_id, created_at,
-            current_players, total_players, public_rsvp_count, available_spots
+            current_players, total_players, available_spots
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
@@ -228,8 +227,7 @@ export function useGamesWithCreators() {
             maxPlayers: Number(game.max_players ?? 0),
             currentPlayers: Number(game.current_players ?? 0),
             totalPlayers: Number(game.total_players ?? game.current_players ?? 0),
-            availableSpots: Number(game.available_spots ?? 0),
-            publicRsvpCount: Number(game.public_rsvp_count ?? 0),
+            availableSpots: Number(game.available_spots ?? Math.max(0, Number(game.max_players ?? 0) - Number(game.current_players ?? 0))),
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),

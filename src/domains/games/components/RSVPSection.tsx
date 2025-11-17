@@ -72,9 +72,10 @@ export function RSVPSection({
               {onInvite && (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="default"
                   size="sm"
                   onClick={onInvite}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <UserPlus className="size-3 mr-1" />
                   Invite

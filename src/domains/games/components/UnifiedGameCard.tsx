@@ -268,83 +268,126 @@ export function UnifiedGameCard({
         className="bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-lg transition-all duration-200 ease-out group"
         onClick={handleCardClick}
       >
-        {/* Hero Image */}
-        <div className="relative w-full aspect-video overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
-          {gameToRender.imageUrl ? (
+        {/* Hero Image - Only show if there's an actual image */}
+        {gameToRender.imageUrl && (
+          <div className="relative w-full aspect-video overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
             <ImageWithFallback
               src={gameToRender.imageUrl}
               alt={gameToRender.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Badge className="text-lg px-4 py-2" style={{ backgroundColor: gameToRender.sportColor || '#6B7280' }}>
-                {gameToRender.sport}
-              </Badge>
-            </div>
-          )}
-          
-          {/* Gradient Overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          
-          {/* User Avatar + Name Overlay - Top Left */}
-          {gameToRender.host && (
-            <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
-              <ClickableAvatar
-                userId={gameToRender.host.id}
-                src={gameToRender.host.avatar}
-                alt={gameToRender.host.name}
-                size="sm"
-                className="ring-2 ring-white/50"
-              />
-              <span className="text-white font-medium text-sm drop-shadow-lg">
-                {gameToRender.host.name}
-              </span>
-            </div>
-          )}
-          
-          {/* Statistics Overlay - Bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Players Stat */}
-              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
-                <Users className="w-4 h-4 text-white" />
-                <div>
-                  <div className="text-white font-bold text-lg leading-none">
-                    {gameToRender.totalPlayers}/{gameToRender.maxPlayers}
-                  </div>
-                  <div className="text-white/80 text-xs">players</div>
-                </div>
+            
+            {/* Gradient Overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-0" />
+            
+            {/* User Avatar + Name Overlay - Top Left */}
+            {gameToRender.host && (
+              <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
+                <ClickableAvatar
+                  userId={gameToRender.host.id}
+                  src={gameToRender.host.avatar}
+                  alt={gameToRender.host.name}
+                  size="sm"
+                  className="ring-2 ring-white/50"
+                />
+                <span className="text-white font-medium text-sm drop-shadow-lg">
+                  {gameToRender.host.name}
+                </span>
               </div>
-              
-              {/* Time Stat */}
-              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4 text-white" />
-                <div>
-                  <div className="text-white font-bold text-lg leading-none">
-                    {formatTimeString(gameToRender.time)}
+            )}
+            
+            {/* Statistics Overlay - Bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+              <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Players Stat */}
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                    <Users className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-semibold">
+                      {gameToRender.totalPlayers}/{gameToRender.maxPlayers}
+                    </span>
                   </div>
-                  <div className="text-white/80 text-xs">
-                    {formatEventHeader(gameToRender.date, gameToRender.time).date}
+                  
+                  {/* Time Stat */}
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                    <Clock className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-semibold">
+                      {formatTimeString(gameToRender.time)}
+                    </span>
+                  </div>
+                  
+                  {/* Location Stat */}
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-semibold truncate max-w-[100px]">
+                      {gameToRender.location.split(',')[0]}
+                    </span>
                   </div>
                 </div>
-              </div>
-              
-              {/* Location Stat */}
-              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
-                <MapPin className="w-4 h-4 text-white" />
-                <div>
-                  <div className="text-white font-bold text-base leading-none truncate max-w-[120px]">
-                    {gameToRender.location.split(',')[0]}
+                
+                {/* Host Avatar */}
+                {gameToRender.host && (
+                  <div className="flex items-center gap-1.5">
+                    <ClickableAvatar
+                      userId={gameToRender.host.id}
+                      src={gameToRender.host.avatar}
+                      alt={gameToRender.host.name}
+                      size="xs"
+                      className="ring-2 ring-white/50"
+                    />
+                    <span className="text-white font-medium text-xs drop-shadow-lg">{gameToRender.host.name}</span>
                   </div>
-                  {distance && (
-                    <div className="text-white/80 text-xs">{distance} away</div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
+        
+        {/* Stats bar when no image - inline with content */}
+        {!gameToRender.imageUrl && (
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Players Stat */}
+                <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-border/50">
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="font-semibold">
+                    {gameToRender.totalPlayers}/{gameToRender.maxPlayers}
+                  </span>
+                </div>
+                
+                {/* Time Stat */}
+                <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-border/50">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="font-semibold">
+                    {formatTimeString(gameToRender.time)}
+                  </span>
+                </div>
+                
+                {/* Location Stat */}
+                <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-border/50">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span className="font-semibold truncate max-w-[100px]">
+                    {gameToRender.location.split(',')[0]}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Host Avatar */}
+              {gameToRender.host && (
+                <div className="flex items-center gap-1.5">
+                  <ClickableAvatar
+                    userId={gameToRender.host.id}
+                    src={gameToRender.host.avatar}
+                    alt={gameToRender.host.name}
+                    size="xs"
+                  />
+                  <span className="text-xs font-medium">{gameToRender.host.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Card Content */}
         <div className="p-4">
@@ -373,11 +416,12 @@ export function UnifiedGameCard({
           
           {/* Map Preview - Only if coordinates exist */}
           {gameToRender.latitude && gameToRender.longitude && (
-            <div className="mb-4">
+            <div className="mb-4 rounded-lg overflow-hidden">
               <ActivityMapPreview
                 latitude={gameToRender.latitude}
                 longitude={gameToRender.longitude}
                 location={gameToRender.location}
+                className="h-40 w-full"
                 onClick={() => handleCardClick()}
               />
             </div>

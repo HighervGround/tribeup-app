@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Progress } from '@/shared/components/ui/progress';
@@ -67,6 +67,7 @@ const DEFAULT_QUICK_TIMES = [
 
 function CreateGame() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -104,6 +105,17 @@ function CreateGame() {
     plannedRoute: null as any,
     tribeId: ''
   });
+
+  // Read tribeId from navigation state (when coming from TribeGames)
+  useEffect(() => {
+    const state = location.state as { tribeId?: string } | null;
+    if (state?.tribeId) {
+      setFormData(prev => ({
+        ...prev,
+        tribeId: state.tribeId || ''
+      }));
+    }
+  }, [location.state]);
 
   // Load system configuration on component mount
   useEffect(() => {

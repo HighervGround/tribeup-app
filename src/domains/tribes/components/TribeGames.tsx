@@ -16,7 +16,7 @@ export function TribeGames({ tribeId }: TribeGamesProps) {
 
   const handleCreateGame = () => {
     // Navigate to create game with tribeId in state
-    navigate('/create-game', { state: { tribeId } });
+    navigate('/create', { state: { tribeId } });
   };
 
   if (isLoading) {

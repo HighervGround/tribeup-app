@@ -1001,6 +1001,7 @@ export class SupabaseService {
     description: string;
     imageUrl?: string;
     plannedRoute?: any;
+    tribeId?: string;
   }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1126,6 +1127,26 @@ export class SupabaseService {
       }
     } catch (e) {
       console.warn('Failed to add creator as participant (continuing):', e);
+    }
+
+    // Link game to tribe if tribeId is provided
+    if (gameData.tribeId) {
+      try {
+        const { error: tribeGameError } = await supabase
+          .from('tribe_games')
+          .insert({
+            tribe_id: gameData.tribeId,
+            game_id: data.id,
+          });
+
+        if (tribeGameError) {
+          console.warn('Failed to link game to tribe (continuing):', tribeGameError);
+        } else {
+          console.log('✅ [createGame] Game linked to tribe:', gameData.tribeId);
+        }
+      } catch (e) {
+        console.warn('Failed to link game to tribe (continuing):', e);
+      }
     }
 
     return data.id;

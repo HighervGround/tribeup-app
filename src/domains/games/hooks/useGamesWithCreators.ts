@@ -78,8 +78,6 @@ export function useGamesWithCreators() {
 
     (async () => {
       try {
-        console.log('🚀 Starting race-safe games + creators fetch...');
-        
         // Step 1: Fetch games with minimal fields + participation data
         const { data: { user } } = await supabase.auth.getUser();
         const userId = user?.id;
@@ -96,8 +94,6 @@ export function useGamesWithCreators() {
           .limit(50);
 
         if (gamesErr) throw gamesErr;
-
-        console.log(`📊 Step 1: Fetched ${gamesData?.length || 0} games`);
         
         // Filter out past activities (check both date AND time, not just date)
         const now = new Date();
@@ -107,12 +103,10 @@ export function useGamesWithCreators() {
           return gameDateTime > now;
         });
         
-        console.log(`📊 Filtered: ${gamesData?.length || 0} → ${futureGames.length} future activities`);
         setGames(futureGames);
 
         // Step 2: Get participants for these games (fetch separately since view can't do nested selects)
         const gameIds = futureGames.map(g => g.id);
-        console.log(`🔍 Step 2a: Fetching participants for ${gameIds.length} games`);
         
         // Fetch ALL participants (for creator list) and current user's participation (for isJoined)
         const { data: allParticipants, error: participantsErr } = await supabase
@@ -122,16 +116,13 @@ export function useGamesWithCreators() {
           .eq('status', 'joined');
 
         if (participantsErr) {
-          console.warn('⚠️ Participants fetch failed, continuing with creators only:', participantsErr);
+          // Continue with creators only if participants fetch fails
         }
 
         // Step 2b: Build union of creator and participant ids
         const creatorIds = new Set(futureGames.map(g => g.creator_id).filter(id => id && id !== 'null'));
         const participantIds = new Set((allParticipants ?? []).map(p => p.user_id).filter(id => id && id !== 'null'));
         const userIds = Array.from(new Set([...creatorIds, ...participantIds]));
-
-        console.log(`🔍 Step 2b: Found ${creatorIds.size} creators, ${participantIds.size} participants, ${userIds.length} total unique users`);
-        console.log('🔍 Expected user IDs:', userIds);
 
         if (userIds.length === 0) {
           // No users to fetch; render games with generic fallback if needed
@@ -140,23 +131,13 @@ export function useGamesWithCreators() {
         }
 
         // Step 3: Fetch users by ids (batched IN query for ALL users)
-        console.log(`🔍 Step 3: Querying users with IDs:`, userIds);
         const { data: usersData, error: usersErr } = await supabase
           .from('users')
           .select('id, full_name, username, avatar_url')
           .in('id', userIds);
 
         if (usersErr) {
-          console.error('❌ Users query failed:', usersErr);
           throw usersErr;
-        }
-
-        console.log(`✅ Step 3: Expected ${userIds.length} users, got ${usersData?.length || 0} users`);
-        console.log('✅ Sample user data:', usersData?.[0]);
-        
-        if (userIds.length > (usersData?.length || 0)) {
-          console.warn('🚨 SMOKING GUN: Expected more users than returned - likely RLS policy issue!');
-          console.warn('🚨 Missing user IDs:', userIds.filter(id => !usersData?.find(u => u.id === id)));
         }
 
         // Step 4: Build user map for O(1) lookup

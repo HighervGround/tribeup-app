@@ -95,6 +95,7 @@ function GameDetails() {
       console.log('🔄 GameDetails: gameId changed, participants should refetch:', gameId);
     }
   }, [gameId]);
+
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
@@ -157,15 +158,15 @@ function GameDetails() {
 
   // Handle RSVP status change
   const handleRSVPChange = async (status: RSVPStatus) => {
-    if (!gameId || !user?.id) return;
+    if (!gameId || !user?.id || !game) return;
     
     try {
       if (status === 'going' && !game.isJoined) {
         // Join the game
-        await toggleJoin();
+        await toggleJoin(game);
       } else if (status !== 'going' && game.isJoined) {
         // Leave the game
-        await toggleJoin();
+        await toggleJoin(game);
       }
       // Note: "maybe" and "not_going" would require additional API support
       toast.success(status === 'going' ? 'Joined the game!' : 'Left the game');
@@ -174,6 +175,59 @@ function GameDetails() {
       toast.error('Failed to update RSVP status');
     }
   };
+
+  // Force scroll to top and PREVENT any scrolling for the first second
+  useEffect(() => {
+    let isLocked = true;
+    
+    const preventScroll = (e: Event) => {
+      if (isLocked) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.scrollTo(0, 0);
+      }
+    };
+    
+    const forceScrollToTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    
+    // Immediate scroll
+    forceScrollToTop();
+    
+    // Lock scrolling temporarily
+    window.addEventListener('scroll', preventScroll, { capture: true, passive: false });
+    document.addEventListener('scroll', preventScroll, { capture: true, passive: false });
+    
+    // Aggressive corrections
+    const timeouts = [
+      setTimeout(forceScrollToTop, 50),
+      setTimeout(forceScrollToTop, 100),
+      setTimeout(forceScrollToTop, 200),
+      setTimeout(forceScrollToTop, 400),
+      setTimeout(forceScrollToTop, 600),
+      setTimeout(forceScrollToTop, 800),
+    ];
+    
+    // Unlock after 1 second
+    const unlockTimeout = setTimeout(() => {
+      isLocked = false;
+      window.removeEventListener('scroll', preventScroll, { capture: true });
+      document.removeEventListener('scroll', preventScroll, { capture: true });
+      // Final scroll to top after unlocking
+      forceScrollToTop();
+    }, 1000);
+    
+    return () => {
+      isLocked = false;
+      window.removeEventListener('scroll', preventScroll, { capture: true });
+      document.removeEventListener('scroll', preventScroll, { capture: true });
+      timeouts.forEach(clearTimeout);
+      clearTimeout(unlockTimeout);
+    };
+  }, [gameId]);
 
   // Debug: Log route data structure
   useEffect(() => {
@@ -497,7 +551,7 @@ function GameDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={{ overflowAnchor: 'none' } as React.CSSProperties}>
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
         <div className="flex items-center justify-between px-4 py-4">
@@ -709,7 +763,13 @@ function GameDetails() {
                 <div>{game.location}</div>
               </div>
               
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+              <div 
+                className="aspect-video bg-muted rounded-lg flex items-center justify-center"
+                style={{ 
+                  contain: 'layout',
+                  overflowAnchor: 'none',
+                } as React.CSSProperties}
+              >
                 {(game.latitude && game.longitude) || game.location ? (
                   <iframe
                     src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}&q=${

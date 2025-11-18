@@ -11,6 +11,13 @@ export default function App() {
 
   console.log('🚀 App component rendering...');
 
+  // Disable browser scroll restoration to prevent unwanted scrolling
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   useEffect(() => {
     // Show splash screen for 2.5 seconds
     const timer = setTimeout(() => {

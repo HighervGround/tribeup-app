@@ -1,17 +1,21 @@
 import { supabase } from '@/core/database/supabase';
 
+// Database-level status values (NOT the same as UI RSVP status)
+export type ParticipantStatus = 'joined' | 'left' | 'completed' | 'no_show';
+
 export interface GameParticipant {
   id: string;
   game_id: string;
   user_id: string;
-  status: 'joined' | 'left' | 'kicked' | 'banned';
+  status: ParticipantStatus; // Database values: 'joined' | 'left' | 'completed' | 'no_show'
   joined_at: string;
   left_at?: string;
 }
 
 /**
- * Join a game - inserts participant record with status 'going'
- * Uses ignore-duplicates to handle re-joins gracefully (no UPDATE policy needed)
+ * Join a game - inserts participant record with status 'joined'
+ * NOTE: Do NOT use RSVP status values like 'going' - use ParticipantStatus only
+ * Uses upsert to handle re-joins gracefully (requires INSERT + UPDATE RLS policies)
  * Client must explicitly include user_id equal to auth.uid()
  */
 export async function joinGame(gameId: string): Promise<{ success: boolean; error?: string }> {
@@ -24,6 +28,11 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Must be logged in to join games' };
     }
     
+    // IMPORTANT: Always use 'joined' - NOT 'going' (that's UI-only RSVP status)
+    const participantStatus: ParticipantStatus = 'joined';
+    
+    console.log(`📝 Inserting with status: "${participantStatus}" (NOT "going")`);
+    
     // Insert with explicit user_id (required for RLS policy)
     // Using upsert with onConflict will perform UPDATE if exists (requires UPDATE policy)
     const { error } = await supabase
@@ -32,7 +41,7 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
         {
           game_id: gameId,
           user_id: user.id, // Explicitly include user_id
-          status: 'joined' // Database expects: 'joined' | 'left' | 'completed' | 'no_show'
+          status: participantStatus // Type-safe: only 'joined' | 'left' | 'completed' | 'no_show'
         },
         {
           onConflict: 'game_id,user_id'

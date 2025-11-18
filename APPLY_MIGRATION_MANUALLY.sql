@@ -158,6 +158,21 @@ FROM pg_policies
 WHERE tablename = 'game_participants';
 
 -- ============================================================================
+-- CRITICAL FIX: ADD UPDATE POLICY FOR UPSERT TO WORK
+-- ============================================================================
+
+-- This is the root cause of the join failure!
+-- The client uses .upsert() which requires an UPDATE policy when a row exists
+DROP POLICY IF EXISTS "authenticated_can_update_participation" ON public.game_participants;
+CREATE POLICY "authenticated_can_update_participation" ON public.game_participants
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Verify the UPDATE policy was created:
+SELECT policyname, cmd FROM pg_policies WHERE tablename = 'game_participants' AND cmd = 'UPDATE';
+
+-- ============================================================================
 -- DONE!
 -- ============================================================================
 

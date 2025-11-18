@@ -410,6 +410,10 @@ function GameDetails() {
     if (authUser && gameId && game) {
       console.log('✅ User authenticated after signup, joining game:', gameId);
       
+      // IMPORTANT: Use 'joined' not 'going' - 'going' is UI-only RSVP status
+      const participantStatus = 'joined' as const;
+      console.log(`📝 Quick join: inserting with status "${participantStatus}"`);
+      
       // Join the game - use upsert to handle duplicates gracefully
       const { error } = await supabase
         .from('game_participants')
@@ -417,7 +421,7 @@ function GameDetails() {
           {
             game_id: gameId,
             user_id: authUser.id, // Explicitly include user_id
-            status: 'joined' // Database expects: 'joined' | 'left' | 'completed' | 'no_show'
+            status: participantStatus // Database expects: 'joined' | 'left' | 'completed' | 'no_show'
           },
           {
             onConflict: 'game_id,user_id'

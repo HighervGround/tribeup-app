@@ -32,7 +32,7 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
         {
           game_id: gameId,
           user_id: user.id, // Explicitly include user_id
-          status: 'going'
+          status: 'joined' // Database expects: 'joined' | 'left' | 'completed' | 'no_show'
         },
         {
           onConflict: 'game_id,user_id'
@@ -116,7 +116,7 @@ export async function isUserInGame(gameId: string): Promise<boolean> {
       .from('game_participants')
       .select('id')
       .eq('game_id', gameId)
-      .eq('status', 'going')
+      .eq('status', 'joined')
       .maybeSingle();
       
     if (error && error.code !== 'PGRST116') {
@@ -140,7 +140,7 @@ export async function getGameParticipants(gameId: string): Promise<GameParticipa
       .from('game_participants')
       .select('*')
       .eq('game_id', gameId)
-      .eq('status', 'going')
+      .eq('status', 'joined')
       .order('joined_at', { ascending: true });
       
     if (error) {

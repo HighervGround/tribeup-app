@@ -47,3 +47,4 @@ ALTER VIEW friend_suggestions SET (security_barrier = true);
 GRANT SELECT ON friend_suggestions TO authenticated;
 
 
+

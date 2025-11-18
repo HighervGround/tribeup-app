@@ -382,21 +382,69 @@ function GameDetails() {
     // Prevent multiple rapid clicks
     if (actionLoading) return;
     
+    // Check authentication status
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
     // If user is not authenticated, show quick join modal
-    if (!user) {
+    if (!authUser) {
+      console.log('👤 User not authenticated, showing login modal');
       setShowQuickJoin(true);
       return;
     }
     
-    // Use the centralized toggle logic
+    // User is authenticated, proceed with join/leave
+    console.log('✅ User authenticated, proceeding with join/leave');
     toggleJoin(game);
   };
 
   const handleQuickJoinSuccess = async () => {
+    console.log('🎉 Quick join success, attempting to join game');
     setShowQuickJoin(false);
-    // After successful signup, join the game
-    if (gameId && game) {
-      toggleJoin(game);
+    
+    // Wait a moment for auth state to propagate
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Verify user is now authenticated
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    if (authUser && gameId && game) {
+      console.log('✅ User authenticated after signup, joining game:', gameId);
+      
+      // Join the game - use ignore() to prevent conflicts if already joined
+      // This uses "Prefer: resolution=ignore-duplicates" header
+      const { error } = await supabase
+        .from('game_participants')
+        .insert(
+          {
+            game_id: gameId,
+            user_id: authUser.id, // Explicitly include user_id
+            status: 'going'
+          },
+          { returning: 'minimal' }
+        )
+        .select()
+        .single();
+      
+      if (error) {
+        // Check if it's a duplicate error (which is actually fine)
+        if (error.code === '23505') {
+          console.log('✅ User already in game (duplicate), proceeding anyway');
+          toast.success('Welcome! You\'re joining the game.');
+          window.location.reload();
+        } else {
+          console.error('❌ Failed to join game after signup:', error);
+          toast.error('Failed to join game. Please try clicking Join again.');
+        }
+      } else {
+        console.log('✅ Successfully joined game after signup');
+        toast.success('Welcome! You\'ve successfully joined the game.');
+        
+        // Refresh the page to update all game data
+        window.location.reload();
+      }
+    } else {
+      console.warn('⚠️ User not authenticated after quick join success');
+      toast.error('Please log in and try joining again');
     }
   };
 

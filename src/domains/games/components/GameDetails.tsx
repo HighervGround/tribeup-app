@@ -410,20 +410,19 @@ function GameDetails() {
     if (authUser && gameId && game) {
       console.log('✅ User authenticated after signup, joining game:', gameId);
       
-      // Join the game - use ignore() to prevent conflicts if already joined
-      // This uses "Prefer: resolution=ignore-duplicates" header
+      // Join the game - use upsert to handle duplicates gracefully
       const { error } = await supabase
         .from('game_participants')
-        .insert(
+        .upsert(
           {
             game_id: gameId,
             user_id: authUser.id, // Explicitly include user_id
-            status: 'going'
+            status: 'joined' // Database expects: 'joined' | 'left' | 'completed' | 'no_show'
           },
-          { returning: 'minimal' }
-        )
-        .select()
-        .single();
+          {
+            onConflict: 'game_id,user_id'
+          }
+        );
       
       if (error) {
         // Check if it's a duplicate error (which is actually fine)

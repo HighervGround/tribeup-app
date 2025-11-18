@@ -107,7 +107,7 @@ if (error?.code === '23505') {
 - No errors on duplicate attempts
 - Requires both INSERT and UPDATE RLS policies
 
-### 4. **Post-Authentication Auto-Join** ✅
+### 5. **Post-Authentication Auto-Join** ✅
 
 After successful authentication (via any method):
 1. Modal success callback is triggered

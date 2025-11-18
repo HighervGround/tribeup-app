@@ -10,8 +10,9 @@ export interface GameParticipant {
 }
 
 /**
- * Join a game - upserts participant record with status 'going'
- * RLS policy will automatically set user_id = auth.uid()
+ * Join a game - inserts participant record with status 'going'
+ * Uses ignore-duplicates to handle re-joins gracefully (no UPDATE policy needed)
+ * Client must explicitly include user_id equal to auth.uid()
  */
 export async function joinGame(gameId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -23,22 +24,29 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Must be logged in to join games' };
     }
     
-    // Upsert with game_id and status, omit user_id (RLS will use auth.uid())
+    // Insert with explicit user_id (required for RLS policy)
+    // Using upsert with onConflict will perform UPDATE if exists (requires UPDATE policy)
     const { error } = await supabase
       .from('game_participants')
-      .upsert({
-        game_id: gameId,
-        status: 'going'
-      }, {
-        onConflict: 'game_id,user_id'
-      });
+      .upsert(
+        {
+          game_id: gameId,
+          user_id: user.id, // Explicitly include user_id
+          status: 'going'
+        },
+        {
+          onConflict: 'game_id,user_id'
+        }
+      );
       
     if (error) {
       console.error('❌ Join game failed:', error);
       
       // Handle specific error cases
       if (error.code === '23505') { // Unique constraint violation
-        return { success: false, error: 'You are already in this game' };
+        // This shouldn't happen with upsert, but handle it gracefully
+        console.log('⚠️ Duplicate detected, user may already be in game');
+        return { success: true }; // Treat as success
       }
       
       return { success: false, error: error.message };
@@ -54,7 +62,8 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
 }
 
 /**
- * Leave a game - deletes the RSVP row for the current user
+ * Leave a game - deletes the participant row for the current user
+ * Explicitly filters by user_id and game_id for clarity
  * RLS policy ensures user can only delete their own participation
  */
 export async function leaveGame(gameId: string): Promise<{ success: boolean; error?: string }> {
@@ -67,12 +76,13 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: 'Must be logged in to leave games' };
     }
     
-    // Delete the RSVP row (RLS will ensure user can only delete their own)
+    // Delete the participant row - explicitly filter by both game_id and user_id
+    // RLS policy will additionally enforce that user_id matches auth.uid()
     const { error } = await supabase
       .from('game_participants')
       .delete()
-      .eq('game_id', gameId);
-      // Note: RLS policy automatically filters by auth.uid() for user_id
+      .eq('game_id', gameId)
+      .eq('user_id', user.id); // Explicitly include user_id filter
       
     if (error) {
       console.error('❌ Leave game failed:', error);

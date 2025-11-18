@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import { SupabaseService } from '@/core/database/supabaseService';
 
 interface Notification {
@@ -33,21 +34,27 @@ export function useNotifications() {
   });
 
   // Load notifications from Supabase with error resilience
-  useEffect(() => {
-    const loadNotifications = async () => {
+  // Use React Query for caching to reduce duplicate requests
+  const { data: notificationsData } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
       try {
-        const notificationsData = await SupabaseService.getNotifications();
-        setNotifications(notificationsData || []); // Ensure array fallback
+        return await SupabaseService.getNotifications();
       } catch (error) {
-        console.warn('useNotifications: Failed to load notifications, using empty array:', error);
-        setNotifications([]); // Set empty array on error to prevent crashes
+        return [];
       }
-    };
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false, // Use cached data
+    refetchOnWindowFocus: false,
+  });
 
-    // Add small delay to prevent race conditions on refresh
-    const timeoutId = setTimeout(loadNotifications, 100);
-    return () => clearTimeout(timeoutId);
-  }, []);
+  useEffect(() => {
+    if (notificationsData) {
+      setNotifications(notificationsData);
+    }
+  }, [notificationsData]);
 
   // Subscribe to real-time notifications
   useEffect(() => {

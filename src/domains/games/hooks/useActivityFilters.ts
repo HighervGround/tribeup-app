@@ -28,7 +28,6 @@ export function useActivityFilters({
         .select('game_id, friends_joined');
 
       if (error) {
-        console.warn('Error fetching follower counts:', error);
         return {};
       }
 
@@ -39,7 +38,10 @@ export function useActivityFilters({
       }, {} as Record<string, number>);
     },
     enabled: !!user?.id,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes (increased to reduce requests)
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: false, // Use cached data
+    refetchOnWindowFocus: false,
   });
 
   // Get following IDs

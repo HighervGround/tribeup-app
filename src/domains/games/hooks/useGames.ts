@@ -104,9 +104,9 @@ export function useGames() {
     },
     // Remove authentication requirement - games should load for all users
     // enabled: !!user, // Only fetch when user is authenticated
-    refetchOnMount: 'always', // Always refetch on mount to ensure fresh data
+    refetchOnMount: false, // Use cached data if available (reduces network requests)
     refetchOnWindowFocus: false, // Don't refetch on window focus - reduces queries
-    refetchOnReconnect: true, // Only refetch when network reconnects
+    refetchOnReconnect: false, // Don't auto-refetch on reconnect (user can manually refresh)
     // Prevent queries from being cancelled during auth state changes
     notifyOnChangeProps: ['data', 'error', 'isLoading'],
     meta: {

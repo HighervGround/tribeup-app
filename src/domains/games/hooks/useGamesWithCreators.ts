@@ -69,14 +69,24 @@ export function useGamesWithCreators() {
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const inFlight = useRef(false);
+  const lastFetchTime = useRef<number>(0);
   const queryClient = useQueryClient(); // React Query client to populate cache
   const [refetchTrigger, setRefetchTrigger] = useState(0); // Trigger for refetch
   
   useEffect(() => {
     if (inFlight.current) return;
+    
+    // Skip fetch if we have data and it's fresh (within 30 seconds)
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    if (games.length > 0 && timeSinceLastFetch < 30000 && refetchTrigger === 0) {
+      setLoading(false);
+      return;
+    }
+    
     inFlight.current = true;
 
-    (async () => {
+    const fetchData = async () => {
       try {
         // Step 1: Fetch games with minimal fields + participation data
         const { data: { user } } = await supabase.auth.getUser();
@@ -231,6 +241,9 @@ export function useGamesWithCreators() {
         // Also populate React Query cache so mutations and useGameCard can use it
         queryClient.setQueryData(gameKeys.lists(), transformedGames);
         
+        // Update last fetch time to prevent unnecessary refetches
+        lastFetchTime.current = Date.now();
+        
       } catch (err) {
         console.error('❌ useGamesWithCreators error:', err);
         setError(err instanceof Error ? err : new Error('Failed to load games'));
@@ -238,8 +251,11 @@ export function useGamesWithCreators() {
         setLoading(false);
         inFlight.current = false;
       }
-    })();
-  }, [refetchTrigger]); // Re-run when refetchTrigger changes
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetchTrigger]); // Only re-run when refetchTrigger changes
 
   const refetch = () => {
     if (inFlight.current) return;

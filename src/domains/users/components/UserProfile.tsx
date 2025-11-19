@@ -205,7 +205,7 @@ function UserProfile() {
                 <Button 
                   variant="link" 
                   size="sm" 
-                  onClick={() => navigate('/tribes')}
+                  onClick={() => navigate('/app/tribes')}
                   className="mt-2"
                 >
                   Discover Tribes

@@ -209,7 +209,7 @@ function SearchDiscovery() {
             }}
             secondaryAction={{
               label: "Create Activity",
-              onClick: () => navigate('/create'),
+              onClick: () => navigate('/app/create'),
               icon: <Plus className="size-4" />,
             }}
           />

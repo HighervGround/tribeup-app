@@ -65,7 +65,7 @@ export function CreateTribe() {
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/tribes')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/app/tribes')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <h1 className="text-2xl font-bold">Create New Tribe</h1>
@@ -177,7 +177,7 @@ export function CreateTribe() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate('/tribes')}
+            onClick={() => navigate('/app/tribes')}
             className="flex-1"
           >
             Cancel

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ErrorBoundary } from '@/shared/components/common/ErrorBoundary';
 import { QueryErrorBoundary } from '@/shared/components/common/QueryErrorBoundary';
 import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
@@ -9,6 +9,7 @@ import AppContent from '@/shared/components/layout/AppContent';
 
 // Lazy load components for better performance
 const HomeScreen = lazy(() => import('@/domains/games/components/HomeScreen'));
+const PublicHomeScreen = lazy(() => import('@/pages/PublicHomeScreen'));
 const SearchDiscovery = lazy(() => import('@/domains/games/components/SearchDiscovery'));
 const CreateGame = lazy(() => import('@/domains/games/components/CreateGame'));
 const UserProfile = lazy(() => import('@/domains/users/components/UserProfile'));
@@ -60,13 +61,14 @@ export function AppRouter() {
           <AppWrapper>
             <Suspense fallback={<RouteLoader text="Loading application..." />}>
               <Routes>
-              {/* Public Routes */}
+              {/* Public Routes - No Auth Required */}
+              <Route path="/" element={<PublicHomeScreen />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding onComplete={() => {}} />} />
               <Route path="/public/game/:gameId" element={<PublicGamePage />} />
               
-              {/* Protected Routes - require authentication and onboarding */}
-              <Route path="/*" element={
+              {/* Authenticated Routes - require authentication and onboarding */}
+              <Route path="/app/*" element={
                 <AuthGate>
                   <AppContent />
                 </AuthGate>
@@ -137,6 +139,16 @@ export function AppRouter() {
                 element={<AuthCallback />}
               />
 
+              {/* Legacy redirects (backward compatibility with pre-/app paths) */}
+              <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
+              <Route path="/search" element={<Navigate to="/app/search" replace />} />
+              <Route path="/create" element={<Navigate to="/app/create" replace />} />
+              <Route path="/notifications" element={<Navigate to="/app/notifications" replace />} />
+              <Route path="/tribes" element={<Navigate to="/app/tribes" replace />} />
+              <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+              {/* Dynamic legacy game route */}
+              <Route path="/game/:gameId" element={<LegacyGameRedirect />} />
+
               {/* Legal Pages */}
               <Route
                 path="legal/terms"
@@ -164,4 +176,11 @@ export function AppRouter() {
       </ErrorBoundary>
     </BrowserRouter>
   );
+}
+
+// Component for dynamic legacy game redirect
+function LegacyGameRedirect() {
+  const { gameId } = useParams();
+  if (!gameId) return <Navigate to="/" replace />;
+  return <Navigate to={`/app/game/${gameId}`} replace />;
 }

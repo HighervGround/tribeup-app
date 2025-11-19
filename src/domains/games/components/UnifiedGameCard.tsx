@@ -48,6 +48,7 @@ interface UnifiedGameCardProps {
   onSelect?: (gameId: string) => void;
   onJoinLeave?: (gameId: string) => void;
   distance?: string | null; // Distance in formatted string (e.g., "2.3 mi")
+  friendAvatars?: string[]; // Optional friend/participant avatar URLs
 }
 
 /**
@@ -61,7 +62,8 @@ export function UnifiedGameCard({
   showJoinButton = true,
   onSelect,
   onJoinLeave,
-  distance = null
+  distance = null,
+  friendAvatars = []
 }: UnifiedGameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -479,9 +481,9 @@ export function UnifiedGameCard({
   return (
     <div
       ref={cardRef}
-      className={`bg-card rounded-lg p-4 border border-border cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-200 ease-out relative overflow-hidden group ${
+      className={`bg-card rounded-md p-3 border border-border/60 cursor-pointer shadow-sm hover:shadow-lg hover:border-primary/30 transition-colors duration-150 relative overflow-hidden group ${
         swipeOffset > 0 ? 'transition-none' : ''
-      } ${isHovered ? 'shadow-sm' : ''}`}
+      }`}
       style={{
         transform: swipeOffset > 0 ? `translateX(${swipeOffset}px)` : undefined,
       }}
@@ -508,7 +510,7 @@ export function UnifiedGameCard({
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 pr-3 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-              <h3 className="font-semibold text-base truncate leading-tight text-foreground">{gameToRender.title}</h3>
+              <h3 className="font-semibold text-sm truncate leading-tight text-foreground">{gameToRender.title}</h3>
               {getCategoryBadge() && (
                 <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap shadow-sm ${getCategoryBadge()?.className}`}>
                   {getCategoryBadge()?.text}
@@ -521,6 +523,9 @@ export function UnifiedGameCard({
                 <Badge variant="secondary" className="text-xs font-semibold">
                   {formatCost(gameToRender.cost)}
                 </Badge>
+              )}
+              {distance && (
+                <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1"><MapPin className="w-3 h-3" />{distance}</span>
               )}
             </div>
           </div>
@@ -555,9 +560,25 @@ export function UnifiedGameCard({
       
         {/* Truncated description */}
         {gameToRender.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+          <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">
             {gameToRender.description}
           </p>
+        )}
+
+        {/* Friend/participant avatars */}
+        {friendAvatars.length > 0 && (
+          <div className="flex items-center mb-2">
+            <div className="flex -space-x-2">
+              {friendAvatars.slice(0,3).map((src, i) => (
+                <Avatar key={i} className="w-6 h-6 border border-border bg-muted">
+                  {src ? <img src={src} alt="" className="w-6 h-6 rounded-full object-cover" /> : <AvatarFallback className="text-[10px]">?</AvatarFallback>}
+                </Avatar>
+              ))}
+            </div>
+            <span className="text-[10px] text-muted-foreground ml-2">
+              {friendAvatars.length} friend{friendAvatars.length !== 1 ? 's' : ''} here
+            </span>
+          </div>
         )}
       
         {/* Footer with join button */}

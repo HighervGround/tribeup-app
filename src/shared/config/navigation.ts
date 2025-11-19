@@ -20,25 +20,25 @@ export interface NavigationItem {
 
 export const navigationItems: NavigationItem[] = [
   { 
-    path: '/', 
+    path: '/app', 
     icon: Home, 
     label: 'Home', 
     description: 'Discover activities' 
   },
   { 
-    path: '/search', 
+    path: '/app/search', 
     icon: Search, 
     label: 'Search', 
     description: 'Find activities' 
   },
   { 
-    path: '/tribes', 
+    path: '/app/tribes', 
     icon: Users, 
     label: 'Tribes', 
     description: 'Join communities' 
   },
   { 
-    path: '/profile', 
+    path: '/app/profile', 
     icon: User, 
     label: 'Profile', 
     description: 'Your account' 
@@ -46,7 +46,7 @@ export const navigationItems: NavigationItem[] = [
   // Create moved to floating action button
   // Notifications moved to profile menu
   { 
-    path: '/create', 
+    path: '/app/create', 
     icon: Plus, 
     label: 'Create',
     description: 'Create new activity',
@@ -54,7 +54,7 @@ export const navigationItems: NavigationItem[] = [
     desktopOnly: false
   },
   { 
-    path: '/notifications', 
+    path: '/app/notifications', 
     icon: Bell, 
     label: 'Notifications', 
     description: 'Stay updated',
@@ -68,7 +68,7 @@ export const getMobileNavItems = () => {
   // Show Home, Create, Notifications, Tribes, Profile in mobile bottom nav (5 items)
   return navigationItems.filter(item => 
     !item.desktopOnly && 
-    ['/', '/create', '/notifications', '/tribes', '/profile'].includes(item.path)
+    ['/app', '/app/create', '/app/notifications', '/app/tribes', '/app/profile'].includes(item.path)
   );
 };
 export const getDesktopNavItems = () => navigationItems.filter(item => !item.mobileOnly);
@@ -79,12 +79,12 @@ export const getRouteTitle = (pathname: string): string => {
   if (item) return item.label;
   
   // Handle dynamic routes
-  if (pathname.startsWith('/game/')) return 'Activity Details';
-  if (pathname.startsWith('/chat/')) return 'Chat';
-  if (pathname.startsWith('/user/')) return 'User Profile';
-  if (pathname.startsWith('/settings')) return 'Settings';
-  if (pathname.startsWith('/tribe/')) return 'Tribe';
-  if (pathname === '/tribe/create') return 'Create Tribe';
+  if (pathname.startsWith('/app/game/')) return 'Activity Details';
+  if (pathname.startsWith('/app/chat/')) return 'Chat';
+  if (pathname.startsWith('/app/user/')) return 'User Profile';
+  if (pathname.startsWith('/app/settings')) return 'Settings';
+  if (pathname.startsWith('/app/tribe/')) return 'Tribe';
+  if (pathname === '/app/tribe/create') return 'Create Tribe';
   
   return 'Page';
 };

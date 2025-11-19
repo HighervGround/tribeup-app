@@ -109,7 +109,6 @@ main.tsx -> App.tsx -> ErrorBoundary -> QueryProvider -> SimpleAuthProvider -> A
 
 Refer to `README.md` for high-level project info and to `supabase/` for database schema and migrations.
 
-
 As a next steps we Can do :
 1. phone number login/ guest to see all the events
 2. But while registering for the game we need a mail or the phone number

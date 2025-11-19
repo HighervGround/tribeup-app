@@ -63,4 +63,3 @@ Check the browser console for any remaining errors and verify:
 - The migration ran successfully (no SQL errors)
 - Your app is connected to the correct Supabase project
 - You've refreshed the page after applying the migration
-

@@ -1,17 +1,12 @@
-# MOVED: Friends Feature Documentation
-This file's full content now lives at `docs/FRIENDS_FEATURE_COMPLETE.md`.
+# Friends Feature - Implementation Complete
+**Completed:** November 15, 2025
 
-It was relocated as part of the documentation consolidation to reduce root clutter.
+## Overview
+Added complete friend management system with UI access and contextual empty states.
 
-Please open: `docs/FRIENDS_FEATURE_COMPLETE.md` for the complete implementation notes, flows, testing checklist, and future roadmap.
+---
 
-Rationale:
-- Keep root focused on high‑level entry points (`README.md`, `CODE_FLOW.md`).
-- Centralize feature and audit documents under `docs/` for easier indexing.
-
-If automated tooling still references this path, update imports/links to the new location.
-
-Last updated: Consolidation pass Nov 2025.
+## Problem Fixed
 
 ### Issue:
 1. **Friends filter not working** - User enabled "From Friends" filter but had no friends, resulting in empty feed with no guidance
@@ -256,4 +251,3 @@ No new migrations required! ✅
 **Status:** ✅ **COMPLETE** - Friends feature fully integrated and accessible
 
 **Next Steps:** User testing and feedback collection
-

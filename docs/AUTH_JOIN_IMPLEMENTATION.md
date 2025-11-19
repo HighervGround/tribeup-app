@@ -305,4 +305,3 @@ After joining, we reload the page to:
 - Game Join Hook: `src/domains/games/hooks/useGameJoinToggle.ts`
 - Auth Provider: `src/core/auth/SimpleAuthProvider.tsx`
 - Supabase Client: `src/core/database/supabase.ts`
-

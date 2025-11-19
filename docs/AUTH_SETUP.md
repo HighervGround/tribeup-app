@@ -318,4 +318,3 @@ When adding new auth features:
 3. Include error handling
 4. Test on mobile devices
 5. Update security policies
-

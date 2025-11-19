@@ -1,21 +1,14 @@
-# MOVED: Supabase Integration Setup Guide
-Full Supabase setup instructions relocated to `docs/SUPABASE_SETUP.md`.
+# TribeUp Supabase Integration Setup Guide
 
-Use the centralized version for:
-- Project creation & credentials
-- Schema migration workflow
-- Environment variable configuration
-- Auth, RLS, realtime verification checklist
-- Troubleshooting & performance tips
+## 🚀 Overview
 
-Related docs to consult together:
-- `docs/DATABASE_SCHEMA.md`
-- `docs/FIX_DATABASE_NOW.md`
-- `docs/CODE_FLOW.md`
+This guide will help you set up Supabase as the backend for your TribeUp social sports app. The integration replaces mock data with real database functionality while preserving all existing frontend components and features.
 
-This stub prevents broken links; migrate references then delete.
+## 📋 Prerequisites
 
-Last updated: Nov 2025 consolidation.
+- A Supabase account (free tier available)
+- Node.js 18+ installed
+- Your TribeUp app codebase
 
 ## 🔧 Step 1: Create Supabase Project
 
@@ -191,4 +184,3 @@ Once you've completed these steps, your TribeUp app will have:
 - ✅ Scalable backend infrastructure
 
 Your frontend components will work exactly the same, but now with real data persistence and real-time functionality!
-

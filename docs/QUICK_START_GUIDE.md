@@ -1,17 +1,14 @@
-# MOVED: Quick Start Guide
-The active Quick Start Guide now lives at `docs/QUICK_START_GUIDE.md`.
+# Quick Start Guide - Reorganized Codebase
 
-This root stub remains temporarily to avoid breaking any bookmarked paths. Update links or references to point to the `docs/` version which includes the latest reorganized domain prompts and usage patterns.
+## ✅ What's Been Done
 
-Highlights in the new version:
-- Domain‑driven structure overview
-- AI prompt examples per domain
-- Import alias guidance
-- Troubleshooting & circular dependency mitigation
+Your codebase has been reorganized for optimal AI code generation:
 
-Please remove this stub after all consumers are updated.
-
-Last updated: Nov 2025 consolidation.
+### 1. Clean Root Directory
+- Removed 60+ debug/test scripts
+- Deleted duplicate SQL files
+- Removed backup and unused files
+- **Result:** Clean, professional project structure
 
 ### 2. Domain-Driven Organization
 Your code is now organized by business domain:
@@ -93,6 +90,13 @@ Load src/domains/locations/.cursorrules
 "Add route planning from user location to game venue"
 ```
 
+**For Users:**
+```
+Load src/domains/users/.cursorrules
+
+"Implement onboarding progress tracking"
+```
+
 ## 📁 Where Things Are Now
 
 ### Components
@@ -118,7 +122,7 @@ Load src/domains/locations/.cursorrules
 | What | Where |
 |------|-------|
 | Game database ops | `src/domains/games/services/` |
-| Weather API | `src/domains/weather/services/` |
+| Weather API | `src/domains/weather/services/weatherService.ts` |
 | Venue management | `src/domains/locations/services/` |
 | User profiles | `src/domains/users/services/` |
 | Supabase client | `src/core/database/` |
@@ -136,7 +140,7 @@ import { supabase } from '@/core/database/supabase';
 
 // ❌ WRONG (don't use relative paths)
 import { CreateGame } from '../../domains/games/components/CreateGame';
-import { Button } from '../../../shared/components/ui/button';
+import { Button from '../../../shared/components/ui/button';
 ```
 
 ## 🎯 Quick Reference
@@ -205,4 +209,3 @@ Your codebase is now optimized for AI-assisted development. Each domain is self-
 - Produce higher quality suggestions
 
 Happy coding! 🚀
-

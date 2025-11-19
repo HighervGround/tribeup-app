@@ -3,196 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenWeatherMap Test</title>
+    <title>DEPRECATED - Moved to scripts/samples/</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .weather-card { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 8px; }
-        .loading { color: #666; }
-        .error { color: red; }
-        .success { color: green; }
-        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 40px; 
+            max-width: 800px; 
+            margin: 0 auto;
+            background: #fff3cd;
+        }
+        .warning {
+            background: #f8d7da;
+            border: 2px solid #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
-    <h1>🌤️ OpenWeatherMap API Test</h1>
-    <p>Testing the new weather service with your API key: <code>e13535154c9c651a5c982ede6fda8df9</code></p>
+    <h1>⚠️ DEPRECATED FILE</h1>
+    <div class="warning">
+        <h2>🔒 Security Notice</h2>
+        <p><strong>This file contained a hard-coded API key and has been moved.</strong></p>
+        <p>For security reasons, all test scripts with embedded credentials have been relocated to <code>scripts/samples/</code> and sanitized to use environment variables or user input.</p>
+    </div>
     
-    <button onclick="testCurrentWeather()">Test Current Weather (NYC)</button>
-    <button onclick="testGameWeather()">Test Game Weather (Tomorrow)</button>
-    <button onclick="testRecommendations()">Test Enhanced Recommendations</button>
+    <h2>Where to Find the New Version</h2>
+    <p>The sanitized weather testing tool is now located at:</p>
+    <pre><code>scripts/samples/test-weather.html</code></pre>
     
-    <div id="results"></div>
-
-    <script>
-        const API_KEY = 'e13535154c9c651a5c982ede6fda8df9';
-        const BASE_URL = 'https://api.openweathermap.org/data/2.5';
-        
-        function addResult(title, content, type = 'info') {
-            const results = document.getElementById('results');
-            const div = document.createElement('div');
-            div.className = `weather-card ${type}`;
-            div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
-            results.appendChild(div);
-        }
-        
-        async function testCurrentWeather() {
-            addResult('Testing Current Weather...', 'Loading NYC weather data...', 'loading');
-            
-            try {
-                // NYC coordinates
-                const lat = 40.7128;
-                const lng = -74.0060;
-                
-                const response = await fetch(
-                    `${BASE_URL}/weather?lat=${lat}&lon=${lng}&appid=${API_KEY}&units=imperial`
-                );
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                
-                const result = {
-                    location: `${data.name}, ${data.sys.country}`,
-                    temperature: `${Math.round(data.main.temp)}°F`,
-                    condition: data.weather[0].main,
-                    description: data.weather[0].description,
-                    humidity: `${data.main.humidity}%`,
-                    windSpeed: `${Math.round(data.wind?.speed || 0)} mph`,
-                    icon: getWeatherIcon(data.weather[0].main)
-                };
-                
-                addResult('✅ Current Weather Success', JSON.stringify(result, null, 2), 'success');
-                
-            } catch (error) {
-                addResult('❌ Current Weather Failed', error.message, 'error');
-            }
-        }
-        
-        async function testGameWeather() {
-            addResult('Testing Game Weather...', 'Loading forecast for tomorrow...', 'loading');
-            
-            try {
-                // NYC coordinates
-                const lat = 40.7128;
-                const lng = -74.0060;
-                
-                const response = await fetch(
-                    `${BASE_URL}/forecast?lat=${lat}&lon=${lng}&appid=${API_KEY}&units=imperial`
-                );
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                
-                // Get tomorrow's forecast
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                tomorrow.setHours(15, 0, 0, 0); // 3 PM tomorrow
-                
-                // Find closest forecast
-                let bestMatch = data.list[0];
-                let smallestDiff = Infinity;
-                
-                for (const forecast of data.list) {
-                    const forecastTime = new Date(forecast.dt * 1000);
-                    const diff = Math.abs(forecastTime.getTime() - tomorrow.getTime());
-                    if (diff < smallestDiff) {
-                        smallestDiff = diff;
-                        bestMatch = forecast;
-                    }
-                }
-                
-                const result = {
-                    gameTime: tomorrow.toLocaleString(),
-                    forecastTime: new Date(bestMatch.dt * 1000).toLocaleString(),
-                    temperature: `${Math.round(bestMatch.main.temp)}°F`,
-                    condition: bestMatch.weather[0].main,
-                    description: bestMatch.weather[0].description,
-                    humidity: `${bestMatch.main.humidity}%`,
-                    windSpeed: `${Math.round(bestMatch.wind?.speed || 0)} mph`,
-                    precipitation: bestMatch.rain?.['3h'] || bestMatch.snow?.['3h'] || 0,
-                    icon: getWeatherIcon(bestMatch.weather[0].main)
-                };
-                
-                addResult('✅ Game Weather Success', JSON.stringify(result, null, 2), 'success');
-                
-            } catch (error) {
-                addResult('❌ Game Weather Failed', error.message, 'error');
-            }
-        }
-        
-        async function testRecommendations() {
-            addResult('Testing Recommendations...', 'Generating weather recommendations...', 'loading');
-            
-            try {
-                // Simulate different weather conditions
-                const scenarios = [
-                    {
-                        name: 'Perfect Day',
-                        weather: { temperature: 75, condition: 'Clear', windSpeed: 5, precipitation: 0 }
-                    },
-                    {
-                        name: 'Cold & Windy',
-                        weather: { temperature: 42, condition: 'Clear', windSpeed: 20, precipitation: 0 }
-                    },
-                    {
-                        name: 'Rainy Day',
-                        weather: { temperature: 65, condition: 'Rain', windSpeed: 8, precipitation: 0.5 }
-                    }
-                ];
-                
-                const recommendations = scenarios.map(scenario => {
-                    const { weather } = scenario;
-                    const isOutdoorFriendly = weather.temperature >= 40 && weather.temperature <= 90 && 
-                                            weather.windSpeed <= 25 && 
-                                            !['rain', 'thunderstorm', 'snow'].includes(weather.condition.toLowerCase());
-                    
-                    let rec = '';
-                    if (isOutdoorFriendly) {
-                        rec = 'Perfect conditions for outdoor sports! 🌟';
-                    } else {
-                        const tips = [];
-                        if (weather.temperature < 40) tips.push('Dress warmly - temperatures are quite cold');
-                        if (weather.temperature > 90) tips.push('Stay hydrated - it\'s very hot outside');
-                        if (weather.windSpeed > 15) tips.push('Expect windy conditions');
-                        if (weather.precipitation > 0) tips.push('Bring rain gear or consider indoor alternatives');
-                        rec = tips.join('. ') + '.';
-                    }
-                    
-                    return {
-                        scenario: scenario.name,
-                        weather: weather,
-                        recommendation: rec,
-                        outdoorFriendly: isOutdoorFriendly
-                    };
-                });
-                
-                addResult('✅ Recommendations Success', JSON.stringify(recommendations, null, 2), 'success');
-                
-            } catch (error) {
-                addResult('❌ Recommendations Failed', error.message, 'error');
-            }
-        }
-        
-        function getWeatherIcon(condition) {
-            const conditionLower = condition.toLowerCase();
-            if (conditionLower === 'clear') return '☀️';
-            if (conditionLower === 'clouds') return '☁️';
-            if (conditionLower === 'rain') return '🌧️';
-            if (conditionLower === 'snow') return '❄️';
-            if (conditionLower === 'thunderstorm') return '⛈️';
-            return '🌤️';
-        }
-        
-        // Auto-run a quick test
-        setTimeout(() => {
-            addResult('🚀 Auto-Testing', 'Running automatic current weather test...', 'loading');
-            testCurrentWeather();
-        }, 1000);
-    </script>
+    <h2>What Changed</h2>
+    <ul>
+        <li>✅ No hard-coded API keys</li>
+        <li>✅ Secure user input field for API key entry</li>
+        <li>✅ Keys stored only in memory during browser session</li>
+        <li>✅ Documented security best practices</li>
+    </ul>
+    
+    <h2>Usage Instructions</h2>
+    <ol>
+        <li>Open <code>scripts/samples/test-weather.html</code> in your browser</li>
+        <li>Enter your OpenWeatherMap API key in the input field</li>
+        <li>Click test buttons to verify API functionality</li>
+    </ol>
+    
+    <h2>Related Files</h2>
+    <ul>
+        <li><code>scripts/samples/test-openweather.js</code> - Node.js version (uses .env)</li>
+        <li><code>scripts/samples/README.md</code> - Full documentation</li>
+    </ul>
+    
+    <p style="margin-top: 40px; padding: 15px; background: #d1ecf1; border-radius: 5px;">
+        <strong>Note:</strong> This stub file will be deleted in a future cleanup pass. Update any bookmarks or scripts to point to the new location.
+    </p>
 </body>
 </html>

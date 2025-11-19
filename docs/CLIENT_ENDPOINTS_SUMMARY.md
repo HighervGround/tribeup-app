@@ -241,4 +241,3 @@ Apply in this order:
 1. `20250204000000_fix_games_with_counts_security.sql` (if not already)
 2. `20250206000000_minimal_compatibility_fix.sql` ← **NEW, MOST IMPORTANT**
 3. `20250205000000_comprehensive_schema_audit_and_fix.sql` (optional, for cleanup)
-

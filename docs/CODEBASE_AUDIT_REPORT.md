@@ -145,10 +145,10 @@ streamClient.sendMessage({
 **Medium-term:**
 1. Evaluate Stream.io for chat (or enhance Supabase Realtime)
 2. Add read receipts
-3. Implement presence status (online/in_game/away)
+3. Implement message attachments
 
 **Long-term:**
-1. Regional chat proxies for global users
+1. Regional chat proxies
 2. Message attachment support
 3. Offline message queue with sync
 
@@ -831,4 +831,3 @@ Most improvements can be implemented incrementally without major refactoring. Th
 2. Create detailed implementation plans for quick wins
 3. Begin Phase 1 implementation
 4. Set up metrics tracking for improvements
-

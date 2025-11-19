@@ -76,7 +76,7 @@ export function TribeEdit() {
   if (!tribe) {
     return (
       <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate('/tribes')} className="mb-4">
+        <Button variant="ghost" onClick={() => navigate('/app/tribes')} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Tribes
         </Button>
@@ -195,7 +195,7 @@ export function TribeEdit() {
     try {
       await deleteTribe.mutateAsync(tribeId!);
       toast.success('Tribe deleted');
-      navigate('/tribes');
+      navigate('/app/tribes');
     } catch (error) {
       console.error('Error deleting tribe:', error);
     }

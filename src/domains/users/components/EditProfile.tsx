@@ -298,7 +298,7 @@ function EditProfile() {
           console.log('✅ Profile update successful:', updatedProfile);
           // Update the user in the store
           setUser(updatedProfile);
-          navigate('/profile');
+          navigate('/app/profile');
         },
         onError: (error) => {
           console.error('❌ Profile update failed:', error);

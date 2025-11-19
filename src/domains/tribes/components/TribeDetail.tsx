@@ -49,7 +49,7 @@ export function TribeDetail() {
   if (!tribe) {
     return (
       <div className="p-4">
-        <Button variant="ghost" onClick={() => navigate('/tribes')} className="mb-4">
+        <Button variant="ghost" onClick={() => navigate('/app/tribes')} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Tribes
         </Button>
@@ -69,7 +69,7 @@ export function TribeDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/tribes')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/app/tribes')}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex-1 min-w-0">

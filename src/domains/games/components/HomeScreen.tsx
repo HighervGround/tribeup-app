@@ -234,7 +234,7 @@ function HomeScreen() {
                 <div className="flex gap-2">
                   {/* Quick Create Button */}
                   <Button
-                    onClick={() => navigate('/create')}
+                    onClick={() => navigate('/app/create')}
                     size="sm"
                     className="gap-2"
                     style={{
@@ -250,7 +250,7 @@ function HomeScreen() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/notifications')}
+                    onClick={() => navigate('/app/notifications')}
                     className="relative"
                   >
                     <Bell className="w-4 h-4" />
@@ -401,8 +401,8 @@ function HomeScreen() {
                 </div>
               ) : (
                     <CampusEmptyState
-                      onCreateGame={() => navigate('/create')}
-                      onExploreVenues={() => navigate('/search')}
+                      onCreateGame={() => navigate('/app/create')}
+                      onExploreVenues={() => navigate('/app/search')}
                       title="No activities yet"
                       description="Be the first to create an activity!"
                     />

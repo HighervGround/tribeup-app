@@ -59,7 +59,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         {/* Quick Create Button */}
         <div className="p-4">
           <Button
-            onClick={() => navigate('/create')}
+            onClick={() => navigate('/app/create')}
             className={`gap-3 text-white hover:opacity-90 ${
               sidebarCollapsed 
                 ? 'w-10 h-10 p-0 justify-center mx-auto' 
@@ -131,7 +131,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         <div className={`border-t border-border ${sidebarCollapsed ? 'px-4 py-4' : 'p-4'}`}>
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3">
-              <Avatar className="cursor-pointer" onClick={() => navigate('/profile')}>
+              <Avatar className="cursor-pointer" onClick={() => navigate('/app/profile')}>
                 {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
                 <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
@@ -146,7 +146,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
             </div>
           ) : (
             <div className="w-8 h-8 mx-auto">
-              <Avatar className="cursor-pointer w-8 h-8" onClick={() => navigate('/profile')}>
+              <Avatar className="cursor-pointer w-8 h-8" onClick={() => navigate('/app/profile')}>
                 {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
                 <AvatarFallback className="text-xs">{user?.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>

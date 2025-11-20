@@ -1,7 +1,7 @@
 {
-      "name": "TribeUp Social Sports App",
+      "name": "tribeup-social-sports-app",
       "version": "0.1.0",
-      "private": false,
+      "private": true,
       "dependencies": {
             "@googlemaps/js-api-loader": "^1.16.10",
             "@radix-ui/react-accordion": "^1.2.3",

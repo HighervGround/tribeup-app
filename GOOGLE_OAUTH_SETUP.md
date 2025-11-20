@@ -1,14 +1,19 @@
-# Google OAuth Setup Guide for TribeUp
+# MOVED: Google OAuth Setup Guide
+The full Google OAuth setup instructions are now at `docs/GOOGLE_OAUTH_SETUP.md`.
 
-This guide will help you set up Google OAuth authentication for your TribeUp Sports Platform so that Google displays "Continue to TribeUp" with your domain instead of the Supabase project URL.
+Why moved:
+- Part of the centralized authentication & platform setup documentation collection.
+- Reduces duplication and improves discoverability via `docs/INDEX.md`.
 
-## Overview
+Action:
+Use the `docs/` version for any updates; delete this stub once all external references are updated.
 
-To ensure Google OAuth shows your app name and domain (not Supabase's):
-1. Configure your production domain in environment variables
-2. Set the same domain as Site URL in Supabase
-3. Add it to Google's authorized redirect URIs
-4. The app will automatically use this domain for all OAuth flows
+Additional related docs:
+- `docs/AUTH_SETUP.md`
+- `docs/OAUTH_DOMAIN_SETUP.md`
+- `docs/SUPABASE_SETUP.md`
+
+Last updated: Nov 2025 consolidation.
 
 ## Step 0: Configure Your Production Domain
 

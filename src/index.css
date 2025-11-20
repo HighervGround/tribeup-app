@@ -6687,3 +6687,20 @@ html {
   z-index: 99999 !important;
   position: relative !important;
 }
+
+/* Custom utilities for PublicHomeScreen */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .bg-grid-white\/\[0\.05\] {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+}

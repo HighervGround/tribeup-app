@@ -5,21 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Badge } from '@/shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
-import { Settings, Trophy, Calendar, MapPin } from 'lucide-react';
+import { Settings, Trophy, Calendar, MapPin, Users, UserPlus, Users2 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
+import { useUserFriends, useFriendSuggestions, useFollowUser } from '@/domains/users/hooks/useFriends';
+import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 import { AchievementGrid } from './AchievementBadge';
+import { StatGroup } from '@/shared/components/ui';
 import { formatTimeString } from '@/shared/utils/dateUtils';
 
 function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAppStore();
-  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Support deep linking to specific tab via URL hash
+  const urlHash = window.location.hash.replace('#', '');
+  const initialTab = ['overview', 'following', 'achievements'].includes(urlHash) ? urlHash : 'overview';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Fetch users you're following
+  const { data: userFriends = [], isLoading: friendsLoading } = useUserFriends(user?.id);
+  const { data: friendSuggestions = [], isLoading: suggestionsLoading } = useFriendSuggestions(10);
+  const friendMutation = useFollowUser();
   
   // Use React Query hooks for data fetching
   const { data: stats, isLoading: statsLoading } = useUserStats(user?.id || '');
   const { data: recentGamesData = [], isLoading: recentGamesLoading } = useUserRecentGames(user?.id || '', 5);
   const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(user?.id || '');
+  const { data: userTribes = [], isLoading: tribesLoading } = useUserTribes(user?.id);
   
   const loading = statsLoading || recentGamesLoading || achievementsLoading;
   
@@ -27,8 +40,9 @@ function UserProfile() {
   const userStats = useMemo(() => [
     { label: 'Activities Joined', value: stats?.totalGamesPlayed?.toString() || '0', icon: Calendar },
     { label: 'Activities Hosted', value: stats?.totalGamesHosted?.toString() || '0', icon: MapPin },
+    { label: 'Following', value: userFriends.length.toString(), icon: Users },
     { label: 'Achievements', value: achievements.length.toString(), icon: Trophy },
-  ], [stats, achievements]);
+  ], [stats, achievements, userFriends.length]);
   
   // Transform recent games data
   const recentGames = useMemo(() => {
@@ -96,17 +110,14 @@ function UserProfile() {
             <CardTitle>Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              {userStats.map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <stat.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="text-2xl font-semibold">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
-            </div>
+            <StatGroup
+              stats={userStats.map((stat) => ({
+                label: stat.label,
+                value: stat.value,
+                icon: <stat.icon className="w-5 h-5" />,
+              }))}
+              columns={2}
+            />
           </CardContent>
         </Card>
 
@@ -140,10 +151,75 @@ function UserProfile() {
           </CardContent>
         </Card>
 
+        {/* My Tribes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users2 className="w-5 h-5" />
+              My Tribes ({userTribes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tribesLoading ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p className="text-sm">Loading tribes...</p>
+              </div>
+            ) : userTribes.length > 0 ? (
+              <div className="space-y-2">
+                {userTribes.map((tribe: any) => (
+                  <div
+                    key={tribe.id}
+                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => navigate(`/tribe/${tribe.id}`)}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        {tribe.avatar_url ? (
+                          <img src={tribe.avatar_url} alt={tribe.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          <span className="text-primary font-semibold">
+                            {tribe.name.substring(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{tribe.name}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <span>{tribe.member_count} members</span>
+                          <span>•</span>
+                          <span>{tribe.activity}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {!tribe.is_public && (
+                      <Badge variant="secondary" className="ml-2">Private</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <Users2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">You haven't joined any tribes yet</p>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={() => navigate('/app/tribes')}
+                  className="mt-2"
+                >
+                  Discover Tribes
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Tabs for different sections */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="following">Following</TabsTrigger>
             <TabsTrigger value="achievements">Achievements</TabsTrigger>
           </TabsList>
 
@@ -224,6 +300,118 @@ function UserProfile() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="following" className="space-y-6">
+            {/* People You Follow */}
+            {userFriends.length > 0 ? (
+              <Card key="following-card">
+                <CardHeader>
+                  <CardTitle>Following ({userFriends.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {userFriends.map((friend) => (
+                      <div 
+                        key={friend.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/user/${friend.id}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={friend.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {(friend.display_name || friend.username || 'U').charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{friend.display_name || friend.username || 'User'}</p>
+                            {friend.bio && (
+                              <p className="text-sm text-muted-foreground truncate max-w-[200px]">{friend.bio}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">Following</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card key="no-following-card">
+                <CardContent className="py-8 text-center">
+                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="font-medium mb-2">Not Following Anyone Yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Follow players to see them here
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* People to Follow */}
+            {friendSuggestions.length > 0 && (
+              <Card key="suggestions-card">
+                <CardHeader>
+                  <CardTitle>People to Follow</CardTitle>
+                  <p className="text-sm text-muted-foreground">Based on activities you've joined together</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {friendSuggestions.slice(0, 10).map((suggestion) => (
+                      <div 
+                        key={suggestion.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div 
+                          className="flex items-center gap-3 flex-1 cursor-pointer"
+                          onClick={() => navigate(`/user/${suggestion.id}`)}
+                        >
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={suggestion.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {(suggestion.display_name || suggestion.username || 'U').charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{suggestion.display_name || suggestion.username || 'User'}</p>
+                              {suggestion.common_games_count > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {suggestion.common_games_count} {suggestion.common_games_count !== 1 ? 'activities' : 'activity'} together
+                                </Badge>
+                              )}
+                            </div>
+                            {suggestion.bio && (
+                              <p className="text-sm text-muted-foreground truncate">{suggestion.bio}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={suggestion.is_following ? "outline" : "default"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            friendMutation.mutate(suggestion.id);
+                          }}
+                          disabled={friendMutation.isPending}
+                          className="ml-2"
+                        >
+                          {suggestion.is_following ? (
+                            <>Following</>
+                          ) : (
+                            <>
+                              <UserPlus className="w-3 h-3 mr-1" />
+                              Follow
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
         </Tabs>

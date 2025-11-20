@@ -28,13 +28,12 @@ export function ShareGameModal({ game, isOpen, onClose }: ShareGameModalProps) {
   
   if (!isOpen) return null;
 
-  const publicRsvpUrl = `${window.location.origin}/public/game/${game.id}`;
   const gameDetailsUrl = `${window.location.origin}/game/${game.id}`;
   const shareText = `Join me for ${game.sport} at ${game.location} on ${game.date}!`;
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(publicRsvpUrl);
+      await navigator.clipboard.writeText(gameDetailsUrl);
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
@@ -129,11 +128,11 @@ Hope to see you there!
           {/* Share Link */}
           <div>
             <label className="text-sm font-medium mb-2 block">
-              Public RSVP Link
+              Activity Link
             </label>
             <div className="flex gap-2">
               <Input
-                value={publicRsvpUrl}
+                value={gameDetailsUrl}
                 readOnly
                 className="flex-1"
               />
@@ -147,7 +146,7 @@ Hope to see you there!
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Anyone with this link can view activity details and RSVP
+              Anyone can view this activity. Sign up to join!
             </p>
           </div>
 

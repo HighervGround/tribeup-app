@@ -1,6 +1,7 @@
 import React from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { LayoutState } from '@/shared/hooks/useLayoutState';
+import { FloatingActionButton } from '@/shared/components/common/FloatingActionButton';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,9 @@ export function MobileLayout({
       >
         {children}
       </main>
+
+      {/* Floating Action Button for Create */}
+      <FloatingActionButton />
 
       {/* Bottom navigation - conditionally rendered */}
       {shouldShowBottomNav && <BottomNavigation ref={navigationRef} />}

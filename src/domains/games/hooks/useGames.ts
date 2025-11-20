@@ -26,16 +26,13 @@ export function useGames() {
     // Only invalidate if user actually changed (not just loading states)
     // Add debouncing and prevent invalidation during initial auth flow
     if (user?.id) {
-      console.log('🔄 [useGames] User authenticated, checking if cache invalidation needed:', user.id);
-      
       // Check if this is the same user as before to prevent unnecessary invalidations
       const lastUserId = sessionStorage.getItem('tribeup_last_user_id');
       const lastInvalidationTime = parseInt(sessionStorage.getItem('tribeup_last_invalidation') || '0');
       const now = Date.now();
       
-      // Skip if same user AND recent invalidation (within 10 seconds)
-      if (lastUserId === user.id && (now - lastInvalidationTime) < 10000) {
-        console.log('🔄 [useGames] Same user with recent invalidation, skipping');
+      // Skip if same user AND recent invalidation (within 30 seconds - increased to reduce invalidations)
+      if (lastUserId === user.id && (now - lastInvalidationTime) < 30000) {
         return;
       }
       
@@ -45,9 +42,8 @@ export function useGames() {
       
       // Use longer debounce to let auth stabilize
       const timeoutId = setTimeout(() => {
-        console.log('🔄 [useGames] Invalidating cache for user:', user.id);
         queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
-      }, 1000); // Increased to 1 second to let auth fully stabilize
+      }, 2000); // Increased to 2 seconds to let auth fully stabilize
       
       return () => clearTimeout(timeoutId);
     } else {
@@ -60,40 +56,19 @@ export function useGames() {
   return useQuery({
     queryKey: gameKeys.lists(),
     queryFn: async () => {
-      console.log('🔍 [useGames] Starting fetch with user:', user?.id || 'anonymous');
-      const startTime = performance.now();
-      
       try {
-        // Let the query complete naturally - no artificial timeouts
         const games = await SupabaseService.getGames();
-        const duration = performance.now() - startTime;
-        
-        console.log('✅ [useGames] Games fetched successfully:', {
-          count: games.length,
-          duration: `${duration.toFixed(2)}ms`,
-          user: user?.id || 'anonymous'
-        });
-        
         return games;
       } catch (error) {
-        const duration = performance.now() - startTime;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('❌ [useGames] Fetch failed:', {
-          error: errorMessage,
-          duration: `${duration.toFixed(2)}ms`,
-          user: user?.id || 'anonymous'
-        });
         
         // If it's a timeout, this might be cache corruption
         if (errorMessage.includes('timeout')) {
-          console.warn('🧹 [useGames] Timeout detected - possible cache corruption');
-          
           // After 2 timeouts, assume cache corruption and force clean
           const timeoutCount = parseInt(sessionStorage.getItem('tribeup_timeout_count') || '0') + 1;
           sessionStorage.setItem('tribeup_timeout_count', timeoutCount.toString());
           
           if (timeoutCount >= 2) {
-            console.error('🚨 [useGames] Multiple timeouts detected, forcing cache cleanup');
             CacheCorruptionDetector.forceCleanOnNextLoad();
             toast.error('Loading issues detected', {
               description: 'Refreshing to clear corrupted cache...',
@@ -109,35 +84,29 @@ export function useGames() {
         throw error;
       }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes (reasonable refresh time)
-    gcTime: 5 * 60 * 1000, // 5 minutes (normal cleanup)
+    staleTime: 5 * 60 * 1000, // 5 minutes (increased for better performance)
+    gcTime: 10 * 60 * 1000, // 10 minutes (increased to reduce refetches)
     retry: (failureCount, error) => {
-      console.log(`🔄 [useGames] Retry attempt ${failureCount}:`, error.message);
-      
       // Don't retry timeouts more than once
       if (error.message?.includes('timeout') && failureCount >= 1) {
-        console.warn('🚫 [useGames] Timeout retry limit reached');
         return false;
       }
       
       // Don't retry auth errors
       if (error.message?.includes('JWT') || error.message?.includes('auth')) {
-        console.warn('🚫 [useGames] Auth error, no retry');
         return false;
       }
       
       return failureCount < 2; // Max 2 retries
     },
     retryDelay: (attemptIndex) => {
-      const delay = Math.min(1000 * Math.pow(2, attemptIndex), 5000);
-      console.log(`⏱️ [useGames] Retry delay: ${delay}ms`);
-      return delay;
+      return Math.min(1000 * Math.pow(2, attemptIndex), 5000);
     },
     // Remove authentication requirement - games should load for all users
     // enabled: !!user, // Only fetch when user is authenticated
-    refetchOnMount: 'always', // Always refetch on mount to ensure fresh data
+    refetchOnMount: false, // Use cached data if available (reduces network requests)
     refetchOnWindowFocus: false, // Don't refetch on window focus - reduces queries
-    refetchOnReconnect: true, // Only refetch when network reconnects
+    refetchOnReconnect: false, // Don't auto-refetch on reconnect (user can manually refresh)
     // Prevent queries from being cancelled during auth state changes
     notifyOnChangeProps: ['data', 'error', 'isLoading'],
     meta: {
@@ -151,15 +120,12 @@ export function useGame(gameId: string) {
   return useQuery({
     queryKey: gameKeys.detail(gameId),
     queryFn: async () => {
-      console.log('🔍 Fetching game:', gameId);
-      const game = await SupabaseService.getGameById(gameId);
-      console.log('✅ Game fetched:', game?.id || 'not found');
-      return game;
+      return await SupabaseService.getGameById(gameId);
     },
     enabled: !!gameId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 3,
+    staleTime: 5 * 60 * 1000, // 5 minutes (increased)
+    gcTime: 10 * 60 * 1000, // 10 minutes (increased)
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     meta: {
       errorMessage: 'Failed to load game details'
@@ -172,18 +138,14 @@ export function useGameParticipants(gameId: string) {
   return useQuery({
     queryKey: gameKeys.participants(gameId),
     queryFn: async () => {
-      console.log('🔍 Fetching participants for game:', gameId);
-      // Use SupabaseService which joins with user data
-      const participants = await SupabaseService.getGameParticipants(gameId);
-      console.log('✅ Participants fetched:', participants.length);
-      return participants;
+      return await SupabaseService.getGameParticipants(gameId);
     },
     enabled: !!gameId,
-    staleTime: 0, // Always refetch when gameId changes
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    retry: 3,
+    staleTime: 2 * 60 * 1000, // 2 minutes (increased from 0 to reduce refetches)
+    gcTime: 10 * 60 * 1000, // 10 minutes (increased)
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnWindowFocus: false, // Disabled to reduce unnecessary refetches
     refetchOnMount: true, // Always refetch when component mounts
     meta: {
       errorMessage: 'Failed to load game participants'
@@ -198,7 +160,6 @@ export function useJoinGame() {
 
   return useMutation({
     mutationFn: async (gameId: string) => {
-      console.log('🔧 Joining game:', gameId);
       const result = await joinGame(gameId);
       if (!result.success) {
         throw new Error(result.error || 'Failed to join game');
@@ -277,8 +238,6 @@ export function useJoinGame() {
       return { previousGames, previousGame, previousParticipants };
     },
     onError: (error, gameId, context) => {
-      console.error('❌ Join game error:', error);
-      
       // Rollback on error
       if (context?.previousGames) {
         queryClient.setQueryData(gameKeys.lists(), context.previousGames);
@@ -295,8 +254,6 @@ export function useJoinGame() {
       });
     },
     onSuccess: async (_, gameId) => {
-      console.log('✅ Successfully joined activity:', gameId);
-      
       // Invalidate React Query cache
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
@@ -313,7 +270,6 @@ export function useLeaveGame() {
 
   return useMutation({
     mutationFn: async (gameId: string) => {
-      console.log('🔧 Leaving game:', gameId);
       const result = await leaveGame(gameId);
       if (!result.success) {
         throw new Error(result.error || 'Failed to leave game');
@@ -393,8 +349,6 @@ export function useLeaveGame() {
       return { previousGames, previousGame, previousParticipants };
     },
     onError: (error, gameId, context) => {
-      console.error('❌ Leave game error:', error);
-      
       // Rollback on error
       if (context?.previousGames) {
         queryClient.setQueryData(gameKeys.lists(), context.previousGames);
@@ -411,15 +365,6 @@ export function useLeaveGame() {
       });
     },
     onSuccess: async (_, gameId) => {
-      console.log('✅ Successfully left activity:', gameId);
-      
-      // Log state before refetch
-      const gameBefore = queryClient.getQueryData(gameKeys.detail(gameId));
-      console.log('📊 Game state BEFORE refetch:', { 
-        isJoined: (gameBefore as any)?.isJoined, 
-        currentPlayers: (gameBefore as any)?.currentPlayers 
-      });
-      
       // Invalidate React Query cache
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
@@ -436,12 +381,9 @@ export function useCreateGame() {
 
   return useMutation({
     mutationFn: async (gameData: any) => {
-      console.log('🔧 Creating game:', gameData);
       return await SupabaseService.createGame(gameData);
     },
     onSuccess: (newGame) => {
-      console.log('✅ Game created successfully:', (newGame as any)?.id || 'unknown');
-      
       // Invalidate games list to refetch
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       
@@ -450,8 +392,6 @@ export function useCreateGame() {
       });
     },
     onError: (error) => {
-      console.error('❌ Create activity error:', error);
-      
       toast.error('Failed to create activity', {
         description: 'Please try again later',
       });
@@ -464,10 +404,7 @@ export function useIsUserInGame(gameId: string) {
   return useQuery({
     queryKey: [...gameKeys.detail(gameId), 'userInGame'],
     queryFn: async () => {
-      console.log('🔍 Checking if user is in game:', gameId);
-      const inGame = await isUserInGame(gameId);
-      console.log('✅ User in game check:', inGame);
-      return inGame;
+      return await isUserInGame(gameId);
     },
     enabled: !!gameId,
     staleTime: 30 * 1000, // 30 seconds

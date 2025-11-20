@@ -43,6 +43,8 @@ import { QuickJoinModal } from './QuickJoinModal';
 import { ShareGameModal } from './ShareGameModal';
 import { PostGameRatingModal } from './PostGameRatingModal';
 import { RouteDisplayMap } from '@/domains/locations/components/RouteDisplayMap';
+import { RSVPSection, AttendeeList, type Attendee, type RSVPStatus } from '@/domains/games/components';
+import { Facepile } from '@/shared/components/ui';
 import { toast } from 'sonner';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { supabase } from '@/core/database/supabase';
@@ -93,6 +95,7 @@ function GameDetails() {
       console.log('🔄 GameDetails: gameId changed, participants should refetch:', gameId);
     }
   }, [gameId]);
+
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
@@ -130,6 +133,101 @@ function GameDetails() {
       isHost: player.id === game?.creator_id
     }));
   }, [participants, game?.creator_id]);
+
+  // Convert players to Attendee format for RSVPSection
+  const attendees: Attendee[] = useMemo(() => {
+    if (!players || !game) return [];
+    return players.map(player => ({
+      id: player.id,
+      name: player.name,
+      avatar: player.avatar,
+      email: player.email,
+      status: 'going' as RSVPStatus, // All current participants are "going"
+      isHost: player.isHost || player.id === game?.creator_id,
+      isOrganizer: player.isHost || player.id === game?.creator_id,
+      isGuest: player.isGuest || false,
+      joinedAt: player.joinedAt,
+    }));
+  }, [players, game?.creator_id]);
+
+  // Get current user's RSVP status
+  const userRSVPStatus: RSVPStatus | undefined = useMemo(() => {
+    if (!user?.id || !game?.isJoined) return undefined;
+    return 'going';
+  }, [user?.id, game?.isJoined]);
+
+  // Handle RSVP status change
+  const handleRSVPChange = async (status: RSVPStatus) => {
+    if (!gameId || !user?.id || !game) return;
+    
+    try {
+      if (status === 'going' && !game.isJoined) {
+        // Join the game
+        await toggleJoin(game);
+      } else if (status !== 'going' && game.isJoined) {
+        // Leave the game
+        await toggleJoin(game);
+      }
+      // Note: "maybe" and "not_going" would require additional API support
+      toast.success(status === 'going' ? 'Joined the game!' : 'Left the game');
+    } catch (error) {
+      console.error('Failed to update RSVP:', error);
+      toast.error('Failed to update RSVP status');
+    }
+  };
+
+  // Force scroll to top and PREVENT any scrolling for the first second
+  useEffect(() => {
+    let isLocked = true;
+    
+    const preventScroll = (e: Event) => {
+      if (isLocked) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.scrollTo(0, 0);
+      }
+    };
+    
+    const forceScrollToTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    
+    // Immediate scroll
+    forceScrollToTop();
+    
+    // Lock scrolling temporarily
+    window.addEventListener('scroll', preventScroll, { capture: true, passive: false });
+    document.addEventListener('scroll', preventScroll, { capture: true, passive: false });
+    
+    // Aggressive corrections
+    const timeouts = [
+      setTimeout(forceScrollToTop, 50),
+      setTimeout(forceScrollToTop, 100),
+      setTimeout(forceScrollToTop, 200),
+      setTimeout(forceScrollToTop, 400),
+      setTimeout(forceScrollToTop, 600),
+      setTimeout(forceScrollToTop, 800),
+    ];
+    
+    // Unlock after 1 second
+    const unlockTimeout = setTimeout(() => {
+      isLocked = false;
+      window.removeEventListener('scroll', preventScroll, { capture: true });
+      document.removeEventListener('scroll', preventScroll, { capture: true });
+      // Final scroll to top after unlocking
+      forceScrollToTop();
+    }, 1000);
+    
+    return () => {
+      isLocked = false;
+      window.removeEventListener('scroll', preventScroll, { capture: true });
+      document.removeEventListener('scroll', preventScroll, { capture: true });
+      timeouts.forEach(clearTimeout);
+      clearTimeout(unlockTimeout);
+    };
+  }, [gameId]);
 
   // Debug: Log route data structure
   useEffect(() => {
@@ -284,21 +382,72 @@ function GameDetails() {
     // Prevent multiple rapid clicks
     if (actionLoading) return;
     
+    // Check authentication status
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
     // If user is not authenticated, show quick join modal
-    if (!user) {
+    if (!authUser) {
+      console.log('👤 User not authenticated, showing login modal');
       setShowQuickJoin(true);
       return;
     }
     
-    // Use the centralized toggle logic
+    // User is authenticated, proceed with join/leave
+    console.log('✅ User authenticated, proceeding with join/leave');
     toggleJoin(game);
   };
 
   const handleQuickJoinSuccess = async () => {
+    console.log('🎉 Quick join success, attempting to join game');
     setShowQuickJoin(false);
-    // After successful signup, join the game
-    if (gameId && game) {
-      toggleJoin(game);
+    
+    // Wait a moment for auth state to propagate
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Verify user is now authenticated
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    if (authUser && gameId && game) {
+      console.log('✅ User authenticated after signup, joining game:', gameId);
+      
+      // IMPORTANT: Use 'joined' not 'going' - 'going' is UI-only RSVP status
+      const participantStatus = 'joined' as const;
+      console.log(`📝 Quick join: inserting with status "${participantStatus}"`);
+      
+      // Join the game - use upsert to handle duplicates gracefully
+      const { error } = await supabase
+        .from('game_participants')
+        .upsert(
+          {
+            game_id: gameId,
+            user_id: authUser.id, // Explicitly include user_id
+            status: participantStatus // Database expects: 'joined' | 'left' | 'completed' | 'no_show'
+          },
+          {
+            onConflict: 'game_id,user_id'
+          }
+        );
+      
+      if (error) {
+        // Check if it's a duplicate error (which is actually fine)
+        if (error.code === '23505') {
+          console.log('✅ User already in game (duplicate), proceeding anyway');
+          toast.success('Welcome! You\'re joining the game.');
+          window.location.reload();
+        } else {
+          console.error('❌ Failed to join game after signup:', error);
+          toast.error('Failed to join game. Please try clicking Join again.');
+        }
+      } else {
+        console.log('✅ Successfully joined game after signup');
+        toast.success('Welcome! You\'ve successfully joined the game.');
+        
+        // Refresh the page to update all game data
+        window.location.reload();
+      }
+    } else {
+      console.warn('⚠️ User not authenticated after quick join success');
+      toast.error('Please log in and try joining again');
     }
   };
 
@@ -453,7 +602,7 @@ function GameDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={{ overflowAnchor: 'none' } as React.CSSProperties}>
       {/* Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
         <div className="flex items-center justify-between px-4 py-4">
@@ -665,7 +814,13 @@ function GameDetails() {
                 <div>{game.location}</div>
               </div>
               
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+              <div 
+                className="aspect-video bg-muted rounded-lg flex items-center justify-center"
+                style={{ 
+                  contain: 'layout',
+                  overflowAnchor: 'none',
+                } as React.CSSProperties}
+              >
                 {(game.latitude && game.longitude) || game.location ? (
                   <iframe
                     src={`https://www.google.com/maps/embed/v1/place?key=${(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}&q=${
@@ -1126,87 +1281,22 @@ function GameDetails() {
           </CardContent>
         </Card>
 
-        {/* Players List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {/* Use players.length as source of truth since it's from participants query (gets optimistic updates) */}
-                {/* Fall back to game.totalPlayers only if participants haven't loaded yet */}
-                <CardTitle>Players ({!loadingPlayers ? players.length : (game.totalPlayers ?? 0)}/{game.maxPlayers ?? 0})</CardTitle>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-                              {players.map((player, index) => (
-                <div key={player.id}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {player.isGuest ? (
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-muted">
-                            {player.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <ClickableAvatar
-                          userId={player.id}
-                          src={player.avatar}
-                          alt={player.name}
-                          size="md"
-                        />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          {player.isGuest ? (
-                            <span className="font-medium">{player.name}</span>
-                          ) : (
-                            <button 
-                              onClick={async () => {
-                                console.log('🔍 [GameDetails] Clicking on player:', player);
-                                
-                                // Debug: Verify session and client before navigation
-                                const { data: { session } } = await supabase.auth.getSession();
-                                console.log('🔍 [GameDetails] Session check:', {
-                                  hasSession: !!session,
-                                  userId: session?.user?.id,
-                                  targetPlayerId: player.id
-                                });
-                                console.log('🔍 [GameDetails] Client check:', {
-                                  hasClient: !!supabase,
-                                  hasAuth: !!supabase.auth
-                                });
-                                
-                                navigateToUser(player.id);
-                              }}
-                              className="hover:text-primary transition-colors cursor-pointer font-medium"
-                              data-action="view-profile"
-                            >
-                              {player.name}
-                            </button>
-                          )}
-                          {player.isHost && (
-                            <Badge variant="secondary" className="text-xs px-2 py-0">Host</Badge>
-                          )}
-                          {player.isGuest && (
-                            <Badge variant="outline" className="text-xs px-2 py-0 border-muted-foreground/30">Guest</Badge>
-                          )}
-                        </div>
-                        {/* Player rating temporarily hidden during early testing phase */}
-                        {/* <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Star className="w-3 h-3 fill-current text-warning" />
-                          {player.rating}
-                        </div> */}
-                      </div>
-                    </div>
-                  </div>
-                  {index < players.length - 1 && <Separator className="mt-3" />}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* RSVP Section */}
+        <RSVPSection
+          attendees={attendees}
+          currentUserId={user?.id}
+          userRSVPStatus={userRSVPStatus}
+          maxPlayers={game.maxPlayers}
+          currentPlayers={!loadingPlayers ? players.length : (game.totalPlayers ?? 0)}
+          onRSVPChange={handleRSVPChange}
+          onInvite={() => setShowInvite(true)}
+          onAttendeeClick={(attendee) => {
+            if (attendee.id && !attendee.id.startsWith('guest-')) {
+              navigateToUser(attendee.id);
+            }
+          }}
+          showFullList={true}
+        />
 
         {/* Join Status Alert */}
         {game.isJoined && (
@@ -1404,13 +1494,18 @@ function GameDetails() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              className="border-border bg-background hover:bg-muted"
+            >
               Keep Activity
             </Button>
             <Button 
               variant="destructive" 
               onClick={handleDeleteGame} 
               disabled={editActionLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {editActionLoading ? (
                 <>

@@ -1,7 +1,14 @@
 .vercel
+.cursor-history
+# Dependency directories
+.vscode/
+.git/
 node_modules
-
-
 # Local Netlify folder
 .netlify
 build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

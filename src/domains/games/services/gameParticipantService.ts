@@ -1,19 +1,22 @@
 import { supabase } from '@/core/database/supabase';
 
+// Database-level status values (NOT the same as UI RSVP status)
+export type ParticipantStatus = 'joined' | 'left' | 'completed' | 'no_show';
+
 export interface GameParticipant {
   id: string;
   game_id: string;
   user_id: string;
-  status: 'joined' | 'left' | 'kicked' | 'banned';
+  status: ParticipantStatus; // Database values: 'joined' | 'left' | 'completed' | 'no_show'
   joined_at: string;
   left_at?: string;
 }
 
 /**
- * Join a game - creates a new participant record
- * The database triggers will automatically:
- * 1. Set user_id = auth.uid() via RLS policy
- * 2. Update games.current_players count
+ * Join a game - inserts participant record with status 'joined'
+ * NOTE: Do NOT use RSVP status values like 'going' - use ParticipantStatus only
+ * Uses upsert to handle re-joins gracefully (requires INSERT + UPDATE RLS policies)
+ * Client must explicitly include user_id equal to auth.uid()
  */
 export async function joinGame(gameId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -25,24 +28,40 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Must be logged in to join games' };
     }
     
-    // Use the secure v1 join function
-    const { data, error } = await supabase.rpc('join_game_v1', { 
-      p_game_id: gameId 
-    });
+    // IMPORTANT: Always use 'joined' - NOT 'going' (that's UI-only RSVP status)
+    const participantStatus: ParticipantStatus = 'joined';
+    
+    console.log(`📝 Inserting with status: "${participantStatus}" (NOT "going")`);
+    
+    // Insert with explicit user_id (required for RLS policy)
+    // Using upsert with onConflict will perform UPDATE if exists (requires UPDATE policy)
+    const { error } = await supabase
+      .from('game_participants')
+      .upsert(
+        {
+          game_id: gameId,
+          user_id: user.id, // Explicitly include user_id
+          status: participantStatus // Type-safe: only 'joined' | 'left' | 'completed' | 'no_show'
+        },
+        {
+          onConflict: 'game_id,user_id'
+        }
+      );
       
     if (error) {
       console.error('❌ Join game failed:', error);
       
       // Handle specific error cases
       if (error.code === '23505') { // Unique constraint violation
-        return { success: false, error: 'You are already in this game' };
+        // This shouldn't happen with upsert, but handle it gracefully
+        console.log('⚠️ Duplicate detected, user may already be in game');
+        return { success: true }; // Treat as success
       }
       
       return { success: false, error: error.message };
     }
     
-    console.log('✅ Successfully joined game. RPC response:', data);
-    console.log('🔄 Join complete, React Query should now refetch with status=joined');
+    console.log('✅ Successfully joined game');
     return { success: true };
     
   } catch (error) {
@@ -52,10 +71,9 @@ export async function joinGame(gameId: string): Promise<{ success: boolean; erro
 }
 
 /**
- * Leave a game - updates participant status to 'left'
- * The database triggers will automatically:
- * 1. Set left_at = now()
- * 2. Update games.current_players count
+ * Leave a game - deletes the participant row for the current user
+ * Explicitly filters by user_id and game_id for clarity
+ * RLS policy ensures user can only delete their own participation
  */
 export async function leaveGame(gameId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -67,10 +85,13 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: 'Must be logged in to leave games' };
     }
     
-    // Use the secure v1 leave function
-    const { data, error } = await supabase.rpc('leave_game_v1', { 
-      p_game_id: gameId 
-    });
+    // Delete the participant row - explicitly filter by both game_id and user_id
+    // RLS policy will additionally enforce that user_id matches auth.uid()
+    const { error } = await supabase
+      .from('game_participants')
+      .delete()
+      .eq('game_id', gameId)
+      .eq('user_id', user.id); // Explicitly include user_id filter
       
     if (error) {
       console.error('❌ Leave game failed:', error);
@@ -82,8 +103,7 @@ export async function leaveGame(gameId: string): Promise<{ success: boolean; err
       return { success: false, error: error.message };
     }
     
-    console.log('✅ Successfully left game. RPC response:', data);
-    console.log('🔄 Leave complete, React Query should now refetch with status=left');
+    console.log('✅ Successfully left game');
     return { success: true };
     
   } catch (error) {
@@ -100,13 +120,13 @@ export async function isUserInGame(gameId: string): Promise<boolean> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
     
+    // RLS will automatically filter by auth.uid() for user_id
     const { data, error } = await supabase
       .from('game_participants')
       .select('id')
       .eq('game_id', gameId)
-      .eq('user_id', user.id)
       .eq('status', 'joined')
-      .single();
+      .maybeSingle();
       
     if (error && error.code !== 'PGRST116') {
       console.error('Error checking game participation:', error);

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { ClickableAvatar } from '@/shared/components/ui/clickable-avatar';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
-import { MapPin, Calendar, Users, Clock, Star } from 'lucide-react';
+import { MapPin, Calendar, Users, Clock, Star, ChevronRight } from 'lucide-react';
+import { ActivityLikeButton } from './ActivityLikeButton';
+import { ActivityMapPreview } from './ActivityMapPreview';
 import { useGameCard } from '@/domains/games/hooks/useGameCard';
 import { formatTimeString, formatCost, formatEventHeader } from '@/shared/utils/dateUtils';
 import { GameCapacity } from '@/shared/components/ui/GameCapacity';
@@ -23,9 +25,12 @@ interface Game {
   imageUrl?: string;
   currentPlayers: number;
   maxPlayers: number;
+  totalPlayers?: number;
+  availableSpots?: number;
   isJoined: boolean;
   cost?: string;
   category?: string;
+  followerCount?: number;
   host?: {
     id?: string;
     name: string;
@@ -37,26 +42,36 @@ interface Game {
 
 interface UnifiedGameCardProps {
   game: Game;
-  variant?: 'full' | 'simple' | 'compact';
+  variant?: 'full' | 'simple' | 'compact' | 'strava';
   showImage?: boolean;
   showJoinButton?: boolean;
   onSelect?: (gameId: string) => void;
   onJoinLeave?: (gameId: string) => void;
+  distance?: string | null; // Distance in formatted string (e.g., "2.3 mi")
+  friendAvatars?: string[]; // Optional friend/participant avatar URLs
 }
 
 /**
  * Unified GameCard component that handles all game card variants
  * Replaces SimpleGameCard components in HomeScreen and SearchDiscovery
  */
-export function UnifiedGameCard({ 
-  game, 
+export function UnifiedGameCard({
+  game,
   variant = 'simple',
   showImage = false,
   showJoinButton = true,
   onSelect,
-  onJoinLeave
+  onJoinLeave,
+  distance = null,
+  friendAvatars = []
 }: UnifiedGameCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwipeJoining, setIsSwipeJoining] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
   const {
     handleCardClick,
     handleJoinClick,
@@ -71,6 +86,64 @@ export function UnifiedGameCard({
   
   // Use currentGame from hook (with cache updates) instead of prop
   const gameToRender = currentGame || game;
+
+  // Touch gesture handlers for swipe-to-join
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (gameToRender.isJoined) return; // Don't allow swipe if already joined
+
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    setSwipeOffset(0);
+    setIsSwipeJoining(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || gameToRender.isJoined) return;
+
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const deltaX = currentX - touchStartX.current;
+    const deltaY = currentY - touchStartY.current;
+
+    // Only respond to horizontal swipes (more horizontal than vertical)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      e.preventDefault(); // Prevent scrolling when swiping
+      const newOffset = Math.max(0, Math.min(deltaX, 80)); // Max 80px swipe
+      setSwipeOffset(newOffset);
+      setIsSwipeJoining(newOffset > 40); // Trigger join at 40px
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || gameToRender.isJoined) {
+      setSwipeOffset(0);
+      setIsSwipeJoining(false);
+      touchStartX.current = null;
+      touchStartY.current = null;
+      return;
+    }
+
+    const currentX = e.changedTouches[0].clientX;
+    const deltaX = currentX - touchStartX.current;
+
+    // If swiped far enough, trigger join
+    if (deltaX > 60 && !gameToRender.isJoined && !isLoading) {
+      // Add haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(100);
+      }
+
+      // Trigger join
+      handleJoinClick(e as any);
+      setIsSwipeJoining(false);
+    }
+
+    // Reset swipe state
+    setSwipeOffset(0);
+    setIsSwipeJoining(false);
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   // Full variant (original GameCard)
   if (variant === 'full') {
@@ -189,82 +262,367 @@ export function UnifiedGameCard({
     );
   }
 
-  // Simple variant (for HomeScreen and SearchDiscovery) - Optimized for less scrolling
-  return (
-    <div 
-      className="bg-card rounded-lg p-3 border border-border cursor-pointer hover:shadow-md transition-shadow"
-      onClick={handleCardClick}
-    >
-      {/* Header with title and category badge */}
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1 pr-3 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-base truncate">{gameToRender.title}</h3>
-            {getCategoryBadge() && (
-              <span className={`inline-block text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${getCategoryBadge()?.className}`}>
-                {getCategoryBadge()?.text}
-              </span>
+  // Strava variant - Image-first design with statistics overlay
+  if (variant === 'strava') {
+    return (
+      <div
+        ref={cardRef}
+        className="bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-lg transition-all duration-200 ease-out group"
+        onClick={handleCardClick}
+      >
+        {/* Hero Image - Only show if there's an actual image */}
+        {gameToRender.imageUrl && (
+          <div className="relative w-full aspect-video overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+            <ImageWithFallback
+              src={gameToRender.imageUrl}
+              alt={gameToRender.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            
+            {/* Gradient Overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-0" />
+            
+            {/* User Avatar + Name Overlay - Top Left */}
+            {gameToRender.host && (
+              <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
+                <ClickableAvatar
+                  userId={gameToRender.host.id}
+                  src={gameToRender.host.avatar}
+                  alt={gameToRender.host.name}
+                  size="sm"
+                  className="ring-2 ring-white/50"
+                />
+                <span className="text-white font-medium text-sm drop-shadow-lg">
+                  {gameToRender.host.name}
+                </span>
+              </div>
             )}
+            
+            {/* Statistics Overlay - Bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+              <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Players Stat */}
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                    <Users className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-semibold">
+                      {gameToRender.totalPlayers}/{gameToRender.maxPlayers}
+                    </span>
+                  </div>
+                  
+                  {/* Time Stat */}
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                    <Clock className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-semibold">
+                      {formatTimeString(gameToRender.time)}
+                    </span>
+                  </div>
+                  
+                  {/* Location Stat */}
+                  <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg px-2 py-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white font-semibold truncate max-w-[100px]">
+                      {gameToRender.location.split(',')[0]}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Host Avatar */}
+                {gameToRender.host && (
+                  <div className="flex items-center gap-1.5">
+                    <ClickableAvatar
+                      userId={gameToRender.host.id}
+                      src={gameToRender.host.avatar}
+                      alt={gameToRender.host.name}
+                      size="xs"
+                      className="ring-2 ring-white/50"
+                    />
+                    <span className="text-white font-medium text-xs drop-shadow-lg">{gameToRender.host.name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">{gameToRender.sport}</p>
-        </div>
-        <div className="text-right flex-shrink-0">
-          {gameToRender.cost && <div className="text-xs font-medium">{formatCost(gameToRender.cost)}</div>}
-          <GameCapacity
-            totalPlayers={gameToRender.totalPlayers}
-            maxPlayers={gameToRender.maxPlayers}
-            availableSpots={gameToRender.availableSpots}
-            className="text-xs justify-end"
-          />
-        </div>
-      </div>
-      
-      {/* Game details - Condensed */}
-      <div className="space-y-1 text-xs text-muted-foreground mb-2">
-        <div className="flex items-center gap-1.5 truncate">
-          <MapPin className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">{gameToRender.location}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Clock className="w-3 h-3 flex-shrink-0" />
-          <span>{gameToRender.date} at {formatTimeString(gameToRender.time)}</span>
-        </div>
-      </div>
-      
-      {/* Truncated description */}
-      {gameToRender.description && (
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-          {gameToRender.description}
-        </p>
-      )}
-      
-      {/* Footer with join button */}
-      {showJoinButton && (
-        <div className="flex items-center justify-end gap-2">
-          {getJoinStatus() && (
-            <span className={`inline-block text-xs ${getJoinStatus()?.className}`}>
-              {getJoinStatus()?.text}
-            </span>
+        )}
+        
+        {/* Stats bar when no image - inline with content */}
+        {!gameToRender.imageUrl && (
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Players Stat */}
+                <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-border/50">
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="font-semibold">
+                    {gameToRender.totalPlayers}/{gameToRender.maxPlayers}
+                  </span>
+                </div>
+                
+                {/* Time Stat */}
+                <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-border/50">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="font-semibold">
+                    {formatTimeString(gameToRender.time)}
+                  </span>
+                </div>
+                
+                {/* Location Stat */}
+                <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-border/50">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span className="font-semibold truncate max-w-[100px]">
+                    {gameToRender.location.split(',')[0]}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Host Avatar */}
+              {gameToRender.host && (
+                <div className="flex items-center gap-1.5">
+                  <ClickableAvatar
+                    userId={gameToRender.host.id}
+                    src={gameToRender.host.avatar}
+                    alt={gameToRender.host.name}
+                    size="xs"
+                  />
+                  <span className="text-xs font-medium">{gameToRender.host.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Card Content */}
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-lg mb-1 truncate">{gameToRender.title}</h3>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {gameToRender.sport}
+                </Badge>
+                {gameToRender.cost && (
+                  <Badge variant="outline" className="text-xs">
+                    {formatCost(gameToRender.cost)}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Description */}
+          {gameToRender.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+              {gameToRender.description}
+            </p>
           )}
           
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleJoinClick(e);
-            }}
-            disabled={isLoading}
-            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              isLoading 
-                ? 'opacity-50 cursor-not-allowed' 
-                : gameToRender.isJoined 
-                  ? 'bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive hover:bg-destructive/30 dark:hover:bg-destructive/40' 
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
-            }`}
-          >
-            {getButtonText(gameToRender)}
-          </button>
+          {/* Map Preview - Only if coordinates exist */}
+          {gameToRender.latitude && gameToRender.longitude && (
+            <div className="mb-4 rounded-lg overflow-hidden">
+              <ActivityMapPreview
+                latitude={gameToRender.latitude}
+                longitude={gameToRender.longitude}
+                location={gameToRender.location}
+                className="h-40 w-full"
+                onClick={() => handleCardClick()}
+              />
+            </div>
+          )}
+          
+          {/* Footer with Join Button */}
+          {showJoinButton && (
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <ActivityLikeButton 
+                  activityId={gameToRender.id} 
+                  variant="minimal"
+                  showCount={true}
+                />
+                {gameToRender.followerCount && gameToRender.followerCount > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    <span>{gameToRender.followerCount}</span>
+                  </div>
+                )}
+              </div>
+              
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                  }
+                  handleJoinClick(e);
+                }}
+                disabled={isLoading || (gameToRender.totalPlayers >= gameToRender.maxPlayers && !gameToRender.isJoined)}
+                size="sm"
+                variant={gameToRender.isJoined ? "destructive" : "default"}
+                className="font-semibold"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Joining...</span>
+                  </div>
+                ) : (
+                  gameToRender.totalPlayers >= gameToRender.maxPlayers && !gameToRender.isJoined
+                    ? 'Full'
+                    : getButtonText(gameToRender)
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Simple variant (for HomeScreen and SearchDiscovery) - Optimized for less scrolling
+  return (
+    <div
+      ref={cardRef}
+      className={`bg-card rounded-md p-3 border border-border/60 cursor-pointer shadow-sm hover:shadow-lg hover:border-primary/30 transition-colors duration-150 relative overflow-hidden group ${
+        swipeOffset > 0 ? 'transition-none' : ''
+      }`}
+      style={{
+        transform: swipeOffset > 0 ? `translateX(${swipeOffset}px)` : undefined,
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleCardClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Swipe indicator background */}
+      {swipeOffset > 0 && !gameToRender.isJoined && (
+        <div className="absolute inset-0 bg-primary/10 flex items-center justify-start pl-4">
+          <div className="flex items-center gap-2 text-primary">
+            <ChevronRight className="w-5 h-5" />
+            <span className="font-medium text-sm">Swipe to join</span>
+          </div>
         </div>
       )}
+
+      {/* Card content */}
+      <div className="relative z-10">
+        {/* Header with title and category badge */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 pr-3 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <h3 className="font-semibold text-sm truncate leading-tight text-foreground">{gameToRender.title}</h3>
+              {getCategoryBadge() && (
+                <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap shadow-sm ${getCategoryBadge()?.className}`}>
+                  {getCategoryBadge()?.text}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium">{gameToRender.sport}</span>
+              {gameToRender.cost && (
+                <Badge variant="secondary" className="text-xs font-semibold">
+                  {formatCost(gameToRender.cost)}
+                </Badge>
+              )}
+              {distance && (
+                <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1"><MapPin className="w-3 h-3" />{distance}</span>
+              )}
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+            {/* Follower count indicator */}
+            {(gameToRender.followerCount && gameToRender.followerCount > 0) && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>{gameToRender.followerCount} follower{gameToRender.followerCount !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            <GameCapacity
+              totalPlayers={gameToRender.totalPlayers}
+              maxPlayers={gameToRender.maxPlayers}
+              availableSpots={gameToRender.availableSpots}
+              className="text-sm justify-end"
+            />
+          </div>
+        </div>
+      
+        {/* Game details - Condensed */}
+        <div className="space-y-1 text-xs text-muted-foreground mb-2">
+          <div className="flex items-center gap-1.5 truncate">
+            <MapPin className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
+            <span className="truncate">{gameToRender.location}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
+            <span>{gameToRender.date} at {formatTimeString(gameToRender.time)}</span>
+          </div>
+        </div>
+      
+        {/* Truncated description */}
+        {gameToRender.description && (
+          <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">
+            {gameToRender.description}
+          </p>
+        )}
+
+        {/* Friend/participant avatars */}
+        {friendAvatars.length > 0 && (
+          <div className="flex items-center mb-2">
+            <div className="flex -space-x-2">
+              {friendAvatars.slice(0,3).map((src, i) => (
+                <Avatar key={i} className="w-6 h-6 border border-border bg-muted">
+                  {src ? <img src={src} alt="" className="w-6 h-6 rounded-full object-cover" /> : <AvatarFallback className="text-[10px]">?</AvatarFallback>}
+                </Avatar>
+              ))}
+            </div>
+            <span className="text-[10px] text-muted-foreground ml-2">
+              {friendAvatars.length} friend{friendAvatars.length !== 1 ? 's' : ''} here
+            </span>
+          </div>
+        )}
+      
+        {/* Footer with join button */}
+        {showJoinButton && (
+          <div className="flex items-center justify-end gap-2">
+            {getJoinStatus() && (
+              <span className={`inline-block text-xs ${getJoinStatus()?.className}`}>
+                {getJoinStatus()?.text}
+              </span>
+            )}
+
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Add haptic feedback for mobile
+                if ('vibrate' in navigator) {
+                  navigator.vibrate(50);
+                }
+                handleJoinClick(e);
+              }}
+              disabled={isLoading || (gameToRender.isJoined && getButtonVariant(gameToRender) === 'secondary')}
+              size="sm"
+              variant={getButtonVariant(gameToRender) === 'secondary' ? 'secondary' : (gameToRender.isJoined ? "destructive" : "default")}
+              className={`font-semibold transition-all duration-200 ${
+                getButtonVariant(gameToRender) === 'secondary'
+                  ? 'opacity-60 cursor-not-allowed'
+                  : gameToRender.isJoined
+                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              }`}
+              title={getButtonVariant(gameToRender) === 'secondary' ? "You created this activity" : undefined}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs">Joining...</span>
+                </div>
+              ) : (
+                getButtonText(gameToRender)
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

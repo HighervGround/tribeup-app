@@ -69,12 +69,24 @@ Refer to the domain-specific READMEs in `src/domains/**` for deeper architectura
 
 ---
 
+## Component Library
+The app includes a comprehensive design system with reusable components:
+- **UI Components**: Facepile, Empty States, Leaderboard, Stats Display, Wizard, Activity Feed
+- **Game Components**: Sport Picker, RSVP Section, Attendee List
+- **User Components**: Player Card
+- **Location Components**: Location Picker with map integration
+
+See `src/shared/components/COMPONENT_LIBRARY.md` for full documentation.
+Visit `/design-system` route (when authenticated) to see interactive demos.
+
 ## Additional Documentation
 - `AUTH_SETUP.md` – Authentication configuration.
 - `GOOGLE_OAUTH_SETUP.md` – Google OAuth provider instructions.
 - `SUPABASE_SETUP.md` – Supabase project bootstrap steps.
 - `USER_TESTING_CHECKLIST.md` – Manual QA flows.
 - `REORGANIZATION_SUMMARY.md` / `SETUP_SUMMARY.md` – Context on recent structural changes.
+- `src/shared/components/COMPONENT_LIBRARY.md` – Component library documentation.
+- `src/shared/patterns/PATTERNS.md` – UI patterns and best practices.
 
 ---
 

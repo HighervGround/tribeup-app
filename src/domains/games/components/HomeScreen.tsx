@@ -1,15 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { RefreshCw, MapPin } from 'lucide-react';
+import { RefreshCw, MapPin, Users as UsersIcon, Flame, Clock, UserPlus, Calendar as CalendarIcon, Plus, Bell } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
 import { useLocation } from '@/domains/locations/hooks/useLocation';
 import { useAllGamesRealtime } from '@/domains/games/hooks/useGameRealtime';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
-import { CacheClearButton } from '@/shared/components/common/CacheClearButton';
 import { FeedbackButton } from '@/domains/users/components/FeedbackButton';
+import { Badge } from '@/shared/components/ui/badge';
+import { CampusEmptyState } from './CampusEmptyState';
+import { useActivityFilters } from '@/domains/games/hooks/useActivityFilters';
+import { useNotifications } from '@/domains/users/hooks/useNotifications';
+import { brandColors } from '@/shared/config/theme';
+import { useActivityGrouping } from '@/domains/games/hooks/useActivityGrouping';
 
 
 
@@ -20,18 +25,33 @@ function HomeScreen() {
   const { games, userById, usersLoaded, loading: isLoading, error, refetch } = useGamesWithCreators();
   const [refreshing, setRefreshing] = useState(false);
   const [forceTimeout, setForceTimeout] = useState(false);
+  const [showFollowingOnly, setShowFollowingOnly] = useState(false);
   
   // Location services for distance calculations
   const { currentLocation, permission, requestLocation, getFormattedDistanceTo, getDistanceTo } = useLocation();
   // Real-time updates for all games
   useAllGamesRealtime();
   
+  // Notifications for badge
+  const notifications = useNotifications();
+  const unreadCount = notifications?.unreadCount || 0;
+  
+  // Filter activities
+  const { filteredGames, gamesFriendCounts } = useActivityFilters({
+    games,
+    showFollowingOnly,
+  });
+  
+  // Group and sort activities
+  const { sortedGames, gamesBySection } = useActivityGrouping({
+    games: filteredGames,
+    gamesFriendCounts,
+  });
+  
   // Force timeout if loading takes too long
   useEffect(() => {
     if (isLoading) {
-      console.log('🕰️ [HomeScreen] Starting loading timeout timer');
       const timeout = setTimeout(() => {
-        console.warn('⚠️ [HomeScreen] Force timeout after 20 seconds');
         setForceTimeout(true);
       }, 20000);
       
@@ -76,14 +96,21 @@ function HomeScreen() {
     
     // Games user has created
     const gamesCreated = games.filter(game => game.creatorId === user?.id).length;
+    
+    // Games with people you follow
+    const gamesWithFollowing = games.filter(game => {
+      const followerCount = gamesFriendCounts?.[game.id] || 0;
+      return followerCount > 0;
+    }).length;
 
     return {
       totalGames: games.length,
       gamesToday,
       gamesNearby,
-      gamesCreated
+      gamesCreated,
+      gamesWithFriends: gamesWithFollowing // Keep key name for backward compatibility
     };
-  }, [games, user, currentLocation, getFormattedDistanceTo]);
+  }, [games, user, currentLocation, getDistanceTo, gamesFriendCounts]);
 
   // No need for manual loading with React Query
 
@@ -132,52 +159,6 @@ function HomeScreen() {
     }
   };
 
-  // Sort games chronologically with smart grouping
-  const sortedGames = (games || [])
-    .map(game => {
-      // Parse game date properly - game.date is like "2025-10-15"
-      const [year, month, day] = game.date.split('-').map(Number);
-      const gameDate = new Date(year, month - 1, day); // month is 0-indexed
-      
-      // Get today's date in local timezone
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      console.log(`🎯 Game "${game.title}": game.date="${game.date}", gameDate="${gameDate.toDateString()}", today="${today.toDateString()}", tomorrow="${tomorrow.toDateString()}"`);
-      
-      // Determine game category for sorting and display
-      let category = 'future';
-      let sortOrder = gameDate.getTime();
-      
-      if (gameDate.getTime() === today.getTime()) {
-        category = 'today';
-        sortOrder = 0; // Today's games first
-        console.log(`✅ "${game.title}" is TODAY`);
-      } else if (gameDate.getTime() === tomorrow.getTime()) {
-        category = 'tomorrow';
-        sortOrder = 1; // Tomorrow's games second
-        console.log(`✅ "${game.title}" is TOMORROW`);
-      } else {
-        console.log(`📅 "${game.title}" is FUTURE (${gameDate.toDateString()})`);
-      }
-      
-      return {
-        ...game,
-        category,
-        sortOrder,
-        gameDate
-      };
-    })
-    .sort((a, b) => {
-      // First sort by category (today first, then chronological)
-      if (a.sortOrder !== b.sortOrder && (a.category === 'today' || b.category === 'today')) {
-        return a.sortOrder - b.sortOrder;
-      }
-      // Then sort by time chronologically
-      return a.gameDate.getTime() - b.gameDate.getTime();
-    });
 
   // Show loading state with timeout handling
   if (isLoading && games.length === 0 && !forceTimeout) {
@@ -185,7 +166,7 @@ function HomeScreen() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading games...</p>
+          <p className="text-muted-foreground">Loading activities...</p>
           <p className="text-xs text-muted-foreground/70">
             {refreshing ? 'Refreshing...' : 'This should only take a moment'}
           </p>
@@ -193,7 +174,6 @@ function HomeScreen() {
             variant="outline" 
             size="sm" 
             onClick={() => {
-              console.log('🔄 [HomeScreen] Manual refresh triggered');
               setForceTimeout(false);
               refetch();
             }}
@@ -215,13 +195,12 @@ function HomeScreen() {
           </div>
           <p className="text-muted-foreground max-w-md">
             {forceTimeout 
-              ? 'Games are taking too long to load. This might be a network or server issue.'
-              : error?.message || 'Unable to load games. Please check your connection.'}
+              ? 'Activities are taking too long to load. This might be a network or server issue.'
+              : error?.message || 'Unable to load activities. Please check your connection.'}
           </p>
           <div className="flex gap-2 justify-center">
             <Button 
               onClick={() => {
-                console.log('🔄 [HomeScreen] Error state refresh');
                 setForceTimeout(false);
                 refetch();
               }}
@@ -229,69 +208,82 @@ function HomeScreen() {
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                console.log('🧹 [HomeScreen] Clearing cache and refreshing');
-                localStorage.removeItem('supabase.auth.token');
-                window.location.reload();
-              }}
-            >
-              Clear Cache & Reload
-            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Log current state for debugging
-  console.log('📊 [HomeScreen] Current state:', {
-    isLoading,
-    hasError: !!error,
-    refreshing,
-    forceTimeout,
-    gamesCount: games?.length || 0,
-    gamesType: Array.isArray(games) ? 'array' : typeof games,
-    errorMessage: error?.message,
-    userId: user?.id || 'anonymous',
-    gamesData: games?.slice(0, 2) // Log first 2 games for debugging
-  });
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Cache Clear Button - only show in development (never in production) */}
-      {typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' ||
-         window.location.hostname.includes('localhost')) && (
-        <CacheClearButton />
-      )}
-      
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-8">
+      <div className="max-w-3xl mx-auto p-4 md:p-6">
+        <div className="w-full">
+          {/* Main Content - Single Column Feed */}
+          <div className="w-full">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold">TribeUp</h1>
-                <p className="text-muted-foreground">Find your next activity</p>
-              </div>
-              <div className="flex gap-2">
-                <FeedbackButton variant="outline" size="default" />
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-2xl -z-10" />
+              <div className="flex items-center justify-between p-4 md:p-6">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                    TribeUp
+                  </h1>
+                  <p className="text-muted-foreground text-sm">Find your next activity</p>
+                </div>
+                <div className="flex gap-2">
+                  {/* Quick Create Button */}
+                  <Button
+                    onClick={() => navigate('/app/create')}
+                    size="sm"
+                    className="gap-2"
+                    style={{
+                      backgroundColor: brandColors.primary,
+                      borderColor: brandColors.primary,
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Create</span>
+                  </Button>
+                  
+                  {/* Notifications Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/app/notifications')}
+                    className="relative"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-1 -right-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center min-w-[16px] rounded-full"
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Badge>
+                    )}
+                    <span className="hidden sm:inline ml-2">Notifications</span>
+                  </Button>
+                  
+                  <FeedbackButton variant="outline" size="default" />
+                </div>
               </div>
             </div>
 
-            {/* Activities List */}
+            {/* Activities List Header */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold">Upcoming Activities</h2>
+              <div>
+                <h2 className="text-lg md:text-xl font-bold">Upcoming Activities</h2>
+                <p className="text-xs text-muted-foreground">
+                  {sortedGames.length} {sortedGames.length === 1 ? 'activity' : 'activities'} available
+                </p>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="hidden md:flex"
+                className="hidden md:flex shadow-sm hover:shadow-md transition-shadow"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -308,87 +300,116 @@ function HomeScreen() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Filters */}
+            <div className="flex gap-2 mb-4 flex-wrap">
+              <Button
+                variant={showFollowingOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFollowingOnly(!showFollowingOnly)}
+                className="gap-2 shadow-sm hover:shadow-md transition-all"
+              >
+                <UserPlus className="w-4 h-4" />
+                Following
+              </Button>
+              {showFollowingOnly && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setShowFollowingOnly(false);
+                  }}
+                  className="gap-2"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+
+            {/* Activity Feed - Single Column Strava-Style */}
+            <div className="space-y-6">
               {isLoading ? (
                 // Show skeleton loading
-                Array.from({ length: 6 }).map((_, index) => (
-                  <GameCardSkeleton key={index} />
-                ))
-              ) : sortedGames.length > 0 ? (
-                sortedGames.map((game) => (
-                  <div key={game.id}>
-                    <UnifiedGameCard
-                      game={game}
-                      variant="simple"
-                      onSelect={() => handleGameSelect(game.id)}
-                      onJoinLeave={handleGameUpdate}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-muted-foreground">No games found. Check back later!</p>
-                  {error && (
-                    <p className="text-sm text-destructive mt-2">{error.message}</p>
-                  )}
+                <div className="space-y-6">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <GameCardSkeleton key={index} />
+                  ))}
                 </div>
+              ) : sortedGames.length > 0 ? (
+                <div className="space-y-6">
+                  {sortedGames.map((game, index) => {
+                    // Add subtle date divider for first game in each time period
+                    const prevGame = index > 0 ? sortedGames[index - 1] : null;
+                    const showDateDivider = !prevGame || prevGame.category !== game.category;
+                    
+                    return (
+                      <div key={game.id}>
+                        {/* Subtle Date Divider */}
+                        {showDateDivider && (
+                          <div className="flex items-center gap-3 mb-4 mt-2">
+                            <div className="flex-1 h-px bg-border" />
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              {game.category === 'today' ? 'Today' : 
+                               game.category === 'tomorrow' ? 'Tomorrow' : 
+                               game.category === 'thisWeek' ? 'This Week' : 
+                               'Upcoming'}
+                            </span>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                        )}
+                        
+                        <UnifiedGameCard
+                          game={game}
+                          variant="strava"
+                          onSelect={() => handleGameSelect(game.id)}
+                          onJoinLeave={handleGameUpdate}
+                          distance={
+                            currentLocation && game.latitude && game.longitude
+                              ? getFormattedDistanceTo(
+                                  { latitude: game.latitude, longitude: game.longitude },
+                                  'mi'
+                                )
+                              : null
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : showFollowingOnly ? (
+                // Special empty state for following filter
+                <div className="col-span-full">
+                  <div className="text-center py-12 px-4 space-y-6 bg-card rounded-lg shadow-sm border border-border">
+                    <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto">
+                      <UsersIcon className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground">Not Following Anyone Yet</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      Follow other players to see their activities here.
+                    </p>
+                    <div className="flex flex-col sm:flex-row justify-center gap-3">
+                      <Button onClick={() => navigate('/profile#following')} className="flex items-center gap-2">
+                        <UsersIcon className="w-4 h-4" /> Find People to Follow
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowFollowingOnly(false)} className="flex items-center gap-2">
+                        View All Activities
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-6">
+                      💡 Tip: Join activities to meet people, then follow them to see their future activities!
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                    <CampusEmptyState
+                      onCreateGame={() => navigate('/app/create')}
+                      onExploreVenues={() => navigate('/app/search')}
+                      title="No activities yet"
+                      description="Be the first to create an activity!"
+                    />
               )}
             </div>
           </div>
 
-          {/* Sidebar - Desktop Only */}
-          <div className="hidden lg:block lg:col-span-4">
-            <div className="bg-card rounded-lg p-6 sticky top-6">
-              <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Activities Today</span>
-                  <span className="font-semibold">{stats.gamesToday}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Activities Nearby</span>
-                  <span className="font-semibold">
-                    {currentLocation ? stats.gamesNearby : '?'}
-                    {!currentLocation && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={requestLocation}
-                        className="ml-2 h-6 px-2 text-xs"
-                      >
-                        <MapPin className="w-3 h-3 mr-1" />
-                        Enable
-                      </Button>
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Activities Created</span>
-                  <span className="font-semibold">{stats.gamesCreated}</span>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <h4 className="text-sm font-semibold mb-3">Quick Actions</h4>
-                <div className="space-y-2">
-                  <Button 
-                    onClick={() => navigate('/create')} 
-                    className="w-full justify-start"
-                    variant="outline"
-                  >
-                    Create New Activity
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/search')} 
-                    className="w-full justify-start"
-                    variant="outline"
-                  >
-                    Search Activities
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       

@@ -149,21 +149,23 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     sport: dbGame.sport,
     date: dbGame.date,
     time: dbGame.time,
-    duration: dbGame.duration_minutes || (dbGame.duration ? parseInterval(dbGame.duration) : 60),
+    // Use server-provided duration_minutes directly (no client-side recomputation)
+    // duration_minutes is the source of truth from the database
+    duration: dbGame.duration_minutes != null ? dbGame.duration_minutes : 60,
     location: dbGame.location,
     latitude: dbGame.latitude,
     longitude: dbGame.longitude,
     cost: dbGame.cost,
     maxPlayers: Number(dbGame.max_players ?? dbGame.maxPlayers ?? 0),
-    // Calculate total_players from current_players + public_rsvp_count (view doesn't have total_players or available_spots columns)
+    // Calculate total_players from current_players only (public RSVPs removed)
     totalPlayers: Number(
       dbGame.total_players ?? 
-      ((dbGame.current_players || 0) + (dbGame.public_rsvp_count || 0))
+      (dbGame.current_players || 0)
     ),
-    // Calculate available_spots from max_players - total_players
+    // Calculate available_spots from max_players - current_players
     availableSpots: Number(
       dbGame.available_spots ?? 
-      Math.max(0, Number(dbGame.max_players ?? 0) - Number((dbGame.current_players || 0) + (dbGame.public_rsvp_count || 0)))
+      Math.max(0, Number(dbGame.max_players ?? 0) - Number(dbGame.current_players || 0))
     ),
     
     description: dbGame.description,

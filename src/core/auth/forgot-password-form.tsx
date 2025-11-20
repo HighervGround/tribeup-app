@@ -74,13 +74,13 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
                   />
                 </div>
                 {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full cursor-pointer" disabled={isLoading}>
                   {isLoading ? 'Sending...' : 'Send reset email'}
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm">
                 Already have an account?{' '}
-                <a href="/login" className="underline underline-offset-4">
+                <a href="/login" className="underline underline-offset-4 cursor-pointer">
                   Login
                 </a>
               </div>

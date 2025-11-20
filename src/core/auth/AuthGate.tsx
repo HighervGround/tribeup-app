@@ -96,10 +96,10 @@ export default function AuthGate({ children }: AuthGateProps) {
           }
         } else {
           console.log('✅ [AuthGate] User authenticated and onboarded');
-          // Redirect authenticated users away from login/onboarding pages
-          if (location.pathname === '/login' || location.pathname === '/onboarding') {
-            console.log('🔐 [AuthGate] Redirecting authenticated user to home');
-            navigate('/', { replace: true });
+          // Redirect authenticated users away from login/onboarding pages to app
+          if (location.pathname === '/login' || location.pathname === '/onboarding' || location.pathname === '/') {
+            console.log('🔐 [AuthGate] Redirecting authenticated user to app home');
+            navigate('/app', { replace: true });
           }
         }
       } catch (e) {

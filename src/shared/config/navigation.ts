@@ -4,6 +4,7 @@ import {
   Plus, 
   Bell, 
   User,
+  Users,
   LucideIcon
 } from 'lucide-react';
 
@@ -19,41 +20,57 @@ export interface NavigationItem {
 
 export const navigationItems: NavigationItem[] = [
   { 
-    path: '/', 
+    path: '/app', 
     icon: Home, 
     label: 'Home', 
     description: 'Discover activities' 
   },
   { 
-    path: '/search', 
+    path: '/app/search', 
     icon: Search, 
     label: 'Search', 
     description: 'Find activities' 
   },
   { 
-    path: '/create', 
-    icon: Plus, 
-    label: 'Create',
-    description: 'Create new activity',
-    mobileOnly: true // Only show in mobile nav, desktop has dedicated button
+    path: '/app/tribes', 
+    icon: Users, 
+    label: 'Tribes', 
+    description: 'Join communities' 
   },
   { 
-    path: '/notifications', 
-    icon: Bell, 
-    label: 'Notifications', 
-    description: 'Stay updated',
-    showBadge: true 
-  },
-  { 
-    path: '/profile', 
+    path: '/app/profile', 
     icon: User, 
     label: 'Profile', 
     description: 'Your account' 
   },
+  // Create moved to floating action button
+  // Notifications moved to profile menu
+  { 
+    path: '/app/create', 
+    icon: Plus, 
+    label: 'Create',
+    description: 'Create new activity',
+    mobileOnly: false, // Show in both mobile and desktop
+    desktopOnly: false
+  },
+  { 
+    path: '/app/notifications', 
+    icon: Bell, 
+    label: 'Notifications', 
+    description: 'Stay updated',
+    showBadge: true,
+    desktopOnly: false // Show in mobile nav too
+  },
 ];
 
 // Filter helpers
-export const getMobileNavItems = () => navigationItems.filter(item => !item.desktopOnly);
+export const getMobileNavItems = () => {
+  // Show Home, Create, Notifications, Tribes, Profile in mobile bottom nav (5 items)
+  return navigationItems.filter(item => 
+    !item.desktopOnly && 
+    ['/app', '/app/create', '/app/notifications', '/app/tribes', '/app/profile'].includes(item.path)
+  );
+};
 export const getDesktopNavItems = () => navigationItems.filter(item => !item.mobileOnly);
 
 // Route title mapping
@@ -62,10 +79,12 @@ export const getRouteTitle = (pathname: string): string => {
   if (item) return item.label;
   
   // Handle dynamic routes
-  if (pathname.startsWith('/game/')) return 'Activity Details';
-  if (pathname.startsWith('/chat/')) return 'Chat';
-  if (pathname.startsWith('/user/')) return 'User Profile';
-  if (pathname.startsWith('/settings')) return 'Settings';
+  if (pathname.startsWith('/app/game/')) return 'Activity Details';
+  if (pathname.startsWith('/app/chat/')) return 'Chat';
+  if (pathname.startsWith('/app/user/')) return 'User Profile';
+  if (pathname.startsWith('/app/settings')) return 'Settings';
+  if (pathname.startsWith('/app/tribe/')) return 'Tribe';
+  if (pathname === '/app/tribe/create') return 'Create Tribe';
   
   return 'Page';
 };

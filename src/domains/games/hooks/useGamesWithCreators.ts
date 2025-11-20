@@ -33,10 +33,9 @@ export interface GameWithCreator {
   longitude?: number;
   cost: string;
   maxPlayers: number;
-  currentPlayers: number;
-  publicRsvpCount?: number;
-  totalPlayers?: number;
-  availableSpots?: number;
+  currentPlayers: number; // Authenticated participants with status='going'
+  totalPlayers: number; // current_players only (public RSVPs removed)
+  availableSpots: number; // max_players - current_players
   description: string;
   imageUrl?: string;
   sportColor: string;
@@ -44,6 +43,11 @@ export interface GameWithCreator {
   createdBy: string;
   creatorId: string;
   creatorData: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  host?: {
     id: string;
     name: string;
     avatar: string;
@@ -65,17 +69,25 @@ export function useGamesWithCreators() {
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const inFlight = useRef(false);
+  const lastFetchTime = useRef<number>(0);
   const queryClient = useQueryClient(); // React Query client to populate cache
   const [refetchTrigger, setRefetchTrigger] = useState(0); // Trigger for refetch
   
   useEffect(() => {
     if (inFlight.current) return;
+    
+    // Skip fetch if we have data and it's fresh (within 30 seconds)
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime.current;
+    if (games.length > 0 && timeSinceLastFetch < 30000 && refetchTrigger === 0) {
+      setLoading(false);
+      return;
+    }
+    
     inFlight.current = true;
 
-    (async () => {
+    const fetchData = async () => {
       try {
-        console.log('🚀 Starting race-safe games + creators fetch...');
-        
         // Step 1: Fetch games with minimal fields + participation data
         const { data: { user } } = await supabase.auth.getUser();
         const userId = user?.id;
@@ -83,22 +95,28 @@ export function useGamesWithCreators() {
         const { data: gamesData, error: gamesErr } = await supabase
           .from('games_with_counts')
           .select(`
-            id, title, sport, date, time, duration, location, latitude, longitude,
+            id, title, sport, date, time, duration, duration_minutes, location, latitude, longitude,
             cost, max_players, description, image_url, creator_id, created_at,
-            current_players, participant_count
+            current_players, total_players, available_spots
           `)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
 
         if (gamesErr) throw gamesErr;
-
-        console.log(`📊 Step 1: Fetched ${gamesData?.length || 0} games`);
-        setGames(gamesData ?? []);
+        
+        // Filter out past activities (check both date AND time, not just date)
+        const now = new Date();
+        const futureGames = (gamesData ?? []).filter(game => {
+          if (!game.date || !game.time) return false;
+          const gameDateTime = new Date(`${game.date}T${game.time}`);
+          return gameDateTime > now;
+        });
+        
+        setGames(futureGames);
 
         // Step 2: Get participants for these games (fetch separately since view can't do nested selects)
-        const gameIds = (gamesData ?? []).map(g => g.id);
-        console.log(`🔍 Step 2a: Fetching participants for ${gameIds.length} games`);
+        const gameIds = futureGames.map(g => g.id);
         
         // Fetch ALL participants (for creator list) and current user's participation (for isJoined)
         const { data: allParticipants, error: participantsErr } = await supabase
@@ -108,16 +126,13 @@ export function useGamesWithCreators() {
           .eq('status', 'joined');
 
         if (participantsErr) {
-          console.warn('⚠️ Participants fetch failed, continuing with creators only:', participantsErr);
+          // Continue with creators only if participants fetch fails
         }
 
         // Step 2b: Build union of creator and participant ids
-        const creatorIds = new Set((gamesData ?? []).map(g => g.creator_id).filter(id => id && id !== 'null'));
+        const creatorIds = new Set(futureGames.map(g => g.creator_id).filter(id => id && id !== 'null'));
         const participantIds = new Set((allParticipants ?? []).map(p => p.user_id).filter(id => id && id !== 'null'));
         const userIds = Array.from(new Set([...creatorIds, ...participantIds]));
-
-        console.log(`🔍 Step 2b: Found ${creatorIds.size} creators, ${participantIds.size} participants, ${userIds.length} total unique users`);
-        console.log('🔍 Expected user IDs:', userIds);
 
         if (userIds.length === 0) {
           // No users to fetch; render games with generic fallback if needed
@@ -126,23 +141,13 @@ export function useGamesWithCreators() {
         }
 
         // Step 3: Fetch users by ids (batched IN query for ALL users)
-        console.log(`🔍 Step 3: Querying users with IDs:`, userIds);
         const { data: usersData, error: usersErr } = await supabase
           .from('users')
           .select('id, full_name, username, avatar_url')
           .in('id', userIds);
 
         if (usersErr) {
-          console.error('❌ Users query failed:', usersErr);
           throw usersErr;
-        }
-
-        console.log(`✅ Step 3: Expected ${userIds.length} users, got ${usersData?.length || 0} users`);
-        console.log('✅ Sample user data:', usersData?.[0]);
-        
-        if (userIds.length > (usersData?.length || 0)) {
-          console.warn('🚨 SMOKING GUN: Expected more users than returned - likely RLS policy issue!');
-          console.warn('🚨 Missing user IDs:', userIds.filter(id => !usersData?.find(u => u.id === id)));
         }
 
         // Step 4: Build user map for O(1) lookup
@@ -161,7 +166,7 @@ export function useGamesWithCreators() {
         }
 
         // Transform games with proper user mapping and defensive fallbacks
-        const transformedGames = (gamesData ?? []).map(game => {
+        const transformedGames = futureGames.map(game => {
           const user = finalUserMap.get(game.creator_id) as UserProfile | undefined;
           const isJoined = joinedGameIds.has(game.id);
           
@@ -195,20 +200,25 @@ export function useGamesWithCreators() {
             };
           }
 
+          // Use server-provided duration_minutes directly (no client-side recomputation)
+          // duration_minutes is the source of truth from the database
+          const duration = game.duration_minutes != null ? game.duration_minutes : 60;
+          
           return {
             id: game.id,
             title: game.title,
             sport: game.sport,
             date: game.date,
             time: game.time,
-            duration: game.duration || 60,
+            duration: Number(duration),
             location: game.location,
             latitude: game.latitude,
             longitude: game.longitude,
             cost: game.cost,
             maxPlayers: Number(game.max_players ?? 0),
-            totalPlayers: Number(game.participant_count ?? 0),
-            availableSpots: Math.max(0, Number(game.max_players ?? 0) - Number(game.participant_count ?? 0)),
+            currentPlayers: Number(game.current_players ?? 0),
+            totalPlayers: Number(game.total_players ?? game.current_players ?? 0),
+            availableSpots: Number(game.available_spots ?? Math.max(0, Number(game.max_players ?? 0) - Number(game.current_players ?? 0))),
             description: game.description,
             imageUrl: game.image_url || '',
             sportColor: getSportColor(game.sport),
@@ -231,6 +241,9 @@ export function useGamesWithCreators() {
         // Also populate React Query cache so mutations and useGameCard can use it
         queryClient.setQueryData(gameKeys.lists(), transformedGames);
         
+        // Update last fetch time to prevent unnecessary refetches
+        lastFetchTime.current = Date.now();
+        
       } catch (err) {
         console.error('❌ useGamesWithCreators error:', err);
         setError(err instanceof Error ? err : new Error('Failed to load games'));
@@ -238,8 +251,11 @@ export function useGamesWithCreators() {
         setLoading(false);
         inFlight.current = false;
       }
-    })();
-  }, [refetchTrigger]); // Re-run when refetchTrigger changes
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetchTrigger]); // Only re-run when refetchTrigger changes
 
   const refetch = () => {
     if (inFlight.current) return;

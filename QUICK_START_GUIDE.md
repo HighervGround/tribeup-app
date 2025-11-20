@@ -1,14 +1,17 @@
-# Quick Start Guide - Reorganized Codebase
+# MOVED: Quick Start Guide
+The active Quick Start Guide now lives at `docs/QUICK_START_GUIDE.md`.
 
-## ✅ What's Been Done
+This root stub remains temporarily to avoid breaking any bookmarked paths. Update links or references to point to the `docs/` version which includes the latest reorganized domain prompts and usage patterns.
 
-Your codebase has been reorganized for optimal AI code generation:
+Highlights in the new version:
+- Domain‑driven structure overview
+- AI prompt examples per domain
+- Import alias guidance
+- Troubleshooting & circular dependency mitigation
 
-### 1. Clean Root Directory
-- Removed 60+ debug/test scripts
-- Deleted duplicate SQL files
-- Removed backup and unused files
-- **Result:** Clean, professional project structure
+Please remove this stub after all consumers are updated.
+
+Last updated: Nov 2025 consolidation.
 
 ### 2. Domain-Driven Organization
 Your code is now organized by business domain:

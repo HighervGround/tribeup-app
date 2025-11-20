@@ -72,10 +72,9 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           return;
         }
 
-        // Transform messages - use display_name first, then username, then fallback
-        // Note: user_public_profile doesn't have full_name, only display_name and username
+        // Transform messages - display_name is now a generated column, always present
         const transformedMessages: ChatMessage[] = messagesData.map((msg: any) => {
-          const authorName = msg.display_name || msg.username || 'Player';
+          const authorName = msg.display_name || 'Player';
           return {
             id: msg.id,
             game_id: msg.game_id,
@@ -131,8 +130,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         }
 
         if (fullMessage.user_id) {
-          // Use display_name first, then username, then fallback
-          const authorName = fullMessage.display_name || fullMessage.username || 'Player';
+          // display_name is now a generated column, always present
+          const authorName = fullMessage.display_name || 'Player';
           const newMsg: ChatMessage = {
             id: fullMessage.id,
             game_id: fullMessage.game_id,
@@ -325,7 +324,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-green-500" : "bg-gray-400")} />
-            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+            <span>{isConnected ? 'Connected' : 'Connecting...'}</span>
           </div>
         </CardTitle>
       </CardHeader>
@@ -432,15 +431,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
               </Button>
             )}
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-muted-foreground">
-              Press Enter to send<span className="hidden md:inline"> • Shift+Enter for new line</span>
-            </p>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500" : "bg-gray-400")} />
-              {isConnected ? "Connected" : "Connecting..."}
-            </div>
-          </div>
+          {/* Connection status removed - already shown in header */}
         </div>
       </CardContent>
     </Card>

@@ -3,7 +3,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Alert, AlertDescription } from '@/shared/components/ui/alert';
-import { X, Mail, User, Phone } from 'lucide-react';
+import { X, Mail, User, Phone, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 
@@ -16,12 +16,14 @@ interface QuickJoinModalProps {
 }
 
 export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSuccess }: QuickJoinModalProps) {
-  const { signUp, signInWithOAuth } = useSimpleAuth();
-  const [step, setStep] = useState<'signup' | 'verify'>('signup');
+  const { signUp, signIn, signInWithOAuth } = useSimpleAuth();
+  const [mode, setMode] = useState<'signup' | 'login'>('signup');
+  const [step, setStep] = useState<'form' | 'verify'>('form');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -35,17 +37,48 @@ export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSucce
 
     try {
       // Create account with minimal info
-      await signUp(formData.email, 'temp-password-' + Date.now(), {
+      const result = await signUp(formData.email, 'temp-password-' + Date.now(), {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         pendingGameId: gameId // Store which game they want to join
       });
       
-      setStep('verify');
-      toast.success('Account created! Check your email to verify and join the game.');
+      // If signup was successful and user is immediately authenticated (some providers do this)
+      if (result?.session) {
+        console.log('✅ User authenticated immediately after signup');
+        toast.success('Account created! Joining game...');
+        onJoinSuccess(); // Call success callback to join the game
+      } else {
+        // Email verification required
+        setStep('verify');
+        toast.success('Account created! Check your email to verify and join the game.');
+      }
     } catch (error: any) {
       setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const result = await signIn(formData.email, formData.password);
+      
+      if (result?.session) {
+        console.log('✅ User logged in successfully');
+        toast.success('Logged in! Joining game...');
+        onJoinSuccess(); // Call success callback to join the game
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
+    } catch (error: any) {
+      console.error('❌ Login failed:', error);
+      setError(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -54,13 +87,20 @@ export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSucce
   const handleSocialLogin = async (provider: 'google') => {
     try {
       setLoading(true);
-      await signInWithOAuth(provider, { pendingGameId: gameId });
-      toast.success(`Signing in with ${provider}...`);
-      // The AuthProvider will handle auto-joining after successful login
-      onClose();
+      const result = await signInWithOAuth(provider, { pendingGameId: gameId });
+      
+      // If OAuth was successful, call the success callback
+      if (result) {
+        console.log('✅ OAuth login successful, joining game');
+        toast.success(`Signed in with ${provider}! Joining game...`);
+        onJoinSuccess(); // Call success callback to join the game
+      } else {
+        toast.info('Redirecting to login...');
+        onClose();
+      }
     } catch (error: any) {
+      console.error('❌ Social login failed:', error);
       toast.error(error.message || 'Social login failed');
-    } finally {
       setLoading(false);
     }
   };
@@ -70,7 +110,7 @@ export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSucce
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">
-            {step === 'signup' ? `Join "${gameTitle}"` : 'Check Your Email'}
+            {step === 'form' ? (mode === 'signup' ? `Join "${gameTitle}"` : 'Login to Join') : 'Check Your Email'}
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-4 h-4" />
@@ -78,7 +118,7 @@ export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSucce
         </CardHeader>
         
         <CardContent>
-          {step === 'signup' ? (
+          {step === 'form' ? (
             <div className="space-y-4">
               {/* Social Login Options */}
               <div className="space-y-2">
@@ -108,57 +148,119 @@ export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSucce
                 </div>
               </div>
 
-              {/* Quick Signup Form */}
-              <form onSubmit={handleQuickSignup} className="space-y-3">
-                <div>
-                  <Input
-                    type="text"
-                    placeholder="Your name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                    className="pl-10"
-                  />
-                  <User className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-                </div>
-                
-                <div className="relative">
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                    className="pl-10"
-                  />
-                  <Mail className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-                </div>
-                
-                <div className="relative">
-                  <Input
-                    type="tel"
-                    placeholder="Phone (optional)"
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="pl-10"
-                  />
-                  <Phone className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-                </div>
+              {/* Signup/Login Form */}
+              {mode === 'signup' ? (
+                <form onSubmit={handleQuickSignup} className="space-y-3">
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder="Your name"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                      className="pl-10"
+                    />
+                    <User className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="relative">
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      className="pl-10"
+                    />
+                    <Mail className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="relative">
+                    <Input
+                      type="tel"
+                      placeholder="Phone (optional)"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="pl-10"
+                    />
+                    <Phone className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating Account...' : 'Join Game'}
-                </Button>
-              </form>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Creating Account...' : 'Join Game'}
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground text-center">
+                    By joining, you agree to our Terms of Service and Privacy Policy
+                  </p>
+                  
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="w-full"
+                    onClick={() => {
+                      setMode('login');
+                      setError('');
+                    }}
+                  >
+                    Already have an account? Log in
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-3">
+                  <div className="relative">
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      className="pl-10"
+                    />
+                    <Mail className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="relative">
+                    <Input
+                      type="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                      required
+                      className="pl-10"
+                    />
+                    <Lock className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                  </div>
 
-              <p className="text-xs text-muted-foreground text-center">
-                By joining, you agree to our Terms of Service and Privacy Policy
-              </p>
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Logging in...' : 'Login & Join Game'}
+                  </Button>
+                  
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="w-full"
+                    onClick={() => {
+                      setMode('signup');
+                      setError('');
+                    }}
+                  >
+                    Don't have an account? Sign up
+                  </Button>
+                </form>
+              )}
             </div>
           ) : (
             <div className="text-center space-y-4">

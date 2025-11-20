@@ -697,14 +697,14 @@ export class SupabaseService {
       // Note: Views don't support relationships, so we'll fetch creator data separately
       // The view has: id, title, sport, description, location, latitude, longitude, date, time, 
       // cost, max_players, image_url, creator_id, created_at, duration,
-      // current_players, public_rsvp_count
+      // current_players
       const queryStart = performance.now();
       const { data: gamesData, error: gamesError } = await supabase
         .from('games_with_counts')
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
           max_players, creator_id, created_at, duration,
-          current_players, public_rsvp_count
+          current_players
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
@@ -809,7 +809,7 @@ export class SupabaseService {
       try {
         const { data: gamesData, error: fallbackError } = await supabase
           .from('games_with_counts')
-          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, current_players, public_rsvp_count')
+          .select('id, title, location, date, time, max_players, creator_id, sport, cost, description, image_url, latitude, longitude, created_at, duration, current_players')
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .limit(50);
@@ -828,8 +828,8 @@ export class SupabaseService {
           longitude: game.longitude,
           cost: game.cost,
           maxPlayers: game.max_players,
-          totalPlayers: (game.current_players || 0) + (game.public_rsvp_count || 0),
-          availableSpots: Math.max(0, (game.max_players || 0) - ((game.current_players || 0) + (game.public_rsvp_count || 0))),
+          totalPlayers: game.current_players || 0,
+          availableSpots: Math.max(0, (game.max_players || 0) - (game.current_players || 0)),
           description: game.description,
           imageUrl: game.image_url || '',
           sportColor: '#6B7280',
@@ -864,7 +864,7 @@ export class SupabaseService {
       .select(`
         id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
         max_players, creator_id, created_at, duration,
-        current_players, public_rsvp_count
+        current_players
       `)
       .eq('creator_id', userId)
       .gte('date', new Date().toISOString().split('T')[0])
@@ -921,7 +921,6 @@ export class SupabaseService {
           cost,
           max_players,
           current_players,
-          public_rsvp_count,
           description,
           image_url,
           creator_id,
@@ -1002,6 +1001,7 @@ export class SupabaseService {
     description: string;
     imageUrl?: string;
     plannedRoute?: any;
+    tribeId?: string;
   }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1039,41 +1039,114 @@ export class SupabaseService {
       console.warn('Failed to ensure user profile exists (continuing):', e);
     }
 
-    // Create the game
+    // Build payload object with proper types and column names
+    const payload: any = {
+      title: gameData.title,
+      sport: gameData.sport,
+      date: gameData.date,
+      time: gameData.time,
+      location: gameData.location,
+      max_players: gameData.maxPlayers,
+      current_players: 0, // Will be updated when creator joins
+      description: gameData.description || '',
+      cost: gameData.cost || 'Free',
+      creator_id: currentUser.id,
+      duration_minutes: gameData.duration || 60,
+    };
+
+    // Add latitude/longitude as numbers (not strings)
+    if (gameData.latitude != null) {
+      payload.latitude = typeof gameData.latitude === 'string' ? parseFloat(gameData.latitude) : Number(gameData.latitude);
+    }
+    if (gameData.longitude != null) {
+      payload.longitude = typeof gameData.longitude === 'string' ? parseFloat(gameData.longitude) : Number(gameData.longitude);
+    }
+
+    // Add image_url if provided
+    if (gameData.imageUrl) {
+      payload.image_url = gameData.imageUrl;
+    }
+
+    // Add planned_route as valid JSON or omit if null
+    if (gameData.plannedRoute) {
+      try {
+        // Ensure it's a valid JSON object
+        payload.planned_route = typeof gameData.plannedRoute === 'string' 
+          ? JSON.parse(gameData.plannedRoute) 
+          : gameData.plannedRoute;
+      } catch (e) {
+        console.warn('Invalid planned_route JSON, omitting:', e);
+        // Omit planned_route if invalid JSON
+      }
+    }
+
+    console.log('📤 [createGame] Inserting game with payload:', {
+      ...payload,
+      planned_route: payload.planned_route ? '[JSON object]' : null
+    });
+
     const { data, error } = await supabase
       .from('games')
-      .insert([{
-        title: gameData.title,
-        sport: gameData.sport,
-        date: gameData.date,
-        time: gameData.time,
-        location: gameData.location,
-        latitude: gameData.latitude,
-        longitude: gameData.longitude,
-        cost: gameData.cost,
-        max_players: gameData.maxPlayers,
-        current_players: 1, // Creator is automatically a participant
-        description: gameData.description,
-        image_url: gameData.imageUrl,
-        creator_id: currentUser.id,
-        duration_minutes: gameData.duration,
-        planned_route: (gameData as any).plannedRoute || null,
-      }])
+      .insert([payload])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [createGame] Supabase error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        status: (error as any).status,
+        statusText: (error as any).statusText,
+        payload: {
+          ...payload,
+          planned_route: payload.planned_route ? '[JSON object]' : null
+        }
+      });
+      throw new Error(error.message || `Failed to create game: ${error.code || 'Unknown error'}`);
+    }
 
-    // Add creator as participant
+    console.log('✅ [createGame] Game created successfully:', data?.id);
+
+    // Add creator as participant using join_game RPC to properly increment current_players
     try {
+      const { error: joinError } = await supabase.rpc('join_game', {
+        game_uuid: data.id
+      });
+      
+      if (joinError) {
+        console.warn('Failed to add creator as participant via RPC (continuing):', joinError);
+        // Fallback: direct insert if RPC fails (shouldn't happen, but handle gracefully)
       await supabase
         .from('game_participants')
         .insert({
           game_id: data.id,
           user_id: currentUser.id
         });
+      }
     } catch (e) {
       console.warn('Failed to add creator as participant (continuing):', e);
+    }
+
+    // Link game to tribe if tribeId is provided
+    if (gameData.tribeId) {
+      try {
+        const { error: tribeGameError } = await supabase
+          .from('tribe_games')
+          .insert({
+            tribe_id: gameData.tribeId,
+            game_id: data.id,
+          });
+
+        if (tribeGameError) {
+          console.warn('Failed to link game to tribe (continuing):', tribeGameError);
+        } else {
+          console.log('✅ [createGame] Game linked to tribe:', gameData.tribeId);
+        }
+      } catch (e) {
+        console.warn('Failed to link game to tribe (continuing):', e);
+      }
     }
 
     return data.id;
@@ -1157,24 +1230,36 @@ export class SupabaseService {
 
     console.log('🚨 [SERVICE] Final updateData being sent to database:', updateData);
     
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('games')
       .update(updateData)
-      .eq('id', gameId)
-      .select('id, duration_minutes')
-      .single();
+      .eq('id', gameId);
       
-    console.log('🚨 [SERVICE] Database response:', { data, error });
+    console.log('🚨 [SERVICE] Database update response:', { error });
 
     if (error) throw error;
 
+    // Fetch the full game after update to get all fields needed for transformGameFromDB
+    const { data: fullGame, error: fetchFullGameError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+      
+    if (fetchFullGameError) {
+      console.error('❌ [SERVICE] Failed to fetch updated game:', fetchFullGameError);
+      throw fetchFullGameError;
+    }
+
+    const activityTitle = fullGame?.title;
+
     // Notify participants of changes
     await this.notifyGameParticipants(gameId, 'game_updated', {
-      title: 'Game Updated',
-      message: `The game "${data.title}" has been updated by the organizer.`
+      title: 'Activity Updated',
+      message: `The activity "${activityTitle || 'your activity'}" has been updated by the organizer.`
     });
 
-    return transformGameFromDB(data, false);
+    return transformGameFromDB(fullGame, false);
   }
 
 
@@ -1281,16 +1366,12 @@ export class SupabaseService {
     }
   }
 
-  // Public RSVP methods
+  // Public RSVP methods - REMOVED: Public RSVP feature has been removed
+  // All participants must be authenticated users
   static async getPublicRSVPs(gameId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('public_rsvps_public')
-      .select('game_id,name_initial,created_at')
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+    // Return empty array - public RSVPs no longer supported
+    console.warn('getPublicRSVPs called but public RSVPs are no longer supported');
+    return [];
   }
 
   static async createPublicRSVP(gameId: string, rsvpData: { name: string; email: string; phone?: string; message?: string }): Promise<any> {
@@ -1363,10 +1444,12 @@ export class SupabaseService {
           
         const isJoined = !!participantData;
         
+        // Use server-provided duration_minutes directly (no client-side recomputation)
+        // duration_minutes is the source of truth from the database
         const result = transformGameFromDB({
           ...gameData,
           creator: creator,
-          duration_minutes: gameData.duration ? (typeof gameData.duration === 'string' ? parseInt(gameData.duration) || 60 : gameData.duration) : 60
+          duration_minutes: gameData.duration_minutes != null ? gameData.duration_minutes : 60
         }, isJoined);
         
         const duration = performance.now() - startTime;
@@ -1410,10 +1493,12 @@ export class SupabaseService {
           }
         }
         
+        // Use server-provided duration_minutes directly (no client-side recomputation)
+        // duration_minutes is the source of truth from the database
         const result = transformGameFromDB({
           ...gameData,
           creator: creator,
-          duration_minutes: gameData.duration ? (typeof gameData.duration === 'string' ? parseInt(gameData.duration) || 60 : gameData.duration) : 60
+          duration_minutes: gameData.duration_minutes != null ? gameData.duration_minutes : 60
         }, false);
         
         const duration = performance.now() - startTime;
@@ -1515,67 +1600,49 @@ export class SupabaseService {
     const startTime = performance.now();
     
     try {
-      // Fetch authenticated participants
+      // Fetch participants
       const { data: participants, error: participantsError } = await supabase
         .from('game_participants')
-        .select('user_id, joined_at')
+        .select('user_id, joined_at, status')
         .eq('game_id', gameId)
-        .eq('status', 'joined');
+        .eq('status', 'joined')
+        .order('joined_at', { ascending: true });
 
       if (participantsError) throw participantsError;
 
-      console.log('🔍 Raw authenticated participants:', participants);
-
-      // Fetch public RSVPs (guest users)
-      console.log('🔍 [getGameParticipants] Attempting to fetch public RSVPs for game:', gameId);
-      const { data: publicRsvps, error: rsvpsError } = await supabase
-        .from('public_rsvps')
-        .select('id, name, email, created_at, attending')
-        .eq('game_id', gameId)
-        .eq('attending', true);
-
-      if (rsvpsError) {
-        console.error('⚠️ [getGameParticipants] ERROR fetching public RSVPs:', rsvpsError);
-        console.error('⚠️ [getGameParticipants] Error code:', rsvpsError.code);
-        console.error('⚠️ [getGameParticipants] Error message:', rsvpsError.message);
-        console.error('⚠️ [getGameParticipants] Error details:', rsvpsError.details);
-      } else {
-        console.log('✅ [getGameParticipants] Successfully fetched public RSVPs:', publicRsvps?.length || 0);
-      }
-
-      console.log('🔍 [getGameParticipants] Raw public RSVPs data:', publicRsvps);
+      console.log('🔍 Raw participants:', participants);
 
       const allParticipants: any[] = [];
 
       // Process authenticated participants
       if (participants && participants.length > 0) {
-        const userIds = participants.map(p => p.user_id);
+        const userIds = participants.map(p => p.user_id).filter(Boolean);
         
-        console.log('🔍 Fetching user details for IDs:', userIds);
-        
-        // Fetch user details from users table
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('id, full_name, username, avatar_url')
-          .in('id', userIds);
-        
-        console.log('👤 Users query result:', { users, error: usersError, count: users?.length });
-
-        // Handle case where RLS blocks or users don't exist
-        const usersMap = new Map();
-        if (users && !usersError) {
-          users.forEach(u => usersMap.set(u.id, u));
+        // Fetch user profiles separately - use 'users' table, not 'user_profiles'
+        let usersMap = new Map();
+        if (userIds.length > 0) {
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, full_name, username, avatar_url')
+            .in('id', userIds);
+          
+          if (!usersError && users) {
+            users.forEach(u => usersMap.set(u.id, u));
+          }
         }
 
-        // Add authenticated participants
         participants.forEach(participant => {
           const user = usersMap.get(participant.user_id);
           
+          // Compute display name: full_name || username || 'Player'
           let name = 'Player';
           if (user) {
-            name = user.full_name?.trim() || user.username?.trim() || 'Player';
-          } else {
-            name = `Player ${participant.user_id.slice(0, 6)}`;
+            name = (user.full_name?.trim() || user.username?.trim() || 'Player');
+          }
+          
+          // Never show user IDs - always use a friendly fallback
+          if (!name || name === 'Player' || name.trim() === '') {
+            name = 'Player';
           }
           
           allParticipants.push({
@@ -1590,30 +1657,14 @@ export class SupabaseService {
         });
       }
 
-      // Add public RSVPs (guests)
-      if (publicRsvps && publicRsvps.length > 0) {
-        publicRsvps.forEach(rsvp => {
-          allParticipants.push({
-            id: `guest-${rsvp.id}`, // Prefix with 'guest-' to avoid conflicts
-            name: rsvp.name,
-            avatar: null, // Guests don't have avatars
-            isHost: false,
-            isGuest: true,
-            rating: null,
-            joinedAt: rsvp.created_at
-          });
-        });
-      }
-
       // Sort by join date (earliest first)
       allParticipants.sort((a, b) => 
         new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
       );
 
       const duration = performance.now() - startTime;
-      const guestCount = allParticipants.filter(p => p.isGuest).length;
-      const authCount = allParticipants.filter(p => !p.isGuest).length;
-      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} total (${authCount} authenticated + ${guestCount} guests) in ${duration.toFixed(2)}ms`);
+      const authCount = allParticipants.length;
+      console.log(`✅ [getGameParticipants] Fetched ${allParticipants.length} participants in ${duration.toFixed(2)}ms`);
       console.log(`✅ [getGameParticipants] Returning participants:`, allParticipants.map(p => ({ 
         id: p.id, 
         name: p.name, 
@@ -1726,7 +1777,7 @@ export class SupabaseService {
       // Use games_with_counts view for optimized current_players count
       let query = supabase
         .from('games_with_counts')
-        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players,public_rsvp_count')
+        .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players')
 ;
 
       // Default to future games only unless specific date range is provided
@@ -1751,7 +1802,7 @@ export class SupabaseService {
         return (gamesData || []).map((game: any) => transformGameFromDB(game, false));
       }
 
-      // For authenticated users, use optimized join query (includes public_rsvp_count from earlier select)
+      // For authenticated users, use optimized join query
       const { data: gamesWithParticipants, error } = await query
         .select(`
           *,
@@ -1820,7 +1871,7 @@ export class SupabaseService {
           .from('games_with_counts')
           .select(`
             id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,
-            current_players,public_rsvp_count
+            current_players
           `)
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
@@ -1851,7 +1902,7 @@ export class SupabaseService {
         // Use games_with_counts view for optimized current_players count
         const { data: gamesData, error } = await supabase
           .from('games_with_counts')
-          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players,public_rsvp_count')
+          .select('id,title,sport,date,time,location,cost,max_players,description,image_url,creator_id,created_at,current_players')
           .in('sport', preferred)
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Progress } from '@/shared/components/ui/progress';
@@ -15,6 +15,8 @@ import { SupabaseService } from '@/core/database/supabaseService';
 import { useLocationSearch } from '@/domains/locations/hooks/useLocationSearch';
 import { useGeolocation } from '@/domains/locations/hooks/useGeolocation';
 import { systemConfig } from '@/core/config/systemConfig';
+import { SportPicker, DEFAULT_SPORTS } from '@/domains/games/components';
+import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 
 interface FormData {
   sport: string;
@@ -34,6 +36,7 @@ interface FormData {
   maxEloRating: string;
   minReputation: string;
   competitiveMode: boolean;
+  tribeId: string;
 }
 
 const sportOptions = [
@@ -52,8 +55,8 @@ const sportOptions = [
 ];
 
 const steps = [
-  { id: 1, title: 'What & When', fields: ['sport', 'date', 'time', 'duration'] },
-  { id: 2, title: 'Where & Who', fields: ['location', 'maxPlayers', 'cost'] },
+  { id: 1, title: 'Activity Details', fields: ['sport', 'location', 'title', 'date', 'time', 'duration'] },
+  { id: 2, title: 'Players & Cost', fields: ['maxPlayers', 'cost'] },
   { id: 3, title: 'Review & Create', fields: [] },
 ];
 
@@ -64,6 +67,7 @@ const DEFAULT_QUICK_TIMES = [
 
 function CreateGame() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -77,6 +81,7 @@ function CreateGame() {
   const { user } = useAppStore();
   const navigationRef = useRef<HTMLDivElement>(null);
   const [navigationHeight, setNavigationHeight] = useState(0);
+  const { data: userTribes } = useUserTribes(user?.id);
 
   // Smart defaults
   const getDefaultDate = () => {
@@ -97,8 +102,20 @@ function CreateGame() {
     maxPlayers: '10', // Will be updated from system config
     cost: 'FREE',
     imageUrl: '',
-    plannedRoute: null as any
+    plannedRoute: null as any,
+    tribeId: ''
   });
+
+  // Read tribeId from navigation state (when coming from TribeGames)
+  useEffect(() => {
+    const state = location.state as { tribeId?: string } | null;
+    if (state?.tribeId) {
+      setFormData(prev => ({
+        ...prev,
+        tribeId: state.tribeId || ''
+      }));
+    }
+  }, [location.state]);
 
   // Load system configuration on component mount
   useEffect(() => {
@@ -213,6 +230,29 @@ function CreateGame() {
     }
   });
 
+  // Recent sports (stored in localStorage)
+  const [recentSports, setRecentSports] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('recentSports') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  // Handle sport selection and track recent
+  const handleSportSelect = (sport: { value: string; label: string; icon: string }) => {
+    handleInputChange('sport', sport.value);
+    
+    // Track recent sports
+    const updated = [sport.value, ...recentSports.filter(s => s !== sport.value)].slice(0, 5);
+    setRecentSports(updated);
+    try {
+      localStorage.setItem('recentSports', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save recent sports:', e);
+    }
+  };
+
   // Note: Removed auto-populate location to avoid interfering with user input
   // Users can manually click the location button to use their current location
   // This prevents the location field from being auto-filled and interfering with search suggestions
@@ -310,6 +350,26 @@ function CreateGame() {
     
     return templates[Math.floor(Math.random() * templates.length)];
   };
+
+  // Track if user has manually edited the title
+  const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
+
+  // Auto-generate title when sport, time, and location are all filled
+  useEffect(() => {
+    // Always auto-generate title when all required fields are present (unless user manually edited)
+    if (formData.sport && formData.time && formData.location && !titleManuallyEdited) {
+      const autoTitle = generateGameTitle(formData.sport, formData.time, formData.location);
+      if (autoTitle) {
+        setFormData(prev => {
+          // Only update if it's different or empty
+          if (!prev.title || prev.title !== autoTitle) {
+            return { ...prev, title: autoTitle };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [formData.sport, formData.time, formData.location, titleManuallyEdited]);
 
   const checkForDuplicateGame = async (sport: string, date: string, time: string, location: string): Promise<string | null> => {
     if (!sport || !date || !time || !location) return null;
@@ -416,17 +476,24 @@ function CreateGame() {
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
       
-      // Auto-generate title when sport, time, or location changes (only if title is empty or matches previous auto-generated title)
-      const currentAutoTitle = generateGameTitle(prev.sport, prev.time, prev.location);
-      const newAutoTitle = generateGameTitle(
-        name === 'sport' ? value : prev.sport,
-        name === 'time' ? value : prev.time,
-        name === 'location' ? value : prev.location
-      );
-      
-      if ((name === 'sport' || name === 'time' || name === 'location') && 
-          (!prev.title || prev.title === currentAutoTitle) && newAutoTitle) {
-        newData.title = newAutoTitle;
+      // Auto-generate title when sport, time, or location changes
+      // Always auto-generate when all three are present (unless user manually edited title)
+      if (name !== 'title') {
+        const updatedSport = name === 'sport' ? value : prev.sport;
+        const updatedTime = name === 'time' ? value : prev.time;
+        const updatedLocation = name === 'location' ? value : prev.location;
+        
+        // Auto-generate if: field changed is sport/time/location, and we have all required fields
+        if ((name === 'sport' || name === 'time' || name === 'location') && 
+            updatedSport && updatedTime && updatedLocation && !titleManuallyEdited) {
+          const newAutoTitle = generateGameTitle(updatedSport, updatedTime, updatedLocation);
+          if (newAutoTitle) {
+            newData.title = newAutoTitle;
+          }
+        }
+      } else {
+        // User is editing title manually
+        setTitleManuallyEdited(true);
       }
       
       // Auto-set max players based on sport
@@ -489,7 +556,9 @@ function CreateGame() {
   const validateCurrentStep = (): boolean => {
     const stepErrors: Record<string, string> = {};
     if (currentStep === 1) {
-      if (!formData.sport) stepErrors.sport = 'Please select a sport.';
+      if (!formData.sport) stepErrors.sport = 'Please select an activity type.';
+      if (!formData.location.trim()) stepErrors.location = 'Location is required.';
+      if (!formData.title || formData.title.trim().length === 0) stepErrors.title = 'Activity title is required.';
       if (!formData.date) stepErrors.date = 'Please choose a date.';
       if (!formData.time) stepErrors.time = 'Please choose a time.';
       if (!formData.duration) stepErrors.duration = 'Please set a duration.';
@@ -507,7 +576,6 @@ function CreateGame() {
       }
     }
     if (currentStep === 2) {
-      if (!formData.location.trim()) stepErrors.location = 'Location is required.';
       const mp = parseInt(formData.maxPlayers, 10);
       if (!formData.maxPlayers) stepErrors.maxPlayers = 'Max players is required.';
       else if (Number.isNaN(mp) || mp <= 0) stepErrors.maxPlayers = 'Enter a valid number greater than 0.';
@@ -515,7 +583,6 @@ function CreateGame() {
     }
     // Step 3 is now "Review & Create" - no validation needed
     
-    console.log('[CreateGame] Validation - Step:', currentStep, 'Errors:', stepErrors, 'FormData:', formData);
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   };
@@ -539,45 +606,72 @@ function CreateGame() {
     setSubmitError(null);
     try {
       const { user } = useAppStore.getState();
-      console.log('[CreateGame] submit clicked. user =', user?.id);
       if (!user) {
-        throw new Error('You must be logged in to create an activity');
+        toast.error('You must be logged in to create an activity');
+        navigate('/login');
+        return;
       }
 
       // Parse duration more carefully to avoid losing user input
       const parsedDuration = parseInt(String(formData.duration).trim(), 10);
       const finalDuration = Number.isNaN(parsedDuration) ? 60 : Math.max(1, parsedDuration);
-      
-      console.log('[CreateGame] Duration parsing:', {
-        formDataDuration: formData.duration,
-        parsedDuration,
-        finalDuration,
-        formDataType: typeof formData.duration
-      });
 
-      const gameData = {
-        title: formData.title,
+      // Auto-generate title if empty or just whitespace
+      let finalTitle = formData.title?.trim() || '';
+      if (!finalTitle && formData.sport && formData.time && formData.location) {
+        finalTitle = generateGameTitle(formData.sport, formData.time, formData.location);
+      }
+      // Fallback if still empty (shouldn't happen, but just in case)
+      if (!finalTitle) {
+        finalTitle = `${formData.sport || 'Game'} at ${formData.location || 'Location'}`;
+      }
+
+      // Build payload object with proper types
+      let plannedRoute = null;
+      if (formData.plannedRoute) {
+        try {
+          plannedRoute = typeof formData.plannedRoute === 'string' 
+            ? JSON.parse(formData.plannedRoute) 
+            : formData.plannedRoute;
+        } catch (e) {
+          console.warn('Invalid planned_route JSON, omitting:', e);
+          plannedRoute = null;
+        }
+      }
+
+      const payload = {
+        title: finalTitle,
         sport: formData.sport,
         date: formData.date,
         time: formData.time,
         duration: finalDuration,
         location: formData.location,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
+        latitude: formData.latitude ? Number(formData.latitude) : null,
+        longitude: formData.longitude ? Number(formData.longitude) : null,
         maxPlayers: parseInt(String(formData.maxPlayers).trim(), 10) || 10,
         cost: formData.cost || 'Free',
         description: '', // Default empty description
-        imageUrl: formData.imageUrl,
-        plannedRoute: formData.plannedRoute || null
-        // Note: Removed skill-related fields as they don't exist in current database schema
-        // TODO: Add skill fields to database schema if needed
+        imageUrl: formData.imageUrl || null,
+        plannedRoute: plannedRoute,
+        tribeId: formData.tribeId || undefined
       };
-      console.log('[CreateGame] creating game with data =', gameData);
-      await SupabaseService.createGame(gameData as any);
+      
+      await SupabaseService.createGame(payload as any);
+      toast.success('Activity created successfully!');
       navigate('/');
     } catch (error) {
       console.error('Error creating game:', error);
-      setSubmitError(error instanceof Error ? error.message : 'Failed to create game');
+      let errorMessage = 'Failed to create activity. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Show more detailed error in console for debugging
+        console.error('Detailed error:', {
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      setSubmitError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -683,9 +777,9 @@ function CreateGame() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">Create Activity</h1>
+                <h1 className="text-xl font-bold">Create Activity</h1>
                 <p className="text-sm text-muted-foreground">
-                  {steps[currentStep - 1].title}
+                  Step {currentStep} of {steps.length}: {steps[currentStep - 1].title}
                 </p>
               </div>
             </div>
@@ -733,42 +827,153 @@ function CreateGame() {
               <CardContent className="space-y-6">
                 {/* Sport Selection */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    Sport
+                  <label className="block text-sm font-medium text-foreground mb-3">
+                    Sport <span className="text-destructive">*</span>
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {sportOptions.map((sport) => (
-                      <button
-                        key={sport.value}
-                        type="button"
-                        onClick={() => handleInputChange('sport', sport.value)}
-                        className={`p-2 rounded-lg border-2 transition-all duration-200 ${
-                          formData.sport === sport.value
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-input hover:border-ring text-foreground bg-background'
-                        }`}
-                      >
-                        <div className="text-lg mb-1">{sport.icon}</div>
-                        <div className="text-xs font-medium">{sport.label}</div>
-                      </button>
-                    ))}
-                  </div>
+                  <SportPicker
+                    sports={DEFAULT_SPORTS}
+                    selectedSport={formData.sport}
+                    onSportSelect={handleSportSelect}
+                    showSearch={true}
+                    showRecent={true}
+                    recentSports={recentSports}
+                    gridCols={3}
+                    size="md"
+                  />
                   {errors.sport && (
-                    <p className="text-sm text-destructive">{errors.sport}</p>
+                    <p className="text-sm text-destructive mt-2">{errors.sport}</p>
                   )}
                 </div>
+
+                {/* Location Input Field */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Location <span className="text-destructive">*</span>
+                  </label>
+                  <div className="relative">
+                    <Input
+                      value={formData.location}
+                      onChange={(e) => {
+                        handleInputChange('location', e.target.value);
+                        if (e.target.value.length > 2) {
+                          searchLocations(e.target.value, userLat || undefined, userLng || undefined);
+                          setShowLocationSuggestions(true);
+                        } else {
+                          setShowLocationSuggestions(false);
+                        }
+                      }}
+                      placeholder="Enter location or address"
+                      className={errors.location ? 'border-destructive' : ''}
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
+                      {isLocationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={async () => {
+                          if (userLat && userLng) {
+                            try {
+                              const response = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
+                              );
+                              const data = await response.json();
+                              const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
+                              setFormData(prev => ({
+                                ...prev,
+                                location: address,
+                                latitude: userLat,
+                                longitude: userLng
+                              }));
+                              setShowLocationSuggestions(false);
+                            } catch (error) {
+                              console.error('Error getting current location:', error);
+                            }
+                          }
+                        }}
+                        title={userLat && userLng ? "Use my current location" : geoError || "Location not available"}
+                        disabled={!userLat || !userLng}
+                      >
+                        <Navigation className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {showLocationSuggestions && suggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          className="w-full text-left px-4 py-2 hover:bg-muted flex items-center gap-2"
+                          onClick={async () => {
+                            const coords = await geocodeLocation(suggestion.description);
+                            setFormData(prev => ({
+                              ...prev,
+                              location: suggestion.description,
+                              latitude: coords?.lat || null,
+                              longitude: coords?.lng || null
+                            }));
+                            setShowLocationSuggestions(false);
+                            // Generate auto title when location is selected
+                            if (formData.sport && formData.time) {
+                              const autoTitle = generateGameTitle(formData.sport, formData.time, suggestion.description);
+                              if (autoTitle) {
+                                setFormData(prev => ({ ...prev, title: autoTitle }));
+                              }
+                            }
+                          }}
+                        >
+                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm">{suggestion.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {errors.location && (
+                    <p className="text-sm text-destructive">{errors.location}</p>
+                  )}
+                </div>
+
+                {/* Tribe Selection (Optional) */}
+                {userTribes && userTribes.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Tribe (Optional)
+                    </label>
+                    <Select
+                      value={formData.tribeId || undefined}
+                      onValueChange={(value) => handleInputChange('tribeId', value === 'none' ? '' : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a tribe (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No tribe</SelectItem>
+                        {userTribes.map((tribe) => (
+                          <SelectItem key={tribe.id} value={tribe.id}>
+                            {tribe.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Link this activity to one of your tribes
+                    </p>
+                  </div>
+                )}
 
                 {renderField('date', 'Date', 'date')}
                 
                 {/* Quick Time Selection */}
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-foreground">
-                    Time
+                    Time <span className="text-destructive">*</span>
                   </label>
                   
                   {/* Quick Time Buttons */}
                   <div className="grid grid-cols-4 gap-2">
-                    {(quickTimes || DEFAULT_QUICK_TIMES).map((timeOption) => (
+                    {((quickTimes && quickTimes.length > 0) ? quickTimes : DEFAULT_QUICK_TIMES).map((timeOption) => (
                       <button
                         key={timeOption}
                         type="button"
@@ -803,6 +1008,28 @@ function CreateGame() {
                   
                   {errors.time && (
                     <p className="text-sm text-destructive">{errors.time}</p>
+                  )}
+                </div>
+
+                {/* Activity Title - Auto-generated but editable */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Activity Title <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    placeholder={formData.sport && formData.time && formData.location ? "Auto-generated from sport, location, and time" : "Will auto-generate from sport, location, and time"}
+                    className={errors.title ? 'border-destructive' : ''}
+                  />
+                  {errors.title && (
+                    <p className="text-sm text-destructive">{errors.title}</p>
+                  )}
+                  {formData.sport && formData.time && formData.location && formData.title && !errors.title && (
+                    <p className="text-xs text-muted-foreground">✨ Auto-generated from your sport, location, and time (you can edit if needed)</p>
+                  )}
+                  {(!formData.sport || !formData.time || !formData.location) && (
+                    <p className="text-xs text-muted-foreground">Fill in sport, location, and time to auto-generate title</p>
                   )}
                 </div>
 
@@ -861,127 +1088,10 @@ function CreateGame() {
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
                     2
                   </div>
-                  Where & Who
+                  Players & Cost
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Location Input Field */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-foreground">
-                    Location
-                  </label>
-                  <div className="relative">
-                    <Input
-                      value={formData.location}
-                      onChange={(e) => {
-                        handleInputChange('location', e.target.value);
-                        console.log('Location input changed:', e.target.value);
-                        if (e.target.value.length > 2) {
-                          console.log('Triggering location search for:', e.target.value);
-                          searchLocations(e.target.value, userLat || undefined, userLng || undefined);
-                          setShowLocationSuggestions(true);
-                        } else {
-                          console.log('Hiding location suggestions');
-                          setShowLocationSuggestions(false);
-                        }
-                      }}
-                      placeholder="Enter location or address"
-                      className={errors.location ? 'border-destructive' : ''}
-                    />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-2">
-                      {isLocationLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={async () => {
-                          if (userLat && userLng) {
-                            try {
-                              const response = await fetch(
-                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`
-                              );
-                              const data = await response.json();
-                              const address = data.display_name || `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`;
-                              setFormData(prev => ({
-                                ...prev,
-                                location: address,
-                                latitude: userLat,
-                                longitude: userLng
-                              }));
-                            } catch (error) {
-                              console.error('Reverse geocoding failed:', error);
-                              setFormData(prev => ({
-                                ...prev,
-                                location: `${userLat.toFixed(4)}, ${userLng.toFixed(4)}`,
-                                latitude: userLat,
-                                longitude: userLng
-                              }));
-                            }
-                          }
-                        }}
-                        disabled={!userLat || !userLng}
-                        title={userLat && userLng ? "Use my current location" : geoError || "Location not available"}
-                      >
-                        <MapPin className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Location Suggestions */}
-                  {showLocationSuggestions && (
-                    <div className="border border-border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto">
-                      {suggestions.length > 0 ? (
-                        suggestions.map((suggestion) => (
-                          <button
-                            key={suggestion.place_id}
-                            type="button"
-                            className="w-full text-left px-3 py-2 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
-                            onClick={async () => {
-                              setFormData(prev => {
-                                // Generate auto title when location is selected
-                                const newTitle = prev.sport && prev.time ? 
-                                  generateGameTitle(prev.sport, prev.time, suggestion.description) : 
-                                  prev.title;
-                                
-                                return { 
-                                  ...prev, 
-                                  location: suggestion.description,
-                                  title: newTitle || prev.title
-                                };
-                              });
-                              setShowLocationSuggestions(false);
-                              
-                              const coords = await geocodeLocation(suggestion.description);
-                              if (coords) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  latitude: coords.lat,
-                                  longitude: coords.lng
-                                }));
-                              }
-                            }}
-                          >
-                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            <div>
-                              <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                              <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          {isLocationLoading ? 'Searching...' : 'No suggestions found. Try typing a more specific location.'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {errors.location && (
-                    <p className="text-sm text-destructive">{errors.location}</p>
-                  )}
-                </div>
-
                 {renderField('maxPlayers', 'Max Players', 'number')}
                 
                 {/* Cost Selection */}
@@ -1274,14 +1384,6 @@ function CreateGame() {
             </div>
           )}
           
-          {/* Debug Info - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-2 text-xs text-muted-foreground text-center">
-              Debug: Step {currentStep} complete: {isStepComplete(currentStep) ? 'Yes' : 'No'} | 
-              Errors: {Object.keys(errors).filter(key => key !== 'duplicate').length} | 
-              Submitting: {isSubmitting ? 'Yes' : 'No'}
-            </div>
-          )}
         </div>
       </div>
     </div>

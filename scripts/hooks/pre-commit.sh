@@ -48,6 +48,9 @@ EXCLUDE_PATTERNS=(
     'yarn\.lock$'
     '\.min\.js$'
     'pre-commit\.sh$'
+    '^node_modules/'
+    '^dist/'
+    '^build/'
 )
 
 # Get list of staged files

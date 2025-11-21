@@ -48,3 +48,4 @@ GRANT SELECT ON friend_suggestions TO authenticated;
 
 
 
+

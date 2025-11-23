@@ -43,7 +43,7 @@ export interface SportPickerProps {
   maxRecent?: number;
   gridCols?: 2 | 3 | 4;
   size?: 'sm' | 'md' | 'lg';
-  allowCustom?: boolean;
+  allowCustom?: boolean; // Enable creation of a custom sport when search does not match
 }
 
 /**
@@ -76,7 +76,7 @@ export function SportPicker({
   maxRecent = 5,
   gridCols = 3,
   size = 'md',
-  allowCustom = true,
+  allowCustom = false,
 }: SportPickerProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
@@ -323,46 +323,45 @@ export function SportPicker({
                 )}
               </div>
             ) : (
-              <div className="py-8 text-center text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground space-y-3">
                 <p>No sports found matching "{searchQuery}"</p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => setSearchQuery('')}
-                >
-                  Clear search
-                </Button>
-              </div>
-            )}
-            {/* Custom sport option */}
-            {allowCustom && searchQuery.trim() && (
-              (() => {
-                const query = searchQuery.trim();
-                const normalized = query.toLowerCase().replace(/\s+/g, '_');
-                const exists = sports.some(s => s.value === normalized);
-                if (exists) return null;
-                const customSport: Sport = {
-                  value: normalized,
-                  label: query,
-                  icon: '🏅',
-                  color: '#666666'
-                };
-                return (
-                  <div className="mt-4">
+                <div className="flex justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    Clear
+                  </Button>
+                  {allowCustom && searchQuery.trim().length >= 2 && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      onClick={() => onSportSelect(customSport)}
-                      className="w-full justify-center"
+                      onClick={() => {
+                        const raw = searchQuery.trim();
+                        const value = raw
+                          .toLowerCase()
+                          .replace(/[^a-z0-9]+/g, '_')
+                          .replace(/^_+|_+$/g, '');
+                        const customSport: Sport = {
+                          value,
+                          label: raw,
+                          icon: '✨',
+                          color: getSportColor(value)
+                        };
+                        onSportSelect(customSport);
+                      }}
                     >
-                      Use custom sport: "{query}"
+                      Use "{searchQuery}" as custom sport
                     </Button>
-                  </div>
-                );
-              })()
+                  )}
+                </div>
+                {allowCustom && (
+                  <p className="text-xs text-muted-foreground">Custom sports are saved for this activity only.</p>
+                )}
+              </div>
             )}
           </div>
         </div>

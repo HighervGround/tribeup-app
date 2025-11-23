@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avat
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { useAppStore } from '@/store/appStore';
 import { Plus, Menu } from 'lucide-react';
+import { ThemeToggle } from '@/shared/components/ui/theme-toggle';
 import { getDesktopNavItems } from '@/shared/config/navigation';
 import { brandColors, layoutConstants } from '@/shared/config/theme';
 
@@ -31,18 +32,22 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         <div className={sidebarCollapsed ? 'px-4 py-4' : 'p-6 border-b border-border'}>
           {!sidebarCollapsed ? (
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl text-foreground">TribeUp</h1>
-                <p className="text-sm text-gray-600 dark:text-muted-foreground">Find your tribe</p>
+              <div className="flex items-center gap-2">
+                <div>
+                  <h1 className="text-xl text-foreground">TribeUp</h1>
+                  <p className="text-sm text-muted-foreground">Find your tribe</p>
+                </div>
+                <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  aria-label="Collapse sidebar"
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                aria-label="Collapse sidebar"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
+              {/* Close outer flex container */}
             </div>
           ) : (
             <Button

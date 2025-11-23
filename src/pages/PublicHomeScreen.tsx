@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { MapPin, Calendar, Users, LogIn, UserPlus } from 'lucide-react';
+import { ThemeToggle } from '@/shared/components/ui/theme-toggle';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
 import { useLocation } from '@/domains/locations/hooks/useLocation';
 import { UnifiedGameCard } from '@/domains/games/components/UnifiedGameCard';
@@ -88,9 +89,9 @@ export default function PublicHomeScreen() {
   }), [games]);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Compact header */}
-      <header className="border-b bg-white/90 backdrop-blur px-4 py-3">
+      <header className="border-b bg-background/90 backdrop-blur px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="font-semibold text-lg">TribeUp</div>
@@ -100,6 +101,7 @@ export default function PublicHomeScreen() {
             </div>
           </div>
           <div className="flex gap-2">
+            <ThemeToggle />
             <Button size="sm" variant="outline" onClick={() => navigate('/login')} className="gap-1">
               <LogIn className="h-4 w-4" /> Sign In
             </Button>
@@ -111,7 +113,7 @@ export default function PublicHomeScreen() {
       </header>
 
       {/* Filters */}
-      <div className="border-b bg-white sticky top-0 z-10">
+      <div className="border-b bg-background sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             {/* Sport Filter */}
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">

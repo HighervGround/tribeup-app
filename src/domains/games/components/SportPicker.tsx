@@ -43,6 +43,7 @@ export interface SportPickerProps {
   maxRecent?: number;
   gridCols?: 2 | 3 | 4;
   size?: 'sm' | 'md' | 'lg';
+  allowCustom?: boolean;
 }
 
 /**
@@ -75,6 +76,7 @@ export function SportPicker({
   maxRecent = 5,
   gridCols = 3,
   size = 'md',
+  allowCustom = true,
 }: SportPickerProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
@@ -333,6 +335,34 @@ export function SportPicker({
                   Clear search
                 </Button>
               </div>
+            )}
+            {/* Custom sport option */}
+            {allowCustom && searchQuery.trim() && (
+              (() => {
+                const query = searchQuery.trim();
+                const normalized = query.toLowerCase().replace(/\s+/g, '_');
+                const exists = sports.some(s => s.value === normalized);
+                if (exists) return null;
+                const customSport: Sport = {
+                  value: normalized,
+                  label: query,
+                  icon: '🏅',
+                  color: '#666666'
+                };
+                return (
+                  <div className="mt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSportSelect(customSport)}
+                      className="w-full justify-center"
+                    >
+                      Use custom sport: "{query}"
+                    </Button>
+                  </div>
+                );
+              })()
             )}
           </div>
         </div>

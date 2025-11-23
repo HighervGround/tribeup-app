@@ -5,6 +5,7 @@ import './styles/globals.css'
 import './index.css'
 import './fix-colors.css'
 import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector'
+import { useThemeStore } from '@/store/themeStore'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization
@@ -57,6 +58,14 @@ async function initializeApp() {
   
   try {
     console.log('✅ [App] Skipping cache corruption check, starting React app directly...');
+
+    // Apply stored theme before React mounts (avoid flash)
+    try {
+      const stored = localStorage.getItem('theme');
+      if (stored === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    } catch {}
     
     // Start React app immediately
     ReactDOM.createRoot(document.getElementById('root')!).render(

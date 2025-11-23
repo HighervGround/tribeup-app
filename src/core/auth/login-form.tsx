@@ -28,6 +28,7 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   const handleSocialLogin = async (provider: 'google') => {
     setIsLoading(true)
@@ -74,6 +75,47 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const runDiagnostics = async () => {
+    setDebugInfo(null)
+    try {
+      const lines: string[] = []
+      lines.push('🔍 Auth Diagnostics Start')
+      // Environment vars (only show presence, not values)
+      lines.push(`SUPABASE_URL: ${Boolean(env.SUPABASE_URL) ? 'SET' : 'MISSING'}`)
+      lines.push(`SUPABASE_ANON_KEY: ${Boolean(env.SUPABASE_ANON_KEY) ? 'SET' : 'MISSING'}`)
+      // Session
+      const sessionRes = await supabase.auth.getSession()
+      lines.push(`getSession error: ${sessionRes.error ? sessionRes.error.message : 'none'}`)
+      lines.push(`session user: ${sessionRes.data.session?.user?.id ? 'present' : 'none'}`)
+      // User
+      const userRes = await supabase.auth.getUser()
+      lines.push(`getUser error: ${userRes.error ? userRes.error.message : 'none'}`)
+      lines.push(`user id: ${userRes.data.user?.id || 'none'}`)
+      // Simple query
+      const { error: tableError } = await supabase.from('games').select('id').limit(1)
+      lines.push(`games table query error: ${tableError ? tableError.message : 'none'}`)
+      // Local storage keys
+      try {
+        const keys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.includes('tribeup'))
+        lines.push(`localStorage keys: ${keys.join(', ') || 'none'}`)
+      } catch {}
+      lines.push('🔍 Auth Diagnostics End')
+      setDebugInfo(lines.join('\n'))
+    } catch (err: any) {
+      setDebugInfo(`Diagnostics failed: ${err?.message || err}`)
+    }
+  }
+
+  const clearSession = () => {
+    try {
+      localStorage.removeItem('tribeup-auth')
+      localStorage.removeItem('supabase.auth.token')
+      setDebugInfo('Cleared stored auth tokens. Refresh and try login again.')
+    } catch (e: any) {
+      setDebugInfo(`Failed to clear tokens: ${e?.message || e}`)
     }
   }
 
@@ -126,6 +168,21 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+              {debugInfo && (
+                <Alert>
+                  <AlertDescription>
+                    <pre className="text-xs whitespace-pre-wrap break-words">{debugInfo}</pre>
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex flex-col gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={runDiagnostics} disabled={isLoading} className="w-full">
+                  Run Auth Diagnostics
+                </Button>
+                <Button variant="ghost" type="button" onClick={clearSession} disabled={isLoading} className="w-full">
+                  Clear Stored Session
+                </Button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleEmailAuth} className="space-y-4">
@@ -172,6 +229,21 @@ export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+              {debugInfo && (
+                <Alert>
+                  <AlertDescription>
+                    <pre className="text-xs whitespace-pre-wrap break-words">{debugInfo}</pre>
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="flex flex-col gap-2 pt-2">
+                <Button variant="outline" type="button" onClick={runDiagnostics} disabled={isLoading} className="w-full">
+                  Run Auth Diagnostics
+                </Button>
+                <Button variant="ghost" type="button" onClick={clearSession} disabled={isLoading} className="w-full">
+                  Clear Stored Session
+                </Button>
+              </div>
 
               {success && (
                 <Alert>

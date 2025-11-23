@@ -18,24 +18,34 @@ function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle OAuth callback properly
+        // Log all query params for debugging
+        const params = Object.fromEntries(searchParams.entries());
+        console.log('[AuthCallback] Query params:', params);
+        // Log localStorage keys for debugging
+        const lsKeys = Object.keys(localStorage);
+        console.log('[AuthCallback] LocalStorage keys:', lsKeys);
+
+        // Attempt to get session
         const { data, error } = await supabase.auth.getSession();
-        
         if (error) {
-          console.error('Auth callback error:', error);
+          console.error('[AuthCallback] getSession error:', error);
           setStatus('error');
           setMessage(error.message || 'Authentication failed');
           return;
         }
 
         if (!data.session?.user) {
+          // Log PKCE code verifier and any code param
+          const codeVerifier = localStorage.getItem('tribeup-auth-code-verifier');
+          console.log('[AuthCallback] PKCE code verifier:', codeVerifier);
+          console.log('[AuthCallback] No user session found. Params:', params);
           setStatus('error');
           setMessage('No user session found');
           return;
         }
 
         const user = data.session.user;
-        console.log('OAuth user authenticated:', user.id);
+        console.log('[AuthCallback] OAuth user authenticated:', user.id);
 
         // Create optimized user profile from OAuth data
         const userProfile = {
@@ -79,10 +89,9 @@ function AuthCallback() {
           try {
             // Check if user profile already exists
             const existingProfile = await SupabaseService.getUserProfile(user.id);
-            
             if (!existingProfile) {
               // Create user profile in database (non-blocking)
-              console.log('Creating user profile for OAuth user:', user.id);
+              console.log('[AuthCallback] Creating user profile for OAuth user:', user.id);
               await SupabaseService.createUserProfile(user.id, {
                 email: userProfile.email,
                 full_name: userProfile.name,
@@ -91,16 +100,16 @@ function AuthCallback() {
                 bio: userProfile.bio,
                 location: userProfile.location
               });
-              console.log('✅ User profile created successfully');
+              console.log('[AuthCallback] User profile created successfully');
             } else {
-              console.log('✅ User profile already exists');
+              console.log('[AuthCallback] User profile already exists');
               // Update app store with complete profile data
               setUser(existingProfile);
             }
           } catch (profileError) {
-            console.error('Error creating user profile:', profileError);
+            console.error('[AuthCallback] Error creating user profile:', profileError);
             // Continue with OAuth data - profile creation is non-critical
-            console.log('⚠️ Using OAuth data without database profile');
+            console.log('[AuthCallback] Using OAuth data without database profile');
           }
         }, 100); // Small delay to allow UI to update first
 
@@ -108,22 +117,20 @@ function AuthCallback() {
         const pendingGameId = localStorage.getItem('pendingGameJoin');
         if (pendingGameId) {
           localStorage.removeItem('pendingGameJoin');
-          // Redirect to game page
-          setTimeout(() => navigate(`/game/${pendingGameId}`), 1500);
+          // Redirect to game page inside app shell
+          setTimeout(() => navigate(`/app/game/${pendingGameId}`), 800);
         } else {
-          // For OAuth users, let the ProtectedRoute handle onboarding detection
-          // This ensures consistent behavior with email/password users
-          setTimeout(() => navigate('/'), 1500);
+          // Send authenticated users to the app layout, not public landing
+          setTimeout(() => navigate('/app'), 800);
         }
 
       } catch (error) {
-        console.error('Auth callback error:', error);
+        console.error('[AuthCallback] Exception:', error);
         setStatus('error');
         setMessage('Authentication failed. Please try again.');
         setTimeout(() => navigate('/auth'), 3000);
       }
     };
-
     handleAuthCallback();
   }, [navigate, setUser, searchParams]);
 

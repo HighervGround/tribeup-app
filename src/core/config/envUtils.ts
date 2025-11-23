@@ -72,3 +72,8 @@ export function debugEnvVars() {
     console.log(`  ${varName}: ${value ? '✅ Set' : '❌ Missing'}`);
   });
 }
+
+// Expose debug function in browser for manual invocation
+if (typeof window !== 'undefined') {
+  (window as any).debugEnvVars = debugEnvVars;
+}

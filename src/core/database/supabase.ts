@@ -37,10 +37,10 @@ const createSupabaseClient = () => {
       persistSession: true, // Keep sessions persistent for good UX
       autoRefreshToken: true, // Re-enable auto refresh
       detectSessionInUrl: true,
-      storageKey: 'tribeup-auth',
+      // Use default storage key (sb-<project-ref>-auth-token) for compatibility
       flowType: 'pkce', // Use PKCE flow for better security and reliability
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      debug: false, // Set to true for debugging auth issues
+      debug: env.ENVIRONMENT === 'development', // Enable verbose auth logs in development
       // Note: The Supabase client automatically includes the JWT token from localStorage
       // in the Authorization header for all requests. This ensures RLS policies receive
       // the authenticated user context (auth.uid()).

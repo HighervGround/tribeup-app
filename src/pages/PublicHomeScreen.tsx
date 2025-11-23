@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { MapPin, Calendar, Users, LogIn, UserPlus } from 'lucide-react';
-import { ThemeToggle } from '@/shared/components/ui/theme-toggle';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
+import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { useLocation } from '@/domains/locations/hooks/useLocation';
 import { UnifiedGameCard } from '@/domains/games/components/UnifiedGameCard';
 import { GameCardSkeleton } from '@/domains/games/components/GameCardSkeleton';
@@ -15,6 +15,7 @@ export default function PublicHomeScreen() {
   const navigate = useNavigate();
   const { games, loading: isLoading, error } = useGamesWithCreators();
   const { currentLocation, permission, requestLocation, getDistanceTo } = useLocation();
+  const { user } = useSimpleAuth();
 
   const [selectedSport, setSelectedSport] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'distance'>('date');
@@ -88,10 +89,17 @@ export default function PublicHomeScreen() {
     today: games.filter(g => g.date === new Date().toISOString().slice(0,10)).length,
   }), [games]);
 
+  // Auto-redirect authenticated users into the app shell
+  useEffect(() => {
+    if (user) {
+      navigate('/app');
+    }
+  }, [user, navigate]);
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-white text-gray-900">
       {/* Compact header */}
-      <header className="border-b bg-background/90 backdrop-blur px-4 py-3">
+      <header className="border-b bg-white/90 backdrop-blur px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="font-semibold text-lg">TribeUp</div>
@@ -100,20 +108,21 @@ export default function PublicHomeScreen() {
               <Users className="h-3.5 w-3.5" /> <span>{stats.today} today</span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-            <Button size="sm" variant="outline" onClick={() => navigate('/login')} className="gap-1">
-              <LogIn className="h-4 w-4" /> Sign In
-            </Button>
-            <Button size="sm" onClick={() => navigate('/login')} className="gap-1">
-              <UserPlus className="h-4 w-4" /> Create Account
-            </Button>
-          </div>
+          {!user && (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => navigate('/auth')} className="gap-1">
+                <LogIn className="h-4 w-4" /> Sign In
+              </Button>
+              <Button size="sm" onClick={() => navigate('/auth')} className="gap-1">
+                <UserPlus className="h-4 w-4" /> Create Account
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
       {/* Filters */}
-      <div className="border-b bg-background sticky top-0 z-10">
+      <div className="border-b bg-white sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             {/* Sport Filter */}
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">
@@ -210,9 +219,11 @@ export default function PublicHomeScreen() {
             <Users className="h-14 w-14 text-gray-300 mx-auto mb-4" />
             <h3 className="font-semibold mb-1">No games found</h3>
             <p className="text-sm text-gray-600 mb-4">{selectedSport !== 'all' ? `No ${selectedSport} games right now` : 'No games available right now'}</p>
-            <Button size="sm" onClick={() => navigate('/login')} className="gap-1">
-              <UserPlus className="h-4 w-4" /> Sign in to create a game
-            </Button>
+            {!user && (
+              <Button size="sm" onClick={() => navigate('/auth')} className="gap-1">
+                <UserPlus className="h-4 w-4" /> Sign in to create a game
+              </Button>
+            )}
           </div>
         )}
 

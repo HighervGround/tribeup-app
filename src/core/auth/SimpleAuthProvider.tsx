@@ -116,15 +116,19 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       }
     }, 10000);
     
-    // Also try to get session from localStorage as backup
+    // Detect default Supabase auth token keys (sb-<project-ref>-auth-token)
     try {
-      const storedSession = localStorage.getItem('supabase.auth.token');
-      if (storedSession && !session) {
-        console.log('🔍 Found stored session, will wait for auth listener');
-        // Don't set loading to false yet - let the auth listener handle it
+      const keys = Object.keys(localStorage);
+      const authKeys = keys.filter(k => /sb-.*-auth-token/.test(k));
+      if (authKeys.length) {
+        console.log('🔍 Detected Supabase auth token key(s):', authKeys);
+        const sample = localStorage.getItem(authKeys[0]) || '';
+        console.log('🔍 Sample token length:', sample.length);
+      } else {
+        console.log('🔍 No Supabase auth token keys found yet');
       }
     } catch (error) {
-      console.warn('Could not check localStorage for session:', error);
+      console.warn('Could not inspect localStorage for Supabase auth tokens:', error);
     }
 
         // Handle user profile creation/loading - OPTIMIZED VERSION
@@ -386,17 +390,40 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
-    // Use the configured app URL for OAuth redirects to ensure consistent domain
-    const redirectUrl = `${env.APP_URL}/auth/callback`;
-    console.log('🔐 Starting OAuth flow with redirect:', redirectUrl);
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: redirectUrl,
+    // Use window.location.origin in development to avoid stale APP_URL affecting local testing (incognito)
+    const origin = env.ENVIRONMENT === 'development' ? window.location.origin : env.APP_URL;
+    const redirectUrl = `${origin}/auth/callback`;
+    console.log('🔐 Starting OAuth flow:', { provider, redirectUrl, origin });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          // Force full redirect instead of popup; incognito / strict privacy sometimes blocks popup session persistence
+          preferRedirect: true,
+        },
+      });
+      if (error) {
+        console.error('❌ OAuth sign-in error:', error);
+        toast.error(`OAuth error: ${error.message}`);
+        throw error;
       }
-    });
-    if (error) throw error;
+      console.log('✅ OAuth initiation response:', { url: data?.url });
+      // Fallback: if redirect did not happen (rare), navigate manually
+      if (data?.url) {
+        // Some browsers in strict/incognito may not auto-follow
+        setTimeout(() => {
+          if (!document.hidden && !/auth\/callback/.test(window.location.pathname)) {
+            console.log('🔄 Manual navigation fallback to OAuth URL');
+            window.location.href = data.url!;
+          }
+        }, 500);
+      }
+    } catch (err: any) {
+      console.error('❌ Unexpected OAuth exception:', err);
+      toast.error(`OAuth exception: ${err?.message || 'Unknown error'}`);
+      throw err;
+    }
   };
 
   const signOut = async () => {

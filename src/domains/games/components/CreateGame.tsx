@@ -839,6 +839,7 @@ function CreateGame() {
                     recentSports={recentSports}
                     gridCols={3}
                     size="md"
+                    allowCustom={true}
                   />
                   {errors.sport && (
                     <p className="text-sm text-destructive mt-2">{errors.sport}</p>

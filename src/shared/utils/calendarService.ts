@@ -82,7 +82,7 @@ export class CalendarService {
       location: game.location,
       startDate: gameDateTime,
       endDate: endDateTime,
-      url: `${window.location.origin}/game/${game.id}`
+      url: `${window.location.origin}/public/game/${game.id}`
     };
   }
 

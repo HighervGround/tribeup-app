@@ -32,7 +32,7 @@ export function InviteModal({
 
   if (!isOpen) return null;
 
-  const gameUrl = `${window.location.origin}/game/${gameId}`;
+  const gameUrl = `${window.location.origin}/public/game/${gameId}`;
   const shareText = `🏃‍♂️ Join me for ${sport}!\n\n"${gameTitle}"\n📅 ${gameDate} at ${gameTime}\n📍 ${gameLocation}\n\nTap to RSVP: ${gameUrl}`;
 
   const handleCopyLink = async () => {

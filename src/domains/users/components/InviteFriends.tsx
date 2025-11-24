@@ -42,7 +42,7 @@ export function InviteFriends({
   const handleShareGame = async () => {
     if (!gameId) return;
 
-    const gameUrl = `${window.location.origin}/game/${gameId}`;
+    const gameUrl = `${window.location.origin}/public/game/${gameId}`;
 
     try {
       if (navigator.share) {

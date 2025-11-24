@@ -28,7 +28,7 @@ export function ShareGameModal({ game, isOpen, onClose }: ShareGameModalProps) {
   
   if (!isOpen) return null;
 
-  const gameDetailsUrl = `${window.location.origin}/game/${game.id}`;
+  const gameDetailsUrl = `${window.location.origin}/public/game/${game.id}`;
   const shareText = `Join me for ${game.sport} at ${game.location} on ${game.date}!`;
 
   const handleCopyLink = async () => {

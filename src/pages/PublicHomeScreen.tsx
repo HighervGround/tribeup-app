@@ -10,16 +10,24 @@ import { GameCardSkeleton } from '@/domains/games/components/GameCardSkeleton';
 import { Badge } from '@/shared/components/ui/badge';
 import { Input } from '@/shared/components/ui/input';
 import { useActivityFilters } from '@/domains/games/hooks/useActivityFilters';
+import { ThemeToggle } from '@/shared/components/ui/theme-toggle';
 
 export default function PublicHomeScreen() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useSimpleAuth();
   const { games, loading: isLoading, error } = useGamesWithCreators();
   const { currentLocation, permission, requestLocation, getDistanceTo } = useLocation();
-  const { user } = useSimpleAuth();
 
   const [selectedSport, setSelectedSport] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'distance'>('date');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Redirect authenticated users to /app
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/app', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   // Load persisted filters
   useEffect(() => {
@@ -89,40 +97,38 @@ export default function PublicHomeScreen() {
     today: games.filter(g => g.date === new Date().toISOString().slice(0,10)).length,
   }), [games]);
 
-  // Auto-redirect authenticated users into the app shell
-  useEffect(() => {
-    if (user) {
-      navigate('/app');
-    }
-  }, [user, navigate]);
+  // (Second redirect effect removed - redundant)
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Compact header */}
-      <header className="border-b bg-white/90 backdrop-blur px-4 py-3">
+      <header className="border-b bg-background/90 backdrop-blur px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="font-semibold text-lg">TribeUp</div>
-            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" /> <span>{stats.total} active</span>
               <Users className="h-3.5 w-3.5" /> <span>{stats.today} today</span>
             </div>
           </div>
-          {!user && (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => navigate('/auth')} className="gap-1">
-                <LogIn className="h-4 w-4" /> Sign In
-              </Button>
-              <Button size="sm" onClick={() => navigate('/auth')} className="gap-1">
-                <UserPlus className="h-4 w-4" /> Create Account
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <ThemeToggle />
+            {!user && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => navigate('/auth')} className="gap-1">
+                  <LogIn className="h-4 w-4" /> Sign In
+                </Button>
+                <Button size="sm" onClick={() => navigate('/auth')} className="gap-1">
+                  <UserPlus className="h-4 w-4" /> Create Account
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Filters */}
-      <div className="border-b bg-white sticky top-0 z-10">
+      <div className="border-b bg-background sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             {/* Sport Filter */}
             <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide">

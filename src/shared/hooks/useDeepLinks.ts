@@ -30,7 +30,7 @@ export function useDeepLinks() {
     utm_campaign?: string;
   }) => {
     const baseUrl = window.location.origin;
-    const url = new URL(`${baseUrl}/game/${gameId}`);
+    const url = new URL(`${baseUrl}/public/game/${gameId}`);
     
     if (options) {
       Object.entries(options).forEach(([key, value]) => {

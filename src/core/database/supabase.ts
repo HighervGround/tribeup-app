@@ -6,12 +6,7 @@ import { env } from '@/core/config/envUtils';
 const supabaseUrl = env.SUPABASE_URL?.trim();
 const supabaseAnonKey = env.SUPABASE_ANON_KEY?.trim();
 
-// Environment variables loaded successfully - FORCE DEPLOYMENT v3 - ALL FIXES INCLUDED
-console.log('🚀 App starting with environment variables:', {
-  supabaseUrl: supabaseUrl ? 'SET' : 'NOT SET',
-  supabaseKey: supabaseAnonKey ? 'SET' : 'NOT SET'
-});
-    console.log('🔧 All fixes deployed: table name, CreateGame step 3, location search, environment variables, JOIN/LEAVE FIXED, FIRST-CLASS ARCHITECTURE DEPLOYED');
+// Environment variables loaded successfully
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables!');
@@ -26,12 +21,8 @@ declare global {
 }
 
 const createSupabaseClient = () => {
-  console.log('🔧 Creating new Supabase client...');
-  
-  // Get the app URL for OAuth redirects (use production domain)
+  // Create Supabase client
   const appUrl = env.APP_URL;
-  console.log('🌐 App URL for OAuth:', appUrl);
-  
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true, // Keep sessions persistent for good UX
@@ -71,11 +62,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.__supabase__ = supabase;
 }
 
-// Expose supabase client to window for debugging
-if (typeof window !== 'undefined') {
-  (window as any).supabase = supabase;
-  console.log('🔍 [Supabase] Client exposed to window.supabase');
-}
+// Do not expose supabase client to window in production builds
 
 // Re-export the generated database types
 export type { Database } from './database.types';

@@ -73,7 +73,4 @@ export function debugEnvVars() {
   });
 }
 
-// Expose debug function in browser for manual invocation
-if (typeof window !== 'undefined') {
-  (window as any).debugEnvVars = debugEnvVars;
-}
+// Note: debugEnvVars is available to import; do not expose it globally in production

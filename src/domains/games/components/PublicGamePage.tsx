@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Separator } from '@/shared/components/ui/separator';
@@ -11,128 +10,170 @@ import {
   MapPin, 
   Users, 
   Clock,
-  DollarSign,
   Share2,
-  Copy,
-  Mail,
-  MessageSquare,
   ExternalLink,
   CheckCircle,
-  AlertCircle,
-  Loader2
+  LogIn,
+  Mail,
+  Chrome
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { usePublicGame, usePublicRSVPs, publicGameKeys } from '@/domains/games/hooks/usePublicGame';
+import { usePublicGame } from '@/domains/games/hooks/usePublicGame';
 import { supabase } from '@/core/database/supabase';
-import { useQueryClient } from '@tanstack/react-query';
+import { SupabaseService } from '@/core/database/supabaseService';
 import { GameCapacityLine } from '@/shared/components/ui/GameCapacity';
-import { Facepile } from '@/shared/components/ui';
+import { env } from '@/core/config/envUtils';
+import { brandColors } from '@/shared/config/theme';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // Use React Query hooks for data fetching
   const { data: game, isLoading: gameLoading, error: gameError } = usePublicGame(gameId || '');
-  const { data: publicRsvps = [], isLoading: rsvpsLoading } = usePublicRSVPs(gameId || '');
-  const loading = gameLoading || rsvpsLoading;
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const loading = gameLoading;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [joiningError, setJoiningError] = useState<string | null>(null);
   const [capacity, setCapacity] = useState<any | null>(null);
-  const [lastResult, setLastResult] = useState<any | null>(null);
-  
-  const [rsvpForm, setRsvpForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-    attending: true
-  });
-  const [rsvpSuccess, setRsvpSuccess] = useState(false);
-  const [showQuickRsvp, setShowQuickRsvp] = useState(false);
-  const [hasRsvped, setHasRsvped] = useState(false);
-  const [userRsvp, setUserRsvp] = useState<any>(null);
 
-  // React Query handles all data loading automatically
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
 
-  const handleRsvpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!gameId) return;
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      // If user just authenticated and we have a pending join, auto-join
+      if (session && gameId) {
+        const pendingJoin = localStorage.getItem('pendingGameJoin');
+        if (pendingJoin === gameId) {
+          handleJoinGame();
+        }
+      }
+    });
 
-    await handleRSVP(e);
-  };
+    return () => subscription.unsubscribe();
+  }, [gameId]);
 
-  const handleRSVP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!gameId) return;
-    if (!rsvpForm.name.trim() || !rsvpForm.email.trim()) {
-      toast.error('Name and email are required');
-      return;
+  // Check if user has already joined
+  useEffect(() => {
+    const checkJoined = async () => {
+      if (!isAuthenticated || !gameId) return;
+      
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('game_participants')
+          .select('*')
+          .eq('game_id', gameId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (data && !error) {
+          setHasJoined(true);
+        }
+      } catch (err) {
+        // User not joined yet
+      }
+    };
+
+    if (isAuthenticated) {
+      checkJoined();
     }
+  }, [isAuthenticated, gameId]);
+
+  // Initial stats load
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!gameId) return;
+      try {
+        const { data, error } = await supabase
+          .from('game_rsvp_stats')
+          .select('*')
+          .eq('game_id', gameId)
+          .single();
+        if (!cancelled && !error && data) {
+          setCapacity(data);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [gameId]);
+
+  const handleJoinGame = async () => {
+    if (!gameId) return;
 
     try {
-      setSubmitError(null);
-      setSubmitting(true);
+      setIsJoining(true);
+      setJoiningError(null);
 
-      const { data, error } = await supabase.functions.invoke('rsvp_public', {
-        body: {
-          game_id: gameId,
-          name: rsvpForm.name.trim(),
-          email: rsvpForm.email.trim(),
-          phone: rsvpForm.phone?.trim() || undefined,
-          message: rsvpForm.message || undefined,
-        },
-      });
+      // Store game ID for post-auth join if needed
+      localStorage.setItem('pendingGameJoin', gameId);
 
-      if (error) {
-        setSubmitError(error.message || 'Request failed');
-        toast.error('Failed to submit RSVP');
-        return;
-      }
-
-      if (data?.error) {
-        setSubmitError(data.message || data.error);
-        toast.error(data.message || data.error);
-        return;
-      }
-
-      if (data?.ok) {
-        setLastResult(data);
-        if (data.stats) setCapacity(data.stats);
-
-        // Invalidate RSVPs list to refresh
-        if (gameId) {
-          queryClient.invalidateQueries({ queryKey: publicGameKeys.rsvps(gameId) });
-        }
-
-        if (data.duplicate) {
-          toast.info("You're already on the list!");
-          setHasRsvped(true);
-          setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
-        } else {
-          setHasRsvped(true);
-          setUserRsvp({ name: rsvpForm.name.trim(), email: rsvpForm.email.trim() });
-          setRsvpForm({ name: '', email: '', phone: '', message: '', attending: true });
-          toast.success('RSVP confirmed!');
-        }
-      }
-    } catch (err: any) {
-      setSubmitError(err?.message || 'Unexpected error');
-      toast.error('Failed to submit RSVP. Please try again.');
+      // Join the game using authenticated RPC
+      await SupabaseService.joinGame(gameId);
+      
+      setHasJoined(true);
+      localStorage.removeItem('pendingGameJoin');
+      toast.success('Successfully joined the activity!');
+      
+      // Refresh capacity
+      const { data } = await supabase
+        .from('game_rsvp_stats')
+        .select('*')
+        .eq('game_id', gameId)
+        .single();
+      if (data) setCapacity(data);
+    } catch (error: any) {
+      console.error('Join game error:', error);
+      setJoiningError(error.message || 'Failed to join activity');
+      toast.error('Failed to join activity. Please try again.');
     } finally {
-      setSubmitting(false);
+      setIsJoining(false);
     }
   };
 
-  // Use live capacity from game_rsvp_stats view
-  const capacityData = useMemo(() => {
-    if (!capacity) return null;
-    return {
-      totalPlayers: capacity.total_rsvps ?? 0,
-      maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
-      availableSpots: capacity.capacity_remaining ?? 0
-    };
-  }, [capacity, game?.maxPlayers]);
+  const handleSignInWithGoogle = async () => {
+    if (!gameId) return;
+
+    try {
+      // Store game ID for post-auth join
+      localStorage.setItem('pendingGameJoin', gameId);
+
+      const redirectUrl = `${env.APP_URL}/auth/callback`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) throw error;
+      // OAuth will redirect automatically
+    } catch (error: any) {
+      console.error('OAuth error:', error);
+      localStorage.removeItem('pendingGameJoin');
+      toast.error('Failed to initiate sign in. Please try again.');
+    }
+  };
+
+  const handleSignInWithEmail = () => {
+    if (!gameId) return;
+    // Store game ID for post-auth join
+    localStorage.setItem('pendingGameJoin', gameId);
+    navigate('/auth?redirect=' + encodeURIComponent(`/public/game/${gameId}`));
+  };
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
@@ -140,8 +181,8 @@ export default function PublicGamePage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Join ${game.title}`,
-          text: `${game.sport} game at ${game.location}`,
+          title: `Join ${game?.title}`,
+          text: `${game?.sport} game at ${game?.location}`,
           url: shareUrl
         });
       } catch (error) {
@@ -162,24 +203,15 @@ export default function PublicGamePage() {
     navigate('/auth?redirect=' + encodeURIComponent(window.location.pathname));
   };
 
-  // Initial stats load from read-only view
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!gameId) return;
-      try {
-        const { data, error } = await supabase
-          .from('game_rsvp_stats')
-          .select('*')
-          .eq('game_id', gameId)
-          .single();
-        if (!cancelled && !error && data) {
-          setCapacity(data);
-        }
-      } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, [gameId]);
+  // Capacity data
+  const capacityData = useMemo(() => {
+    if (!capacity) return null;
+    return {
+      totalPlayers: capacity.total_rsvps ?? 0,
+      maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
+      availableSpots: capacity.capacity_remaining ?? 0
+    };
+  }, [capacity, game?.maxPlayers]);
 
   if (loading) {
     return (
@@ -281,7 +313,7 @@ export default function PublicGamePage() {
                   <p className="font-medium">
                     {capacity ? (
                       <>
-                        {(capacity.private_rsvp_count || 0) + (capacity.public_rsvp_count || 0)}/{capacity.capacity || Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
+                        {capacity.total_rsvps ?? 0}/{capacity.capacity || Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
                       </>
                     ) : (
                       <>
@@ -312,18 +344,36 @@ export default function PublicGamePage() {
           </CardContent>
         </Card>
 
-        {/* RSVP Section */}
-        {!hasRsvped ? (
-          <Card className="mb-8">
+        {/* Join Section */}
+        {hasJoined ? (
+          <Alert className="mb-8">
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>You're all set!</strong> You've successfully joined this activity. 
+              You'll receive updates about this game.
+              {capacityData && (
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {capacityData.totalPlayers}/{capacityData.maxPlayers} players, {capacityData.availableSpots} spots available
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Card 
+            className="mb-8 border"
+            style={{
+              background: `linear-gradient(to bottom, rgba(232, 90, 43, 0.03), rgba(232, 90, 43, 0.01))`,
+              borderColor: `${brandColors.primaryMuted || brandColors.primary}30`
+            }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5" />
-                RSVP for this Activity
+                <LogIn className="w-5 h-5" style={{ color: brandColors.primaryMuted || brandColors.primary }} />
+                Join this Activity
               </CardTitle>
             </CardHeader>
             <CardContent>
               {capacityData && (
-                <div className="mb-3">
+                <div className="mb-4">
                   <GameCapacityLine
                     totalPlayers={capacityData.totalPlayers}
                     maxPlayers={capacityData.maxPlayers}
@@ -331,102 +381,54 @@ export default function PublicGamePage() {
                   />
                 </div>
               )}
-              <form onSubmit={handleRSVP} className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Full Name *
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="Enter your name"
-                    value={rsvpForm.name}
-                    onChange={(e) => setRsvpForm(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Email Address *
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={rsvpForm.email}
-                    onChange={(e) => setRsvpForm(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Phone Number (Optional)
-                  </label>
-                  <Input
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={rsvpForm.phone}
-                    onChange={(e) => setRsvpForm(prev => ({ ...prev, phone: e.target.value }))}
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? 'Confirming...' : 'Confirm RSVP'}
-                </Button>
-              </form>
-              {submitError && (
-                <div className="mt-2 text-sm text-destructive">{submitError}</div>
-              )}
               
-              <p className="text-xs text-muted-foreground mt-4">
-                By RSVPing, you'll receive email updates about this game. 
-                Your information is only shared with the game organizer.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Alert className="mb-8">
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>You're all set!</strong> Your RSVP has been confirmed. 
-              You'll receive email updates about this game.
-              {lastResult?.stats && (
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Updated: {(lastResult.stats.private_rsvp_count || 0) + (lastResult.stats.public_rsvp_count || 0)}/{lastResult.stats.capacity} total, {lastResult.stats.capacity_remaining} available
+              {isAuthenticated ? (
+                <div className="space-y-4">
+                  <Button 
+                    onClick={handleJoinGame}
+                    disabled={isJoining}
+                    className="w-full"
+                    style={{
+                      backgroundColor: brandColors.primary || '#FA4616',
+                      borderColor: brandColors.primary || '#FA4616'
+                    }}>
+                    {isJoining ? 'Joining...' : 'Join Activity'}
+                  </Button>
+                  {joiningError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{joiningError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Sign in to join this activity and connect with other players.
+                  </p>
+                  
+                  <Button
+                    onClick={handleSignInWithGoogle}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Chrome className="w-4 h-4 mr-2" />
+                    Continue with Google
+                  </Button>
+                  
+                  <Button
+                    onClick={handleSignInWithEmail}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Continue with Email
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground text-center">
+                    By joining, you'll receive updates about this activity.
+                  </p>
                 </div>
               )}
-              {userRsvp && (
-                <div className="mt-2 text-sm">
-                  Registered as: <strong>{userRsvp.name}</strong> ({userRsvp.email})
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* RSVPs List */}
-        {publicRsvps.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Who's Coming ({publicRsvps.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Facepile
-                  users={publicRsvps.map((rsvp) => ({
-                    id: `guest-${rsvp.id}`,
-                    name: rsvp.name || 'Guest',
-                    image: null,
-                    email: rsvp.email,
-                  }))}
-                  maxVisible={5}
-                  size="md"
-                  enablePopover={true}
-                />
-                <div className="text-sm text-muted-foreground">
-                  {publicRsvps.length} {publicRsvps.length === 1 ? 'person' : 'people'} RSVPed
-                </div>
-              </div>
             </CardContent>
           </Card>
         )}

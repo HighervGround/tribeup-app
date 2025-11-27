@@ -1,19 +1,30 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LoginForm } from './login-form';
 import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { toast } from 'sonner';
 
 function EnhancedAuth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, user } = useSimpleAuth();
 
   // Redirect if already authenticated (login is public route, AuthGate doesn't run here)
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      // Check for redirect URL or pending game join
+      const redirectUrl = searchParams.get('redirect');
+      const pendingGameId = localStorage.getItem('pendingGameJoin');
+      
+      if (pendingGameId) {
+        navigate(`/public/game/${pendingGameId}`, { replace: true });
+      } else if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   const handleEmailAuth = async (email: string, password: string, isSignUp: boolean) => {
     try {

@@ -71,69 +71,70 @@ If the auto-scrolling issue returns, investigate:
 
 ---
 
-## Attendee Click Navigation Not Working
+## Attendee Click Navigation Not Working (FIXED)
 
 ### Issue Description
-Users are unable to click on attendees in the Game Details page to navigate to their profiles. The click handlers appear to be wired up correctly, but navigation is not occurring when clicking on attendee avatars or names in the RSVP section.
+Users were unable to click on attendees in the Game Details page to navigate to their profiles. The click handlers appeared to be wired up correctly, but navigation was not occurring when clicking on attendee avatars or names in the RSVP section.
 
 ### Symptoms
-- Clicking on attendee avatars in the Facepile does not navigate to user profiles
-- Clicking on attendee items in the full AttendeeList does not navigate to user profiles
+- Clicking on attendee avatars in the Facepile did not navigate to user profiles
+- Clicking on attendee items in the full AttendeeList did not navigate to user profiles
 - No error messages or console errors when clicking
-- Click handlers appear to be connected but not executing navigation
+- Click handlers appeared to be connected but not executing navigation
 
-### Root Cause (Suspected)
-The issue may be related to:
-1. **Event propagation** - Click events may be getting stopped or prevented somewhere in the component tree
-2. **ID format issues** - Attendee IDs may not be in the expected format for navigation
-3. **ClickableAvatar behavior** - When `onClick` is provided to `ClickableAvatar`, it may override the built-in navigation, but the custom handler may not be executing properly
-4. **Facepile component** - The Facepile's `onUserClick` may not be properly propagating to the `onAttendeeClick` handler
+### Root Cause
+The issue was caused by how `ClickableAvatar` handles click events:
 
-### Attempted Fixes
-1. **Improved handler validation** - Added better null checks and ID validation in `onAttendeeClick` handler
-2. **Error handling** - Added try/catch around navigation calls
-3. **ID filtering** - Added checks to exclude guest and temp user IDs
-
-**Current handler implementation:**
+In `facepile.tsx`, when `onUserClick` was provided, a custom `onClick` handler was passed to `ClickableAvatar`:
 ```typescript
-onAttendeeClick={(attendee) => {
-  if (attendee?.id && typeof attendee.id === 'string' && !attendee.id.startsWith('guest-') && !attendee.id.startsWith('temp-')) {
-    try {
-      navigateToUser(attendee.id);
-    } catch (error) {
-      console.error('Failed to navigate to user profile:', error);
-    }
+onClick={onUserClick ? () => handleAvatarClick(user) : undefined}
+```
+
+However, in `clickable-avatar.tsx`, when `onClick` is provided, it takes precedence over the built-in navigation:
+```typescript
+const handleClick = (e: React.MouseEvent) => {
+  e.stopPropagation();
+  
+  if (onClick) {
+    onClick();  // Only calls onClick, doesn't navigate!
+  } else if (userId && !disabled) {
+    // Navigate to user profile...
   }
-}}
+};
+```
+
+The custom `onClick` callback chain (Facepile → RSVPSection → GameDetails) was being called, but the actual navigation was never executing because the chain was not completing properly or was silently failing.
+
+### Fix Applied
+Removed the custom `onClick` override from `ClickableAvatar` in `facepile.tsx`. Now `ClickableAvatar` uses its built-in userId-based navigation, which works correctly.
+
+**Before:**
+```typescript
+<ClickableAvatar
+  userId={user.id}
+  ...
+  onClick={onUserClick ? () => handleAvatarClick(user) : undefined}
+/>
+```
+
+**After:**
+```typescript
+<ClickableAvatar
+  userId={user.id}
+  ...
+  // Let ClickableAvatar handle navigation via its built-in userId-based routing
+  // Don't pass custom onClick as it overrides the built-in navigation behavior
+/>
 ```
 
 ### Current Status
-**Still not fixed** - The issue persists despite handler improvements. Navigation is not occurring when clicking on attendees.
-
-### If Issue Persists
-If the issue continues, investigate:
-1. Check browser console for any errors when clicking attendees
-2. Verify that `navigateToUser` function is being called (add console.log)
-3. Check if event propagation is being stopped somewhere (check for `stopPropagation()` calls)
-4. Verify attendee IDs are valid UUIDs or user IDs
-5. Test if `ClickableAvatar`'s built-in navigation works when `onClick` is not provided
-6. Check if the Facepile component is properly forwarding click events
-7. Verify that `useDeepLinks` hook's `navigateToUser` is working correctly
-8. Check if there are any route guards or authentication checks blocking navigation
-
-### Alternative Solutions to Consider
-- Remove custom `onClick` from `ClickableAvatar` and rely on built-in navigation
-- Use `Link` components from React Router instead of programmatic navigation
-- Add explicit click handlers directly to attendee items instead of relying on component props
-- Debug by adding console.log statements throughout the click handler chain
+**Fixed** - Clicking on attendee avatars in the Facepile now properly navigates to user profiles using `ClickableAvatar`'s built-in navigation.
 
 ### Related Files
-- `src/domains/games/components/GameDetails.tsx` - Main handler implementation
-- `src/domains/games/components/RSVPSection.tsx` - Facepile and attendee list rendering
-- `src/domains/games/components/AttendeeList.tsx` - Full attendee list with click handlers
-- `src/shared/components/ui/facepile.tsx` - Facepile component with ClickableAvatar
-- `src/shared/components/ui/clickable-avatar.tsx` - Avatar component with built-in navigation
-- `src/shared/hooks/useDeepLinks.ts` - Navigation utility function
+- `src/shared/components/ui/facepile.tsx` - Fixed: Removed custom onClick that was overriding built-in navigation
+- `src/shared/components/ui/clickable-avatar.tsx` - Contains built-in navigation logic
+- `src/domains/games/components/RSVPSection.tsx` - Uses Facepile for attendee display
+- `src/domains/games/components/AttendeeList.tsx` - Full attendee list (uses PlayerCard which also uses ClickableAvatar correctly)
 
 ---
 

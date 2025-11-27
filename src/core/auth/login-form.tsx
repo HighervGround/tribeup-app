@@ -12,6 +12,7 @@ import {
 import { Input } from '@/shared/components/ui/input'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Chrome, Mail } from 'lucide-react'
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
@@ -20,10 +21,12 @@ interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
 }
 
 export function LoginForm({ className, onEmailAuth, onForgotPassword, ...props }: LoginFormProps) {
+  const [searchParams] = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [showEmailForm, setShowEmailForm] = useState(false)
+  // Auto-show email form if method=email is in URL (coming from public game page)
+  const [showEmailForm, setShowEmailForm] = useState(searchParams.get('method') === 'email')
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

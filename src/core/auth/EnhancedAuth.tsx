@@ -29,12 +29,19 @@ function EnhancedAuth() {
   const handleEmailAuth = async (email: string, password: string, isSignUp: boolean) => {
     try {
       if (isSignUp) {
+        // Check if we have a pending game join before sign-up
+        const pendingGameId = localStorage.getItem('pendingGameJoin');
+        
         // Use the existing signUp function which properly creates user profiles
         await signUp(email, password, { 
           name: email.split('@')[0], // Default name from email
           email 
         });
-        toast.success('Check your email for confirmation link!');
+        
+        // Note: With email confirmations disabled, user is immediately authenticated
+        // The useEffect above will handle redirect and game join automatically
+        // pendingGameJoin is preserved in localStorage and will be used by PublicGamePage
+        toast.success('Account created! Redirecting...');
       } else {
         await signIn(email, password);
         // User will be set by SimpleAuthProvider, useEffect above will redirect

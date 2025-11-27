@@ -176,59 +176,6 @@ function GameDetails() {
     }
   };
 
-  // Force scroll to top and PREVENT any scrolling for the first second
-  useEffect(() => {
-    let isLocked = true;
-    
-    const preventScroll = (e: Event) => {
-      if (isLocked) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.scrollTo(0, 0);
-      }
-    };
-    
-    const forceScrollToTop = () => {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-    
-    // Immediate scroll
-    forceScrollToTop();
-    
-    // Lock scrolling temporarily
-    window.addEventListener('scroll', preventScroll, { capture: true, passive: false });
-    document.addEventListener('scroll', preventScroll, { capture: true, passive: false });
-    
-    // Aggressive corrections
-    const timeouts = [
-      setTimeout(forceScrollToTop, 50),
-      setTimeout(forceScrollToTop, 100),
-      setTimeout(forceScrollToTop, 200),
-      setTimeout(forceScrollToTop, 400),
-      setTimeout(forceScrollToTop, 600),
-      setTimeout(forceScrollToTop, 800),
-    ];
-    
-    // Unlock after 1 second
-    const unlockTimeout = setTimeout(() => {
-      isLocked = false;
-      window.removeEventListener('scroll', preventScroll, { capture: true });
-      document.removeEventListener('scroll', preventScroll, { capture: true });
-      // Final scroll to top after unlocking
-      forceScrollToTop();
-    }, 1000);
-    
-    return () => {
-      isLocked = false;
-      window.removeEventListener('scroll', preventScroll, { capture: true });
-      document.removeEventListener('scroll', preventScroll, { capture: true });
-      timeouts.forEach(clearTimeout);
-      clearTimeout(unlockTimeout);
-    };
-  }, [gameId]);
-
   // Debug: Log route data structure
   useEffect(() => {
     if (game?.plannedRoute) {

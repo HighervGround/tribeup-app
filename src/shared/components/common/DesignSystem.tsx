@@ -366,6 +366,9 @@ function DesignSystem({ onBack }: DesignSystemProps) {
                       <Badge size="sm">Small</Badge>
                       <Badge size="default">Default</Badge>
                       <Badge size="lg">Large</Badge>
+                      <Badge size="icon" variant="secondary" aria-label="Notifications">
+                        <Bell className="size-4" />
+                      </Badge>
                     </div>
                   </div>
                   

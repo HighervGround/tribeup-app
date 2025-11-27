@@ -71,7 +71,7 @@ function GameDetails() {
 
   // Use React Query for game data and mutations
   const { data: game, isLoading, error: gameError } = useGame(gameId || '');
-  const { data: participants = [], isLoading: loadingPlayers, error: participantsError } = useGameParticipants(gameId || '');
+  const { data: participants = [], isLoading: loadingPlayers, error: participantsError, refetch: refetchParticipants } = useGameParticipants(gameId || '');
   const { toggleJoin, isLoading: actionLoading, getButtonText } = useGameJoinToggle();
   
   // Set up realtime subscription for participants updates
@@ -97,8 +97,10 @@ function GameDetails() {
   useEffect(() => {
     if (gameId) {
       console.log('🔄 GameDetails: gameId changed, participants should refetch:', gameId);
+      // Force refetch participants when gameId changes
+      refetchParticipants();
     }
-  }, [gameId]);
+  }, [gameId, refetchParticipants]);
 
   const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -128,6 +130,50 @@ function GameDetails() {
     cost: ''
   });
   const [deleteReason, setDeleteReason] = useState('');
+  const [capacity, setCapacity] = useState<any | null>(null);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+  
+  // Load initial capacity stats
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!gameId) return;
+      try {
+        const { data, error } = await supabase
+          .from('game_rsvp_stats')
+          .select('*')
+          .eq('game_id', gameId)
+          .single();
+        if (!cancelled && !error && data) {
+          setCapacity(data);
+        }
+      } catch (err) {
+        // Ignore errors, capacity is optional
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [gameId]);
+
+  // Refresh capacity when participants change
+  useEffect(() => {
+    if (!gameId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('game_rsvp_stats')
+          .select('*')
+          .eq('game_id', gameId)
+          .single();
+        if (!cancelled && !error && data) {
+          setCapacity(data);
+        }
+      } catch (err) {
+        // Ignore errors
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [gameId, participants.length]);
   
   // Process participants data to mark the host correctly
   const players = useMemo(() => {
@@ -160,23 +206,65 @@ function GameDetails() {
     return 'going';
   }, [user?.id, game?.isJoined]);
 
+  // Debug logging (moved after players and attendees are defined)
+  useEffect(() => {
+    console.log('📊 GameDetails participants data:', {
+      participants,
+      participantsLength: participants?.length,
+      loadingPlayers,
+      participantsError,
+      gameId,
+      playersLength: players?.length,
+      attendeesLength: attendees?.length
+    });
+  }, [participants, loadingPlayers, participantsError, gameId, players, attendees]);
+  
+  // Force refetch participants on mount if empty and not loading
+  useEffect(() => {
+    if (gameId && !loadingPlayers && participants.length === 0 && !participantsError) {
+      console.log('🔄 GameDetails: Participants empty, forcing refetch');
+      refetchParticipants();
+    }
+  }, [gameId, loadingPlayers, participants.length, participantsError, refetchParticipants]);
+
   // Handle RSVP status change
   const handleRSVPChange = async (status: RSVPStatus) => {
     if (!gameId || !user?.id || !game) return;
     
     try {
+      setRsvpError(null);
+      
       if (status === 'going' && !game.isJoined) {
         // Join the game
         await toggleJoin(game);
+        toast.success('Successfully joined the activity!');
       } else if (status !== 'going' && game.isJoined) {
         // Leave the game
         await toggleJoin(game);
+        toast.success('Left the activity');
       }
-      // Note: "maybe" and "not_going" would require additional API support
-      toast.success(status === 'going' ? 'Joined the game!' : 'Left the game');
-    } catch (error) {
+      
+      // Refresh capacity stats after RSVP change
+      try {
+        const { data, error } = await supabase
+          .from('game_rsvp_stats')
+          .select('*')
+          .eq('game_id', gameId)
+          .single();
+        if (!error && data) {
+          setCapacity(data);
+        }
+      } catch (err) {
+        // Ignore capacity refresh errors
+      }
+      
+      // Refetch participants to ensure UI is in sync
+      refetchParticipants();
+    } catch (error: any) {
       console.error('Failed to update RSVP:', error);
-      toast.error('Failed to update RSVP status');
+      const errorMessage = error?.message || 'Failed to update RSVP status';
+      setRsvpError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -211,7 +299,24 @@ function GameDetails() {
     return formatCalendarInfo(game.date, game.time);
   }, [game?.date, game?.time]);
 
-  const isFull = game ? game.totalPlayers >= game.maxPlayers : false;
+  // Capacity data from stats view
+  const capacityData = useMemo(() => {
+    if (capacity) {
+      return {
+        totalPlayers: capacity.total_rsvps ?? 0,
+        maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
+        availableSpots: capacity.capacity_remaining ?? 0
+      };
+    }
+    // Fallback to game data
+    return {
+      totalPlayers: game?.totalPlayers ?? 0,
+      maxPlayers: game?.maxPlayers ?? 0,
+      availableSpots: Math.max(0, (game?.maxPlayers ?? 0) - (game?.totalPlayers ?? 0))
+    };
+  }, [capacity, game?.maxPlayers, game?.totalPlayers]);
+
+  const isFull = capacityData.availableSpots === 0;
   const tags: string[] | undefined = game ? (game as any).tags : undefined;
 
   // Check if current user is the game creator
@@ -331,21 +436,47 @@ function GameDetails() {
 
   const handleJoinLeave = async () => {
     // Prevent multiple rapid clicks
-    if (actionLoading) return;
+    if (actionLoading || !game) return;
     
-    // Check authentication status
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    
-    // If user is not authenticated, show quick join modal
-    if (!authUser) {
-      console.log('👤 User not authenticated, showing login modal');
-      setShowQuickJoin(true);
-      return;
+    try {
+      setRsvpError(null);
+      
+      // Check authentication status
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      // If user is not authenticated, show quick join modal
+      if (!authUser) {
+        console.log('👤 User not authenticated, showing login modal');
+        setShowQuickJoin(true);
+        return;
+      }
+      
+      // User is authenticated, proceed with join/leave
+      console.log('✅ User authenticated, proceeding with join/leave');
+      await toggleJoin(game);
+      
+      // Refresh capacity stats after join/leave
+      try {
+        const { data, error } = await supabase
+          .from('game_rsvp_stats')
+          .select('*')
+          .eq('game_id', gameId)
+          .single();
+        if (!error && data) {
+          setCapacity(data);
+        }
+      } catch (err) {
+        // Ignore capacity refresh errors
+      }
+      
+      // Refetch participants to ensure UI is in sync
+      refetchParticipants();
+    } catch (error: any) {
+      console.error('Failed to join/leave game:', error);
+      const errorMessage = error?.message || 'Failed to update game status';
+      setRsvpError(errorMessage);
+      toast.error(errorMessage);
     }
-    
-    // User is authenticated, proceed with join/leave
-    console.log('✅ User authenticated, proceeding with join/leave');
-    toggleJoin(game);
   };
 
   const handleQuickJoinSuccess = async () => {
@@ -439,6 +570,99 @@ function GameDetails() {
       toast.success('Opening directions...');
     } catch (error) {
       toast.error('Failed to open directions');
+    }
+  };
+
+  const handleAddToCalendar = () => {
+    if (!game) return;
+    
+    // Create event details
+    const gameDateTime = new Date(`${game.date}T${game.time}`);
+    const endDateTime = new Date(gameDateTime);
+    
+    // Use game duration if available, otherwise default to 2 hours
+    const durationMinutes = typeof game.duration === 'number' 
+      ? game.duration 
+      : parseInt(String(game.duration)) || 120; // Default to 2 hours if not available
+    endDateTime.setMinutes(endDateTime.getMinutes() + durationMinutes);
+    
+    const title = `${game.sport}: ${game.title}`;
+    const description = `Join us for ${game.sport}!\n\n${game.description || ''}\n\nMax Players: ${game.maxPlayers || (game as any).max_players}\nCost: ${game.cost || 'Free'}`;
+    const location = game.location;
+    
+    // Format dates (YYYYMMDDTHHMMSSZ)
+    const formatDate = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    
+    // Detect device and use appropriate calendar
+    const userAgent = navigator.userAgent;
+    
+    if (/iPhone|iPad|iPod/.test(userAgent)) {
+      // iOS - Create .ics file and try to open with Calendar app
+      const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//TribeUp//TribeUp Social Sports//EN',
+        'BEGIN:VEVENT',
+        `UID:${Date.now()}-${Math.random().toString(36).substr(2, 9)}@tribeup.app`,
+        `DTSTART:${formatDate(gameDateTime)}`,
+        `DTEND:${formatDate(endDateTime)}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${description}`,
+        `LOCATION:${location}`,
+        `DTSTAMP:${formatDate(new Date())}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+      
+      const blob = new Blob([icsContent], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      
+      // Try to open with Calendar app
+      window.location.href = url;
+      
+      // Cleanup after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      
+    } else if (/Android/.test(userAgent)) {
+      // Android - Use Google Calendar
+      const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${formatDate(gameDateTime)}/${formatDate(endDateTime)}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+      window.open(googleUrl, '_blank');
+      
+    } else if (/Mac/.test(userAgent)) {
+      // macOS - Create .ics file for Calendar app
+      const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//TribeUp//TribeUp Social Sports//EN',
+        'BEGIN:VEVENT',
+        `UID:${Date.now()}-${Math.random().toString(36).substr(2, 9)}@tribeup.app`,
+        `DTSTART:${formatDate(gameDateTime)}`,
+        `DTEND:${formatDate(endDateTime)}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${description}`,
+        `LOCATION:${location}`,
+        `DTSTAMP:${formatDate(new Date())}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+      
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } else {
+      // Default - Google Calendar for all other devices
+      const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${formatDate(gameDateTime)}/${formatDate(endDateTime)}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+      window.open(googleUrl, '_blank');
     }
   };
 
@@ -661,54 +885,81 @@ function GameDetails() {
           )}
           
           <CardContent className="p-6">
-            {/* Game Info Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div>{calendarInfo.date}</div>
-                  <div className="text-sm text-muted-foreground">{formatTimeString(game.time)}</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div>
-                    {(() => {
-                      // Ensure duration is a valid number
-                      let minutes = typeof game.duration === 'number' ? game.duration : parseInt(game.duration as any) || 60;
-                      if (isNaN(minutes) || minutes <= 0) {
-                        minutes = 60; // Default fallback
-                      }
-                      
-                      if (minutes < 60) {
-                        return `${minutes} min`;
-                      } else if (minutes === 60) {
-                        return '1 hour';
-                      } else {
-                        const hours = Math.floor(minutes / 60);
-                        const remainingMinutes = minutes % 60;
-                        if (remainingMinutes === 0) {
-                          return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-                        } else {
-                          return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${remainingMinutes} min`;
-                        }
-                      }
-                    })()}
+            {/* Game Info Grid - even grid layout matching PublicGamePage */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Players */}
+              <div className="flex items-start gap-3">
+                <Users className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1">
+                    {capacity ? (
+                      <>
+                        {(capacity.total_rsvps ?? 0)}/{(capacity.capacity || game.maxPlayers) ?? 0} players
+                      </>
+                    ) : (
+                      <>
+                        {(game.totalPlayers ?? 0)}/{(game.maxPlayers ?? 0)} players
+                      </>
+                    )}
                   </div>
-                  <div className="text-sm text-muted-foreground">Duration</div>
+                  <div className="text-sm text-muted-foreground">
+                    {capacityData && capacityData.availableSpots > 0 ? (
+                      <span className="text-green-600 dark:text-green-400">
+                        {capacityData.availableSpots} spot{capacityData.availableSpots !== 1 ? 's' : ''} available
+                      </span>
+                    ) : (
+                      'Capacity'
+                    )}
+                  </div>
                 </div>
               </div>
               
-              
-              <div className="flex items-center gap-3">
-                <DollarSign className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <div>{formatCost(game.cost)}</div>
+              {/* Cost */}
+              <div className="flex items-start gap-3">
+                <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1">{formatCost(game.cost)}</div>
                   <div className="text-sm text-muted-foreground">Cost</div>
                 </div>
               </div>
+              
+              {/* Location */}
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={handleDirections}
+                    className="text-left hover:opacity-80 transition-opacity cursor-pointer group w-full"
+                  >
+                    <div className="font-medium mb-1 group-hover:text-primary">
+                      {(() => {
+                        if (!game.location) return 'Location TBD';
+                        // Parse address and show only street address + neighborhood
+                        const parts = game.location.split(',').map((s: string) => s.trim());
+                        // Skip first part if it's a single word/sport name (like "NBA")
+                        // Show street number + street name (usually parts 1-2 or 2-3)
+                        const startIdx = parts[0] && parts[0].length < 5 && !parts[0].match(/\d/) ? 1 : 0;
+                        // Take street address (usually 2 parts: number + street name)
+                        // Plus one more part for neighborhood if available
+                        return parts.slice(startIdx, startIdx + 3).join(', ');
+                      })()}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Location</div>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Date and Time */}
+              <button
+                onClick={handleAddToCalendar}
+                className="flex items-start gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer group w-full"
+              >
+                <Calendar className="w-5 h-5 text-muted-foreground mt-0.5 group-hover:text-primary" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1 group-hover:text-primary">{calendarInfo.date}</div>
+                  <div className="text-sm text-muted-foreground">{formatTimeString(game.time)}</div>
+                </div>
+              </button>
             </div>
 
             {/* Tags */}
@@ -733,7 +984,7 @@ function GameDetails() {
                   {game.isJoined ? 'Leaving...' : 'Joining...'}
                 </>
               ) : isFull && !game.isJoined ? (
-                'Game is Full'
+                `Game is Full (${capacityData.totalPlayers}/${capacityData.maxPlayers})`
               ) : !user ? (
                 'Join Game - Sign Up'
               ) : (
@@ -762,7 +1013,36 @@ function GameDetails() {
           <CardContent>
             <div className="space-y-4">
               <div>
-                <div>{game.location}</div>
+                <div>
+                  {(() => {
+                    if (!game.location) return 'Location TBD';
+                    // Parse address and show street address + neighborhood + city + state (but not county/zip/country)
+                    const parts = game.location.split(',').map((s: string) => s.trim());
+                    // Skip first part if it's a single word/sport name (like "NBA")
+                    const startIdx = parts[0] && parts[0].length < 5 && !parts[0].match(/\d/) ? 1 : 0;
+                    
+                    // Find where to stop - exclude county, zip, country
+                    // Look for patterns like "County", zip codes (5 digits), "United States"
+                    let endIdx = parts.length;
+                    for (let i = startIdx; i < parts.length; i++) {
+                      const part = parts[i].toLowerCase();
+                      if (
+                        part.includes('county') ||
+                        part.includes('community board') ||
+                        /^\d{5}$/.test(part) || // Zip code
+                        part.includes('united states') ||
+                        part === 'usa'
+                      ) {
+                        endIdx = i;
+                        break;
+                      }
+                    }
+                    
+                    // Take up to 5 parts (street + neighborhood + city + state)
+                    const maxParts = Math.min(5, endIdx - startIdx);
+                    return parts.slice(startIdx, startIdx + maxParts).join(', ');
+                  })()}
+                </div>
               </div>
               
               <div 
@@ -1232,18 +1512,30 @@ function GameDetails() {
           </CardContent>
         </Card>
 
+        {/* RSVP Error Alert */}
+        {rsvpError && (
+          <Alert variant="destructive">
+            <AlertDescription>{rsvpError}</AlertDescription>
+          </Alert>
+        )}
+
         {/* RSVP Section */}
         <RSVPSection
           attendees={attendees}
           currentUserId={user?.id}
           userRSVPStatus={userRSVPStatus}
-          maxPlayers={game.maxPlayers}
-          currentPlayers={!loadingPlayers ? players.length : (game.totalPlayers ?? 0)}
+          maxPlayers={capacityData.maxPlayers}
+          currentPlayers={capacityData.totalPlayers}
           onRSVPChange={handleRSVPChange}
           onInvite={() => setShowInvite(true)}
           onAttendeeClick={(attendee) => {
-            if (attendee.id && !attendee.id.startsWith('guest-')) {
-              navigateToUser(attendee.id);
+            // Navigate to user profile if attendee has a valid user ID
+            if (attendee?.id && typeof attendee.id === 'string' && !attendee.id.startsWith('guest-') && !attendee.id.startsWith('temp-')) {
+              try {
+                navigateToUser(attendee.id);
+              } catch (error) {
+                console.error('Failed to navigate to user profile:', error);
+              }
             }
           }}
           showFullList={true}

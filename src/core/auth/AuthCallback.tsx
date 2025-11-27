@@ -113,12 +113,27 @@ function AuthCallback() {
           }
         }, 100); // Small delay to allow UI to update first
 
-        // Check for pending game join
+        // Check for pending game join and automatically join the game
         const pendingGameId = localStorage.getItem('pendingGameJoin');
         if (pendingGameId) {
-          localStorage.removeItem('pendingGameJoin');
-          // Redirect to game page inside app shell
-          setTimeout(() => navigate(`/app/game/${pendingGameId}`), 800);
+          try {
+            console.log('[AuthCallback] Auto-joining game after authentication:', pendingGameId);
+            setMessage('Joining activity...');
+            
+            // Join the game using authenticated RPC
+            await SupabaseService.joinGame(pendingGameId);
+            
+            console.log('[AuthCallback] Successfully joined game');
+            localStorage.removeItem('pendingGameJoin');
+            
+            // Redirect to public game page to show success state
+            setTimeout(() => navigate(`/public/game/${pendingGameId}`), 800);
+          } catch (joinError: any) {
+            console.error('[AuthCallback] Failed to join game:', joinError);
+            // Still redirect but user will see error on game page
+            localStorage.removeItem('pendingGameJoin');
+            setTimeout(() => navigate(`/public/game/${pendingGameId}`), 800);
+          }
         } else {
           // Send authenticated users to the app layout, not public landing
           setTimeout(() => navigate('/app'), 800);

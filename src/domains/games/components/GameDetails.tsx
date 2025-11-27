@@ -37,6 +37,7 @@ import {
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { useAppStore } from '@/store/appStore';
 import { useGame, useGameParticipants } from '@/domains/games/hooks/useGames';
+import { useGameParticipantsRealtime } from '@/domains/games/hooks/useGameParticipants';
 import { useGameJoinToggle } from '@/domains/games/hooks/useGameJoinToggle';
 import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 import { QuickJoinModal } from './QuickJoinModal';
@@ -72,6 +73,9 @@ function GameDetails() {
   const { data: game, isLoading, error: gameError } = useGame(gameId || '');
   const { data: participants = [], isLoading: loadingPlayers, error: participantsError } = useGameParticipants(gameId || '');
   const { toggleJoin, isLoading: actionLoading, getButtonText } = useGameJoinToggle();
+  
+  // Set up realtime subscription for participants updates
+  useGameParticipantsRealtime(gameId || null);
   
   // Add timeout for loading states to prevent infinite loading
   const [loadingTimeout, setLoadingTimeout] = useState(false);

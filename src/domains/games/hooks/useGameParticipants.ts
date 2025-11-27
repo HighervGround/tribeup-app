@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { gameKeys } from './useGames';
 
-export function useGameParticipants(gameId: string | null) {
+export function useGameParticipantsRealtime(gameId: string | null) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!gameId) return;
 
-    console.log('🔗 Setting up realtime broadcast subscription for game participants:', gameId);
+    console.log('🔗 Setting up realtime subscription for game participants:', gameId);
 
     // Use the new broadcast channel format: game:{game_id}:participants
     const channel = supabase
@@ -20,17 +21,19 @@ export function useGameParticipants(gameId: string | null) {
       })
       .on('broadcast', { event: 'participant_join' }, (payload) => {
         console.log('👥 Participant joined via broadcast:', payload);
-        queryClient.invalidateQueries({ queryKey: ['game', gameId] });
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-        queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
+        // Invalidate with correct query keys
+        queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+        queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
+        queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       })
       .on('broadcast', { event: 'participant_leave' }, (payload) => {
         console.log('👋 Participant left via broadcast:', payload);
-        queryClient.invalidateQueries({ queryKey: ['game', gameId] });
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-        queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
+        // Invalidate with correct query keys
+        queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+        queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
+        queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       })
-      // Also keep postgres_changes as fallback
+      // Also keep postgres_changes as fallback for direct DB changes
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -38,9 +41,10 @@ export function useGameParticipants(gameId: string | null) {
         filter: `game_id=eq.${gameId}`
       }, (payload) => {
         console.log('👥 Game participants changed (postgres):', payload);
-        queryClient.invalidateQueries({ queryKey: ['game', gameId] });
-        queryClient.invalidateQueries({ queryKey: ['games'] });
-        queryClient.invalidateQueries({ queryKey: ['gameParticipants', gameId] });
+        // Invalidate with correct query keys
+        queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+        queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
+        queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       })
       .subscribe((status) => {
         console.log('📡 Game participants subscription status:', status);
@@ -49,7 +53,7 @@ export function useGameParticipants(gameId: string | null) {
 
     return () => {
       console.log('🔌 Unsubscribing from game participants:', gameId);
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
       setIsSubscribed(false);
     };
   }, [gameId, queryClient]);

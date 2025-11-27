@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -9,13 +9,14 @@ import {
   Calendar, 
   MapPin, 
   Users, 
-  Clock,
   Share2,
   ExternalLink,
   CheckCircle,
   LogIn,
   Mail,
-  Chrome
+  Chrome,
+  Navigation,
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePublicGame } from '@/domains/games/hooks/usePublicGame';
@@ -24,11 +25,14 @@ import { SupabaseService } from '@/core/database/supabaseService';
 import { GameCapacityLine } from '@/shared/components/ui/GameCapacity';
 import { env } from '@/core/config/envUtils';
 import { brandColors } from '@/shared/config/theme';
+import { SimpleCalendarButton } from '@/shared/components/common/SimpleCalendarButton';
+import { formatCalendarInfo, formatTimeString, formatCost } from '@/shared/utils/dateUtils';
+import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 
 export default function PublicGamePage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { data: game, isLoading: gameLoading, error: gameError } = usePublicGame(gameId || '');
+  const { data: game, isLoading: gameLoading } = usePublicGame(gameId || '');
   const loading = gameLoading;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -45,7 +49,7 @@ export default function PublicGamePage() {
     checkAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setIsAuthenticated(!!session);
       // If user just authenticated and we have a pending join, auto-join
       if (session && gameId) {
@@ -204,6 +208,121 @@ export default function PublicGamePage() {
     navigate('/auth?redirect=' + encodeURIComponent(window.location.pathname));
   };
 
+  const handleAddToCalendar = () => {
+    if (!game) return;
+    
+    // Create event details
+    const gameDateTime = new Date(`${game.date}T${game.time}`);
+    const endDateTime = new Date(gameDateTime);
+    endDateTime.setHours(endDateTime.getHours() + 2); // Default 2 hours
+    
+    const title = `${game.sport}: ${game.title}`;
+    const description = `Join us for ${game.sport}!\n\n${game.description || ''}\n\nMax Players: ${game.maxPlayers || (game as any).max_players}\nCost: ${game.cost || 'Free'}`;
+    const location = game.location;
+    
+    // Format dates (YYYYMMDDTHHMMSSZ)
+    const formatDate = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    
+    // Detect device and use appropriate calendar
+    const userAgent = navigator.userAgent;
+    
+    if (/iPhone|iPad|iPod/.test(userAgent)) {
+      // iOS - Create .ics file and try to open with Calendar app
+      const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//TribeUp//TribeUp Social Sports//EN',
+        'BEGIN:VEVENT',
+        `UID:${Date.now()}-${Math.random().toString(36).substr(2, 9)}@tribeup.app`,
+        `DTSTART:${formatDate(gameDateTime)}`,
+        `DTEND:${formatDate(endDateTime)}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${description}`,
+        `LOCATION:${location}`,
+        `DTSTAMP:${formatDate(new Date())}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+      
+      const blob = new Blob([icsContent], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      
+      // Try to open with Calendar app
+      window.location.href = url;
+      
+      // Cleanup after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      
+    } else if (/Android/.test(userAgent)) {
+      // Android - Use Google Calendar
+      const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${formatDate(gameDateTime)}/${formatDate(endDateTime)}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+      window.open(googleUrl, '_blank');
+      
+    } else if (/Mac/.test(userAgent)) {
+      // macOS - Create .ics file for Calendar app
+      const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//TribeUp//TribeUp Social Sports//EN',
+        'BEGIN:VEVENT',
+        `UID:${Date.now()}-${Math.random().toString(36).substr(2, 9)}@tribeup.app`,
+        `DTSTART:${formatDate(gameDateTime)}`,
+        `DTEND:${formatDate(endDateTime)}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${description}`,
+        `LOCATION:${location}`,
+        `DTSTAMP:${formatDate(new Date())}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+      
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } else {
+      // Default - Google Calendar for all other devices
+      const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${formatDate(gameDateTime)}/${formatDate(endDateTime)}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+      window.open(googleUrl, '_blank');
+    }
+  };
+
+  const handleDirections = () => {
+    const address = game.location || "Location not specified";
+    const encodedAddress = encodeURIComponent(address);
+    
+    // Try to open in native maps app first, fallback to Google Maps
+    const mapsUrl = `https://maps.google.com/maps?q=${encodedAddress}&t=m&z=16`;
+    
+    try {
+      // For mobile devices, try to open native maps
+      if (navigator.userAgent.match(/(iPhone|iPad|iPod|Android)/)) {
+        const nativeUrl = `maps://maps.google.com/maps?q=${encodedAddress}`;
+        window.location.href = nativeUrl;
+        
+        // Fallback after a delay if native app doesn't open
+        setTimeout(() => {
+          window.open(mapsUrl, '_blank');
+        }, 500);
+      } else {
+        // Desktop - open in new tab
+        window.open(mapsUrl, '_blank');
+      }
+    } catch (error) {
+      // Final fallback
+      window.open(mapsUrl, '_blank');
+    }
+  };
+
   // Capacity data
   const capacityData = useMemo(() => {
     if (!capacity) return null;
@@ -269,11 +388,32 @@ export default function PublicGamePage() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Game Details */}
         <Card className="mb-8">
+          {game.imageUrl && (
+            <div className="aspect-video overflow-hidden">
+              <ImageWithFallback
+                src={game.imageUrl}
+                alt={game.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          {!game.imageUrl && (
+            <div className="p-4 border-b">
+              <Badge className={`${(game as any).sportColor || 'bg-primary'} text-white border-none`}>
+                {game.sport}
+              </Badge>
+            </div>
+          )}
+          
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{game.title}</CardTitle>
-                <Badge className="mb-4">{game.sport}</Badge>
+                {game.imageUrl && (
+                  <Badge className={`${(game as any).sportColor || 'bg-primary'} text-white border-none`}>
+                    {game.sport}
+                  </Badge>
+                )}
               </div>
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="w-4 h-4 mr-2" />
@@ -282,36 +422,14 @@ export default function PublicGamePage() {
             </div>
           </CardHeader>
           
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{game.location}</p>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{game.date}</p>
-                  <p className="text-sm text-muted-foreground">Date</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{game.time}</p>
-                  <p className="text-sm text-muted-foreground">Time</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">
+          <CardContent className="p-6">
+            {/* Game Info Grid - even grid layout */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Players */}
+              <div className="flex items-start gap-3">
+                <Users className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1">
                     {capacity ? (
                       <>
                         {capacity.total_rsvps ?? 0}/{capacity.capacity || Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
@@ -321,27 +439,95 @@ export default function PublicGamePage() {
                         {game.totalPlayers ?? 0}/{game.maxPlayers ?? 0} players
                       </>
                     )}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Capacity</p>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {capacityData && capacityData.availableSpots > 0 ? (
+                      <span className="text-green-600 dark:text-green-400">
+                        {capacityData.availableSpots} spot{capacityData.availableSpots !== 1 ? 's' : ''} available
+                      </span>
+                    ) : (
+                      'Capacity'
+                    )}
+                  </div>
                 </div>
               </div>
+              
+              {/* Cost */}
+              <div className="flex items-start gap-3">
+                <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1">{formatCost(game.cost)}</div>
+                  <div className="text-sm text-muted-foreground">Cost</div>
+                </div>
+              </div>
+              
+              {/* Location */}
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={handleDirections}
+                    className="text-left hover:opacity-80 transition-opacity cursor-pointer group w-full"
+                  >
+                    <div className="font-medium mb-1 group-hover:text-primary">
+                      {(() => {
+                        if (!game.location) return 'Location TBD';
+                        // Parse address and show only street address + neighborhood
+                        const parts = game.location.split(',').map((s: string) => s.trim());
+                        // Skip first part if it's a single word/sport name (like "NBA")
+                        // Show street number + street name (usually parts 1-2 or 2-3)
+                        const startIdx = parts[0] && parts[0].length < 5 && !parts[0].match(/\d/) ? 1 : 0;
+                        // Take street address (usually 2 parts: number + street name)
+                        // Plus one more part for neighborhood if available
+                        return parts.slice(startIdx, startIdx + 3).join(', ');
+                      })()}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Location</div>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Date and Time */}
+              <button
+                onClick={handleAddToCalendar}
+                className="flex items-start gap-3 text-left hover:opacity-80 transition-opacity cursor-pointer group w-full"
+              >
+                <Calendar className="w-5 h-5 text-muted-foreground mt-0.5 group-hover:text-primary" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1 group-hover:text-primary">{formatCalendarInfo(game.date, game.time)?.date || game.date}</div>
+                  <div className="text-sm text-muted-foreground">{formatTimeString(game.time)}</div>
+                </div>
+              </button>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1"
+                onClick={handleDirections}
+              >
+                <Navigation className="w-4 h-4 mr-2" />
+                Get Directions
+              </Button>
+              <SimpleCalendarButton 
+                game={game} 
+                variant="outline" 
+                size="sm"
+                className="flex-1"
+              />
             </div>
             
             {game.description && (
               <>
-                <Separator />
+                <Separator className="my-6" />
                 <div>
                   <h3 className="font-medium mb-2">About this activity</h3>
                   <p className="text-muted-foreground">{game.description}</p>
                 </div>
               </>
             )}
-            
-            <div className="bg-muted/50 rounded-lg p-4">
-              <p className="text-sm">
-                <strong>Cost:</strong> {game.cost || 'Free'}
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -364,11 +550,11 @@ export default function PublicGamePage() {
             className="mb-8 border"
             style={{
               background: `linear-gradient(to bottom, rgba(232, 90, 43, 0.03), rgba(232, 90, 43, 0.01))`,
-              borderColor: `${brandColors.primaryMuted || brandColors.primary}30`
+              borderColor: `${brandColors.primary}30`
             }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <LogIn className="w-5 h-5" style={{ color: brandColors.primaryMuted || brandColors.primary }} />
+                <LogIn className="w-5 h-5" style={{ color: brandColors.primary }} />
                 Join this Activity
               </CardTitle>
             </CardHeader>
@@ -395,6 +581,14 @@ export default function PublicGamePage() {
                     }}>
                     {isJoining ? 'Joining...' : 'Join Activity'}
                   </Button>
+                  
+                  <SimpleCalendarButton 
+                    game={game} 
+                    variant="outline" 
+                    size="default"
+                    className="w-full"
+                  />
+                  
                   {joiningError && (
                     <Alert variant="destructive">
                       <AlertDescription>{joiningError}</AlertDescription>
@@ -424,6 +618,13 @@ export default function PublicGamePage() {
                     <Mail className="w-4 h-4 mr-2" />
                     Continue with Email
                   </Button>
+                  
+                  <SimpleCalendarButton 
+                    game={game} 
+                    variant="outline" 
+                    size="default"
+                    className="w-full"
+                  />
                   
                   <p className="text-xs text-muted-foreground text-center">
                     By joining, you'll receive updates about this activity.

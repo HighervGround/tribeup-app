@@ -107,8 +107,9 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                     <Icon className="w-5 h-5 flex-shrink-0" />
                     {(item.showBadge || item.path === '/notifications') && unreadCount > 0 && (
                       <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-4 min-w-4 p-0 text-xs flex items-center justify-center"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute -top-1 -right-1 h-4 min-w-4 p-0 flex items-center justify-center"
                       >
                         {unreadCount > 99 ? '99+' : unreadCount}
                       </Badge>
@@ -119,7 +120,7 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
                       <div className="font-medium flex items-center gap-2">
                         {item.label}
                         {(item.showBadge || item.path === '/notifications') && unreadCount > 0 && (
-                          <Badge variant="destructive" className="h-5 px-2 text-xs">
+                          <Badge variant="destructive" size="sm">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </Badge>
                         )}

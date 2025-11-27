@@ -356,6 +356,16 @@ function DesignSystem({ onBack }: DesignSystemProps) {
                       <Badge variant="secondary">Secondary</Badge>
                       <Badge variant="outline">Outline</Badge>
                       <Badge variant="destructive">Destructive</Badge>
+                      <Badge variant="orange">Orange</Badge>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="mb-3">Badge Sizes</h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge size="sm">Small</Badge>
+                      <Badge size="default">Default</Badge>
+                      <Badge size="lg">Large</Badge>
                     </div>
                   </div>
                   

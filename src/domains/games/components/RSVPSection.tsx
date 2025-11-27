@@ -64,7 +64,7 @@ export function RSVPSection({
                   {going.length} {going.length === 1 ? 'person' : 'people'} going
                 </span>
                 {maxPlayers && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" size="sm">
                     {currentPlayers || going.length}/{maxPlayers}
                   </Badge>
                 )}

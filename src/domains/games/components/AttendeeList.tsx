@@ -154,7 +154,7 @@ export function AttendeeList({
                     {going.length > 0 && (
                       <div className="p-3 space-y-2">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="default" className="text-xs">
+                          <Badge variant="default" size="sm">
                             Going ({going.length})
                           </Badge>
                         </div>
@@ -176,12 +176,12 @@ export function AttendeeList({
                               showActions={false}
                             />
                             {attendee.isHost && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" size="sm">
                                 Host
                               </Badge>
                             )}
                             {attendee.isOrganizer && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" size="sm">
                                 Organizer
                               </Badge>
                             )}
@@ -194,7 +194,7 @@ export function AttendeeList({
                     {maybe.length > 0 && (
                       <div className="p-3 space-y-2 border-t border-border">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" size="sm">
                             Maybe ({maybe.length})
                           </Badge>
                         </div>
@@ -224,7 +224,7 @@ export function AttendeeList({
                     {notGoing.length > 0 && (
                       <div className="p-3 space-y-2 border-t border-border">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" size="sm">
                             Not Going ({notGoing.length})
                           </Badge>
                         </div>

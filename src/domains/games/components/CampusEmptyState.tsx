@@ -1,7 +1,7 @@
-import React from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Plus, MapPin, Users, Calendar } from 'lucide-react';
+import { brandColors } from '@/shared/config/theme';
 
 interface CampusEmptyStateProps {
   onCreateGame: () => void;
@@ -39,9 +39,13 @@ export function CampusEmptyState({
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
             <Button
               onClick={onCreateGame}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="gap-2 text-white hover:opacity-90"
+              style={{ 
+                backgroundColor: brandColors.primary, 
+                borderColor: brandColors.primary
+              }}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Create Your First Activity
             </Button>
 

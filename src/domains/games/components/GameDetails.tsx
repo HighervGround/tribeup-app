@@ -36,7 +36,8 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { useAppStore } from '@/store/appStore';
-import { useGame, useGameParticipants } from '@/domains/games/hooks/useGames';
+import { useQueryClient } from '@tanstack/react-query';
+import { useGame, useGameParticipants, gameKeys } from '@/domains/games/hooks/useGames';
 import { useGameParticipantsRealtime } from '@/domains/games/hooks/useGameParticipants';
 import { useGameJoinToggle } from '@/domains/games/hooks/useGameJoinToggle';
 import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
@@ -57,6 +58,7 @@ function GameDetails() {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { user } = useAppStore();
+  const queryClient = useQueryClient();
   
   // Helper function for difficulty color coding
   const getDifficultyColor = (difficulty: string) => {
@@ -407,9 +409,13 @@ function GameDetails() {
             )}
           </div>
           <div className="space-y-2">
-            <Button onClick={() => window.location.reload()} className="w-full">
+            <Button onClick={async () => {
+              // Clear all caches and refetch
+              await queryClient.resetQueries();
+              await queryClient.refetchQueries();
+            }} className="w-full">
               <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh Page
+              Refresh Data
             </Button>
             <Button variant="outline" onClick={() => navigate('/')} className="w-full">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -515,7 +521,10 @@ function GameDetails() {
         if (error.code === '23505') {
           console.log('✅ User already in game (duplicate), proceeding anyway');
           toast.success('Welcome! You\'re joining the game.');
-          window.location.reload();
+          // Invalidate queries to update UI
+          await queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
+          await queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+          refetchParticipants();
         } else {
           console.error('❌ Failed to join game after signup:', error);
           toast.error('Failed to join game. Please try clicking Join again.');
@@ -524,8 +533,11 @@ function GameDetails() {
         console.log('✅ Successfully joined game after signup');
         toast.success('Welcome! You\'ve successfully joined the game.');
         
-        // Refresh the page to update all game data
-        window.location.reload();
+        // Invalidate and refetch game data
+        await queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
+        await queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
+        await queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+        refetchParticipants();
       }
     } else {
       console.warn('⚠️ User not authenticated after quick join success');
@@ -740,7 +752,10 @@ function GameDetails() {
       
       // Use React Query invalidation instead of hard refresh
       // This will refetch the data and update the UI
-      window.location.reload(); // TODO: Replace with proper React Query invalidation
+      await queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
+      await queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
+      // Optionally refetch immediately for instant update
+      await queryClient.refetchQueries({ queryKey: gameKeys.detail(gameId) });
     } catch (error: any) {
       console.error('[Edit] Update failed:', error);
       console.error('[Edit] Full error details:', {

@@ -410,9 +410,9 @@ function GameDetails() {
           </div>
           <div className="space-y-2">
             <Button onClick={async () => {
-              // Clear all caches and refetch
-              await queryClient.resetQueries();
-              await queryClient.refetchQueries();
+              // Clear game-related caches and refetch
+              await queryClient.resetQueries({ queryKey: gameKeys.all });
+              await queryClient.refetchQueries({ queryKey: gameKeys.all });
             }} className="w-full">
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh Data
@@ -524,7 +524,6 @@ function GameDetails() {
           // Invalidate queries to update UI
           await queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
           await queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
-          refetchParticipants();
         } else {
           console.error('❌ Failed to join game after signup:', error);
           toast.error('Failed to join game. Please try clicking Join again.');
@@ -537,7 +536,6 @@ function GameDetails() {
         await queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
         await queryClient.invalidateQueries({ queryKey: gameKeys.participants(gameId) });
         await queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
-        refetchParticipants();
       }
     } else {
       console.warn('⚠️ User not authenticated after quick join success');

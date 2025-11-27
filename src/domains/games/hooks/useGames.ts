@@ -141,12 +141,13 @@ export function useGameParticipants(gameId: string) {
       return await SupabaseService.getGameParticipants(gameId);
     },
     enabled: !!gameId,
-    staleTime: 2 * 60 * 1000, // 2 minutes (increased from 0 to reduce refetches)
-    gcTime: 10 * 60 * 1000, // 10 minutes (increased)
+    staleTime: 30 * 1000, // 30 seconds - shorter to allow realtime updates to take effect
+    gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    refetchOnWindowFocus: false, // Disabled to reduce unnecessary refetches
+    refetchOnWindowFocus: true, // Re-enable to catch updates when user returns to tab
     refetchOnMount: true, // Always refetch when component mounts
+    refetchOnReconnect: true, // Refetch when network reconnects
     meta: {
       errorMessage: 'Failed to load game participants'
     }

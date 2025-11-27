@@ -1617,18 +1617,26 @@ export class SupabaseService {
       // Process authenticated participants
       if (participants && participants.length > 0) {
         const userIds = participants.map(p => p.user_id).filter(Boolean);
+        console.log('🔍 [getGameParticipants] User IDs to fetch:', userIds);
         
         // Fetch user profiles separately - use 'users' table, not 'user_profiles'
         let usersMap = new Map();
         if (userIds.length > 0) {
           const { data: users, error: usersError } = await supabase
             .from('users')
-            .select('id, full_name, username, avatar_url')
+            .select('id, full_name, username, avatar_url, email')
             .in('id', userIds);
           
-          if (!usersError && users) {
-            users.forEach(u => usersMap.set(u.id, u));
+          if (usersError) {
+            console.error('❌ [getGameParticipants] Error fetching user profiles:', usersError);
+          } else {
+            console.log('🔍 [getGameParticipants] Fetched user profiles:', users?.length || 0);
+            if (users) {
+              users.forEach(u => usersMap.set(u.id, u));
+            }
           }
+        } else {
+          console.warn('⚠️ [getGameParticipants] No user IDs found in participants');
         }
 
         participants.forEach(participant => {

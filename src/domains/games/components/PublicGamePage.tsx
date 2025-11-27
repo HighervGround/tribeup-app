@@ -172,7 +172,8 @@ export default function PublicGamePage() {
     if (!gameId) return;
     // Store game ID for post-auth join
     localStorage.setItem('pendingGameJoin', gameId);
-    navigate('/auth?redirect=' + encodeURIComponent(`/public/game/${gameId}`));
+    // Add method=email to auto-show email form on auth page
+    navigate('/auth?redirect=' + encodeURIComponent(`/public/game/${gameId}`) + '&method=email');
   };
 
   const handleShare = async () => {

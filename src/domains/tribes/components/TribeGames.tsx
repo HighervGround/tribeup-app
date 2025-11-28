@@ -5,6 +5,7 @@ import { Calendar, MapPin, Users, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 import { formatEventHeader } from '@/shared/utils/dateUtils';
+import { EmptyState } from '@/shared/components/common/EmptyState';
 
 interface TribeGamesProps {
   tribeId: string;
@@ -30,8 +31,18 @@ export function TribeGames({ tribeId }: TribeGamesProps) {
   if (!games || games.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">No games organized by this tribe yet</p>
+        <CardContent className="p-0">
+          <EmptyState
+            variant="no-games"
+            title="No games in this tribe yet"
+            description="Be the first to organize a game for your tribe members!"
+            primaryAction={{
+              label: 'Create Game',
+              onClick: handleCreateGame,
+              icon: <Plus className="w-4 h-4" />,
+            }}
+            size="md"
+          />
         </CardContent>
       </Card>
     );

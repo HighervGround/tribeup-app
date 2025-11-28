@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/core/database/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/shared/utils/utils';
+import { NoMessagesEmptyState } from '@/shared/components/common/EmptyState';
 interface ChatMessage {
   id: string;
   game_id: string;
@@ -338,11 +339,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
             </div>
           ) : messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center text-muted-foreground">
-                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No messages yet</p>
-                <p className="text-sm">Be the first to say something!</p>
-              </div>
+              <NoMessagesEmptyState />
             </div>
           ) : (
             groupedMessages.map((group, groupIndex) => (

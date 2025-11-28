@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
 import { MoreVertical } from 'lucide-react';
+import { NoMessagesEmptyState } from '@/shared/components/common/EmptyState';
 
 // Simple relative time formatter
 function formatRelativeTime(dateStr: string): string {
@@ -275,9 +276,7 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
             <>
               <ScrollArea className="flex-1 p-4">
                 {messages.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    No messages yet. Start the conversation!
-                  </div>
+                  <NoMessagesEmptyState isChannel={true} />
                 ) : (
                   <div className="space-y-4">
                     {messages.map((msg: any) => (

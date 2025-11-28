@@ -282,7 +282,7 @@ function Settings() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
-              <Shield className="w-5 h-5" />
+              <LogOut className="w-5 h-5" />
               Account
             </CardTitle>
           </CardHeader>

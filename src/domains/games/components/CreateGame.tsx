@@ -17,6 +17,7 @@ import { useGeolocation } from '@/domains/locations/hooks/useGeolocation';
 import { systemConfig } from '@/core/config/systemConfig';
 import { SportPicker, DEFAULT_SPORTS } from '@/domains/games/components';
 import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
+import { analyticsService } from '@/core/analytics/analyticsService';
 
 interface FormData {
   sport: string;
@@ -103,7 +104,8 @@ function CreateGame() {
     cost: 'FREE',
     imageUrl: '',
     plannedRoute: null as any,
-    tribeId: ''
+    tribeId: '',
+    skillLevel: '' // Optional skill level
   });
 
   // Read tribeId from navigation state (when coming from TribeGames)
@@ -653,11 +655,23 @@ function CreateGame() {
         description: '', // Default empty description
         imageUrl: formData.imageUrl || null,
         plannedRoute: plannedRoute,
-        tribeId: formData.tribeId || undefined
+        tribeId: formData.tribeId || undefined,
+        skillLevel: formData.skillLevel || undefined
       };
       
-      await SupabaseService.createGame(payload as any);
+      const createdGame = await SupabaseService.createGame(payload as any);
       toast.success('Activity created successfully!');
+      
+      // Track game creation event
+      if (createdGame?.id) {
+        analyticsService.trackEvent('create_game', {
+          game_id: createdGame.id,
+          sport: payload.sport,
+          max_players: payload.maxPlayers,
+          has_tribe: !!payload.tribeId,
+        });
+      }
+      
       navigate('/');
     } catch (error) {
       console.error('Error creating game:', error);
@@ -1076,6 +1090,30 @@ function CreateGame() {
                     <p className="text-sm text-destructive">{errors.duration}</p>
                   )}
                 </div>
+
+                {/* Skill Level Selection (Optional) */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">
+                    Skill Level <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                  </label>
+                  <Select 
+                    value={formData.skillLevel || 'none'} 
+                    onValueChange={(value) => handleInputChange('skillLevel', value === 'none' ? '' : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Levels" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">All Levels</SelectItem>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Help players find games that match their skill level
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1228,7 +1266,12 @@ function CreateGame() {
                         <span className="text-sm font-medium text-muted-foreground">Duration:</span>
                         <span className="text-sm">{formData.duration} minutes</span>
                       </div>
-                      {/* Skill level removed - not stored in database */}
+                      {formData.skillLevel && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Skill Level:</span>
+                          <span className="text-sm capitalize">{formData.skillLevel}</span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="space-y-2">

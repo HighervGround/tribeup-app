@@ -128,6 +128,15 @@ function Onboarding({ onComplete }: OnboardingProps) {
           console.log('✅ [Onboarding] Updated app store with completed onboarding profile');
         }
         
+        // Track onboarding completion
+        const { analyticsService } = await import('@/core/analytics/analyticsService');
+        analyticsService.trackEvent('complete_onboarding', {
+          sports_count: payload.sports?.length || 0,
+          has_skill_level: !!payload.skillLevel,
+          has_location: !!payload.location,
+          has_avatar: !!payload.avatarUrl,
+        });
+        
         // Clear localStorage flag (no longer needed with proper DB tracking)
         localStorage.removeItem(`onboarding_completed_${authUser.id}`);
         console.log('✅ [Onboarding] Cleared localStorage onboarding flag');

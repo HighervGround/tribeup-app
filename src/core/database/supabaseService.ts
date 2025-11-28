@@ -1002,6 +1002,7 @@ export class SupabaseService {
     imageUrl?: string;
     plannedRoute?: any;
     tribeId?: string;
+    skillLevel?: string;
   }): Promise<string> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1078,6 +1079,11 @@ export class SupabaseService {
         console.warn('Invalid planned_route JSON, omitting:', e);
         // Omit planned_route if invalid JSON
       }
+    }
+
+    // Add skill_level if provided (optional field)
+    if (gameData.skillLevel && gameData.skillLevel.trim() !== '') {
+      payload.skill_level = gameData.skillLevel;
     }
 
     console.log('📤 [createGame] Inserting game with payload:', {

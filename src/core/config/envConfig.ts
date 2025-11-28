@@ -18,6 +18,10 @@ export interface EnvConfig {
   // Push Notifications
   vapidPublicKey?: string;
   
+  // Analytics & Monitoring
+  posthogApiKey?: string;
+  posthogHost?: string;
+  
   // Timeouts and Intervals
   profileCheckTimeout: number;
   profileForceTimeout: number;
@@ -70,6 +74,10 @@ class EnvironmentConfig {
       
       // Push Notifications (optional)
       vapidPublicKey: env.VITE_VAPID_PUBLIC_KEY,
+      
+      // Analytics & Monitoring (optional)
+      posthogApiKey: env.VITE_POSTHOG_API_KEY,
+      posthogHost: env.VITE_POSTHOG_HOST || 'https://app.posthog.com',
       
       // Timeouts and Intervals
       profileCheckTimeout: parseInt(env.VITE_PROFILE_CHECK_TIMEOUT || '5000'),
@@ -157,6 +165,10 @@ class EnvironmentConfig {
       warnings.push('VITE_VAPID_PUBLIC_KEY not set - push notifications will be disabled');
     }
     
+    if (!this.config.posthogApiKey) {
+      warnings.push('VITE_POSTHOG_API_KEY not set - analytics and error tracking will be disabled');
+    }
+    
     if (warnings.length > 0) {
       console.warn('Environment configuration warnings:', warnings);
     }
@@ -170,7 +182,7 @@ class EnvironmentConfig {
     return this.config[key];
   }
 
-  public isFeatureEnabled(feature: 'weather' | 'pushNotifications' | 'mockData'): boolean {
+  public isFeatureEnabled(feature: 'weather' | 'pushNotifications' | 'mockData' | 'analytics' | 'errorTracking'): boolean {
     switch (feature) {
       case 'weather':
         return !!this.config.weatherApiKey;
@@ -178,6 +190,9 @@ class EnvironmentConfig {
         return !!this.config.vapidPublicKey;
       case 'mockData':
         return this.config.enableMockData;
+      case 'analytics':
+      case 'errorTracking':
+        return !!this.config.posthogApiKey;
       default:
         return false;
     }
@@ -189,5 +204,5 @@ export const envConfig = EnvironmentConfig.getInstance();
 
 // Export individual getters for convenience
 export const getEnvConfig = () => envConfig.getConfig();
-export const isFeatureEnabled = (feature: 'weather' | 'pushNotifications' | 'mockData') => 
+export const isFeatureEnabled = (feature: 'weather' | 'pushNotifications' | 'mockData' | 'analytics' | 'errorTracking') => 
   envConfig.isFeatureEnabled(feature);

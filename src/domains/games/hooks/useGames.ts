@@ -5,6 +5,7 @@ import { joinGame, leaveGame, getGameParticipants, isUserInGame } from '@/domain
 import { useAppStore } from '@/store/appStore';
 import { toast } from 'sonner';
 import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector';
+import { analyticsService } from '@/core/analytics/analyticsService';
 
 // Query keys
 export const gameKeys = {
@@ -255,6 +256,11 @@ export function useJoinGame() {
       });
     },
     onSuccess: async (_, gameId) => {
+      // Track join game event
+      analyticsService.trackEvent('join_game', {
+        game_id: gameId,
+      });
+      
       // Invalidate React Query cache
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });
@@ -366,6 +372,11 @@ export function useLeaveGame() {
       });
     },
     onSuccess: async (_, gameId) => {
+      // Track leave game event
+      analyticsService.trackEvent('leave_game', {
+        game_id: gameId,
+      });
+      
       // Invalidate React Query cache
       queryClient.invalidateQueries({ queryKey: gameKeys.lists() });
       queryClient.invalidateQueries({ queryKey: gameKeys.detail(gameId) });

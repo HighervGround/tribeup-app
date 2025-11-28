@@ -6,6 +6,8 @@ import './index.css'
 import './fix-colors.css'
 import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector'
 import { useThemeStore } from '@/store/themeStore'
+import { analyticsService } from '@/core/analytics/analyticsService'
+import { initializeErrorMonitoring } from '@/core/notifications/errorMonitoring'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization
@@ -58,6 +60,15 @@ async function initializeApp() {
   
   try {
     console.log('✅ [App] Skipping cache corruption check, starting React app directly...');
+
+    // Initialize error monitoring first (before React)
+    initializeErrorMonitoring();
+
+    // Initialize analytics (PostHog)
+    // Check for user consent - default to true for now, can be enhanced with consent management
+    const hasConsent = localStorage.getItem('analytics_consent') !== 'false';
+    analyticsService.setConsent(hasConsent);
+    analyticsService.initialize();
 
     // Apply stored theme before React mounts (avoid flash)
     try {

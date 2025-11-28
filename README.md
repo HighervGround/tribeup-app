@@ -54,6 +54,10 @@ The app reads environment variables prefixed with `VITE_`. At minimum configure:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+**Optional but recommended:**
+- `VITE_POSTHOG_API_KEY` - PostHog API key for analytics and error tracking
+- `VITE_POSTHOG_HOST` - PostHog host URL (defaults to https://app.posthog.com)
+
 When deploying to Vercel, add these under **Project Settings → Environment Variables**. For local development, store them in `.env` (never commit secrets).
 
 ---

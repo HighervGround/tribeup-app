@@ -32,12 +32,20 @@ const sportFilters = [
   { name: 'Hiking', value: 'hiking' },
 ];
 
+const skillLevelFilters = [
+  { name: 'All Levels', value: 'all' },
+  { name: 'Beginner', value: 'beginner' },
+  { name: 'Intermediate', value: 'intermediate' },
+  { name: 'Advanced', value: 'advanced' },
+];
+
 // Using UnifiedGameCard component for consistency
 
 function SearchDiscovery() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('all');
+  const [selectedSkillLevel, setSelectedSkillLevel] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   // Use React Query for consistent data loading
   const { data: games = [], isLoading: loading, error } = useGames();
@@ -85,7 +93,13 @@ function SearchDiscovery() {
       const matchesSport = selectedSport === 'all' || 
                           game.sport?.toLowerCase().trim() === selectedSport.toLowerCase().trim();
       
-      return matchesSearch && matchesSport;
+      // Skill level filter - show games that match the selected level
+      // When "All Levels" is selected, show all games (including those without skill level)
+      // When a specific level is selected, only show games with that exact skill level
+      const matchesSkillLevel = selectedSkillLevel === 'all' || 
+                               (game.skillLevel?.toLowerCase() === selectedSkillLevel.toLowerCase());
+      
+      return matchesSearch && matchesSport && matchesSkillLevel;
     });
 
   return (
@@ -158,6 +172,25 @@ function SearchDiscovery() {
             ))}
           </div>
         </div>
+
+        {/* Skill Level Filter Chips */}
+        <div className="px-4 pb-3 border-b border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium text-muted-foreground">Skill Level:</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {skillLevelFilters.map((level) => (
+              <Badge
+                key={level.value}
+                variant={selectedSkillLevel === level.value ? "default" : "outline"}
+                className="cursor-pointer whitespace-nowrap"
+                onClick={() => setSelectedSkillLevel(level.value)}
+              >
+                {level.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="px-4 py-6">
@@ -204,6 +237,7 @@ function SearchDiscovery() {
               onClick: () => {
                 setSearchQuery('');
                 setSelectedSport('all');
+                setSelectedSkillLevel('all');
               },
               variant: "outline",
             }}

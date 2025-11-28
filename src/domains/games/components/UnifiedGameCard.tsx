@@ -192,10 +192,15 @@ export function UnifiedGameCard({
             </div>
 
             {/* Sport Tag - Top Right */}
-            <div className="absolute top-3 right-3">
+            <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
               <Badge className={`${gameToRender.sportColor || 'bg-primary'} text-white border-none`}>
                 {gameToRender.sport}
               </Badge>
+              {gameToRender.skillLevel && (
+                <Badge variant="outline" className="text-xs capitalize bg-background/90 backdrop-blur-sm">
+                  {gameToRender.skillLevel}
+                </Badge>
+              )}
             </div>
 
             {/* Join status indicator */}
@@ -396,10 +401,15 @@ export function UnifiedGameCard({
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-lg mb-1 truncate">{gameToRender.title}</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary" className="text-xs">
                   {gameToRender.sport}
                 </Badge>
+                {gameToRender.skillLevel && (
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {gameToRender.skillLevel}
+                  </Badge>
+                )}
                 {gameToRender.cost && (
                   <Badge variant="outline" className="text-xs">
                     {formatCost(gameToRender.cost)}
@@ -517,8 +527,13 @@ export function UnifiedGameCard({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground font-medium">{gameToRender.sport}</span>
+              {gameToRender.skillLevel && (
+                <Badge variant="outline" className="text-xs capitalize">
+                  {gameToRender.skillLevel}
+                </Badge>
+              )}
               {gameToRender.cost && (
                 <Badge variant="secondary" className="text-xs font-semibold">
                   {formatCost(gameToRender.cost)}

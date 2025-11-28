@@ -398,10 +398,15 @@ export default function PublicGamePage() {
             </div>
           )}
           {!game.imageUrl && (
-            <div className="p-4 border-b">
+            <div className="p-4 border-b flex items-center gap-2 flex-wrap">
               <Badge className={`${(game as any).sportColor || 'bg-primary'} text-white border-none`}>
                 {game.sport}
               </Badge>
+              {(game as any).skillLevel && (
+                <Badge variant="outline" className="capitalize">
+                  {(game as any).skillLevel}
+                </Badge>
+              )}
             </div>
           )}
           
@@ -410,9 +415,16 @@ export default function PublicGamePage() {
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{game.title}</CardTitle>
                 {game.imageUrl && (
-                  <Badge className={`${(game as any).sportColor || 'bg-primary'} text-white border-none`}>
-                    {game.sport}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`${(game as any).sportColor || 'bg-primary'} text-white border-none`}>
+                      {game.sport}
+                    </Badge>
+                    {(game as any).skillLevel && (
+                      <Badge variant="outline" className="capitalize">
+                        {(game as any).skillLevel}
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={handleShare}>

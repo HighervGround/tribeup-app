@@ -102,7 +102,7 @@ export function LocationPermissionModal({
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <Button onClick={handleAllow} className="w-full">
-            <MapPin className="w-4 h-4 mr-2" />
+        <DialogFooter>
             Allow Location Access
           </Button>
           <Button variant="ghost" onClick={handleDeny} className="w-full">

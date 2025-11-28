@@ -14,6 +14,7 @@ import { useUserSearch } from '@/domains/users/hooks/useFriends';
 import { toast } from 'sonner';
 import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { EmptyState } from '@/shared/components/common/EmptyState';
 
 // Simple relative time formatter
 function formatRelativeTime(dateStr: string): string {
@@ -86,8 +87,13 @@ export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
   if (!members || members.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">No members yet</p>
+        <CardContent className="p-0">
+          <EmptyState
+            variant="no-friends"
+            title="No members yet"
+            description="Invite members to grow your tribe community!"
+            size="md"
+          />
         </CardContent>
       </Card>
     );
@@ -168,9 +174,12 @@ export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : searchQuery.length > 2 && filteredResults.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground">No users found</p>
-                  </div>
+                  <EmptyState
+                    variant="no-results"
+                    title="No users found"
+                    description="Try a different search term to find users."
+                    size="sm"
+                  />
                 ) : searchQuery.length > 2 && filteredResults.length > 0 ? (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {filteredResults.map((user) => (

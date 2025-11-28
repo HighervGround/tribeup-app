@@ -7,8 +7,9 @@ node_modules
 # Local Netlify folder
 .netlify
 build/
+
+# Environment variables - SECURITY: Never commit secrets
+# Only .env.example should be tracked (contains no real values)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example

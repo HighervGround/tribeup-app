@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { MapPin, Calendar, Users, LogIn, UserPlus } from 'lucide-react';
+import { MapPin, Calendar, Users, LogIn, UserPlus, Shield } from 'lucide-react';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
 import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
-import { useLocation } from '@/domains/locations/hooks/useLocation';
+import { useLocationWithPermissionModal } from '@/domains/locations/hooks/useLocationWithPermissionModal';
+import { LocationPermissionModal } from '@/domains/locations/components/LocationPermissionModal';
 import { UnifiedGameCard } from '@/domains/games/components/UnifiedGameCard';
 import { GameCardSkeleton } from '@/domains/games/components/GameCardSkeleton';
 import { Badge } from '@/shared/components/ui/badge';
@@ -16,7 +17,16 @@ export default function PublicHomeScreen() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useSimpleAuth();
   const { games, loading: isLoading, error } = useGamesWithCreators();
-  const { currentLocation, permission, requestLocation, getDistanceTo } = useLocation();
+  const { 
+    currentLocation, 
+    permission, 
+    getDistanceTo,
+    showPermissionModal,
+    setShowPermissionModal,
+    requestLocationWithExplanation,
+    handlePermissionAllow,
+    handlePermissionDeny 
+  } = useLocationWithPermissionModal();
 
   const [selectedSport, setSelectedSport] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'distance'>('date');
@@ -192,12 +202,22 @@ export default function PublicHomeScreen() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Location Permission Prompt */}
         {permission === 'prompt' && (
-          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+          <div className="mb-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
               <div className="flex-1">
-                <h3 className="font-medium text-blue-900 text-sm">Enable location to sort by distance</h3>
-                <Button size="sm" onClick={requestLocation} className="mt-2">
+                <h3 className="font-medium text-blue-900 dark:text-blue-100">Find games near you</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  Enable location to discover nearby activities and sort by distance.
+                </p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-blue-600 dark:text-blue-400">
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Your exact location is never shared with other users</span>
+                </div>
+                <Button size="sm" onClick={requestLocationWithExplanation} className="mt-3">
+                  <MapPin className="h-4 w-4 mr-1" />
                   Enable Location
                 </Button>
               </div>
@@ -268,6 +288,14 @@ export default function PublicHomeScreen() {
           Browse games publicly. Sign in when you're ready to join or create.
         </div>
       </footer>
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        open={showPermissionModal}
+        onOpenChange={setShowPermissionModal}
+        onAllow={handlePermissionAllow}
+        onDeny={handlePermissionDeny}
+      />
     </div>
   );
 }

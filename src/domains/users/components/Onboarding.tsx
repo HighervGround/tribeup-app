@@ -12,7 +12,8 @@ import {
   Check,
   Users,
   Calendar,
-  Trophy
+  Trophy,
+  Shield
 } from 'lucide-react';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +21,7 @@ import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { supabase } from '@/core/database/supabase';
 import { toast } from 'sonner';
+import { LocationPermissionModal } from '@/domains/locations/components/LocationPermissionModal';
 
 interface OnboardingProps {
   onComplete: (data: any) => void;
@@ -51,6 +53,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'pending'>('pending');
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [userProfile, setUserProfile] = useState({
     firstName: '',
     lastName: '',
@@ -157,7 +160,13 @@ function Onboarding({ onComplete }: OnboardingProps) {
     );
   };
 
-  const requestLocationPermission = () => {
+  // Show the location permission explanation modal
+  const showLocationExplanation = () => {
+    setShowLocationModal(true);
+  };
+
+  // Handle when user allows location access from the modal
+  const handleLocationAllow = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         () => {
@@ -297,7 +306,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
 
         {/* Step 3: Location Permission */}
         {currentStep === 3 && (
-          <div className="flex flex-col items-center text-center space-y-8">
+          <div className="flex flex-col items-center text-center space-y-6">
             <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center">
               <MapPin className="w-16 h-16 text-primary" />
             </div>
@@ -305,13 +314,31 @@ function Onboarding({ onComplete }: OnboardingProps) {
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">Enable Location Access</h2>
               <p className="text-muted-foreground max-w-sm">
-                We need your location to show you games happening nearby on campus.
+                Help us show you sports activities and players near you.
               </p>
+            </div>
+
+            {/* Benefits section */}
+            <div className="w-full max-w-sm space-y-3">
+              <div className="flex items-start gap-3 text-left p-3 bg-muted/30 rounded-lg">
+                <Users className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-sm">Find Nearby Games</h4>
+                  <p className="text-xs text-muted-foreground">Discover pickup games happening close to you.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 text-left p-3 bg-muted/30 rounded-lg">
+                <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-sm">Sort by Distance</h4>
+                  <p className="text-xs text-muted-foreground">See games sorted by how far they are from you.</p>
+                </div>
+              </div>
             </div>
 
             {locationPermission === 'pending' && (
               <Button 
-                onClick={requestLocationPermission}
+                onClick={showLocationExplanation}
                 className="w-full max-w-sm"
               >
                 <MapPin className="w-4 h-4 mr-2" />
@@ -341,13 +368,23 @@ function Onboarding({ onComplete }: OnboardingProps) {
                 </div>
                 <Button 
                   variant="outline" 
-                  onClick={requestLocationPermission}
+                  onClick={showLocationExplanation}
                   className="w-full"
                 >
                   Try Again
                 </Button>
               </div>
             )}
+
+            {/* Privacy notice */}
+            <div className="w-full max-w-sm bg-muted/50 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-muted-foreground text-left">
+                  Your exact location is never shared with other users. You can disable location access anytime in settings.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -446,6 +483,14 @@ function Onboarding({ onComplete }: OnboardingProps) {
           </Button>
         )}
       </div>
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        open={showLocationModal}
+        onOpenChange={setShowLocationModal}
+        onAllow={handleLocationAllow}
+        onDeny={() => setShowLocationModal(false)}
+      />
     </div>
   );
 }

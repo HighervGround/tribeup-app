@@ -331,9 +331,18 @@ Run these tests on production:
 
 ### Step 6.1: Set Up Error Monitoring
 
-Consider integrating:
-- Sentry for error tracking
-- LogRocket for session replay
+Sentry is wired into the app. To activate it:
+
+1. Add these environment variables to your hosting provider:
+   - `VITE_SENTRY_DSN`
+   - `VITE_SENTRY_TRACES_SAMPLE_RATE` (0–1, default `0.1`)
+   - `VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` (0–1, default `0`)
+   - `VITE_SENTRY_REPLAYS_ERROR_SAMPLE_RATE` (0–1, default `1`)
+2. (Optional) Add `VITE_SENTRY_ENVIRONMENT` and `VITE_APP_VERSION` for clearer tagging.
+3. Redeploy — runtime errors, performance traces, and session replays (when enabled) flow to Sentry automatically.
+
+Additional recommendations:
+- LogRocket for richer session replay
 - Supabase Analytics for database monitoring
 
 ### Step 6.2: Set Up Uptime Monitoring
@@ -349,6 +358,15 @@ In Supabase dashboard:
 - Monitor **Database** → **Reports** for slow queries
 - Set up alerts for high error rates
 - Monitor connection pool usage
+
+### Step 6.4: Configure Google Analytics
+
+1. Create a GA4 property and copy the Measurement ID (`G-XXXXXXX`).
+2. Add `VITE_GA_MEASUREMENT_ID` in your hosting provider.
+3. (Optional) Set `VITE_GA_DEBUG=true` to echo analytics events in the console while testing.
+4. `VITE_PERF_METRICS_DEBUG=true` (local only) prints every Web Vital without sending extra events.
+
+Web Vital metrics are automatically reported to GA as events once the Measurement ID is present.
 
 ---
 

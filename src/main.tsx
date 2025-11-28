@@ -6,9 +6,19 @@ import './index.css'
 import './fix-colors.css'
 import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector'
 import { useThemeStore } from '@/store/themeStore'
+import { initializeGoogleAnalytics } from '@/core/analytics/googleAnalytics'
+import { initializePerformanceMonitoring } from '@/core/analytics/performanceMetrics'
+import { initializeSystemMonitoring } from '@/core/monitoring/systemMonitoring'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization
+
+// Initialize observability stack before anything else
+if (typeof window !== 'undefined') {
+  initializeSystemMonitoring();
+  initializeGoogleAnalytics();
+  initializePerformanceMonitoring();
+}
 
 // Register service worker properly - only in production
 if ('serviceWorker' in navigator && (import.meta as any).env.PROD) {

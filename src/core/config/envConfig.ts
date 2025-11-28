@@ -31,6 +31,15 @@ export interface EnvConfig {
   // Development
   enableMockData: boolean;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
+
+  // Observability
+  analyticsMeasurementId?: string;
+  analyticsDebug: boolean;
+  sentryDsn?: string;
+  sentryTracesSampleRate: number;
+  sentrySessionReplayRate: number;
+  sentryErrorReplayRate: number;
+  perfMetricsDebug: boolean;
 }
 
 class EnvironmentConfig {
@@ -83,7 +92,16 @@ class EnvironmentConfig {
       
       // Development
       enableMockData: env.VITE_ENABLE_MOCK_DATA === 'true',
-      logLevel: (env.VITE_LOG_LEVEL || 'info') as 'debug' | 'info' | 'warn' | 'error'
+      logLevel: (env.VITE_LOG_LEVEL || 'info') as 'debug' | 'info' | 'warn' | 'error',
+
+      // Observability
+      analyticsMeasurementId: env.VITE_GA_MEASUREMENT_ID,
+      analyticsDebug: env.VITE_GA_DEBUG === 'true',
+      sentryDsn: env.VITE_SENTRY_DSN,
+      sentryTracesSampleRate: parseFloat(env.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+      sentrySessionReplayRate: parseFloat(env.VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE || '0'),
+      sentryErrorReplayRate: parseFloat(env.VITE_SENTRY_REPLAYS_ERROR_SAMPLE_RATE || '1'),
+      perfMetricsDebug: env.VITE_PERF_METRICS_DEBUG === 'true'
     };
   }
 
@@ -140,6 +158,18 @@ class EnvironmentConfig {
     if (!['debug', 'info', 'warn', 'error'].includes(this.config.logLevel)) {
       errors.push('VITE_LOG_LEVEL must be one of: debug, info, warn, error');
     }
+
+    const ratesToValidate: Array<[number, string]> = [
+      [this.config.sentryTracesSampleRate, 'VITE_SENTRY_TRACES_SAMPLE_RATE'],
+      [this.config.sentrySessionReplayRate, 'VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE'],
+      [this.config.sentryErrorReplayRate, 'VITE_SENTRY_REPLAYS_ERROR_SAMPLE_RATE']
+    ];
+
+    for (const [rate, key] of ratesToValidate) {
+      if (isNaN(rate) || rate < 0 || rate > 1) {
+        errors.push(`${key} must be a number between 0 and 1`);
+      }
+    }
     
     if (errors.length > 0) {
       console.error('Environment configuration errors:', errors);
@@ -155,6 +185,14 @@ class EnvironmentConfig {
     
     if (!this.config.vapidPublicKey) {
       warnings.push('VITE_VAPID_PUBLIC_KEY not set - push notifications will be disabled');
+    }
+
+    if (!this.config.analyticsMeasurementId) {
+      warnings.push('VITE_GA_MEASUREMENT_ID not set - Google Analytics disabled');
+    }
+
+    if (!this.config.sentryDsn) {
+      warnings.push('VITE_SENTRY_DSN not set - monitoring integration disabled');
     }
     
     if (warnings.length > 0) {

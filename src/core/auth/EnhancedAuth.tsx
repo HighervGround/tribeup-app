@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { LoginForm } from './login-form';
 import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { toast } from 'sonner';
@@ -62,7 +62,14 @@ function EnhancedAuth() {
         
         <div className="mt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+            By continuing, you agree to our{' '}
+            <Link to="/legal/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>
+            {' '}and{' '}
+            <Link to="/legal/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
           </p>
         </div>
       </div>

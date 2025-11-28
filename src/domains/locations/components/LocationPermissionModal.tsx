@@ -65,7 +65,7 @@ export function LocationPermissionModal({
         <div className="space-y-4 py-4">
           <h3 className="font-semibold text-sm text-center mb-3">Why we need your location</h3>
           
-          <div className="space-y-4">
+          <h4 className="font-semibold text-sm text-center mb-3">Why we need your location</h4>
             <BenefitItem
               icon={<Users className="w-5 h-5 text-primary" />}
               title="Find Nearby Games"

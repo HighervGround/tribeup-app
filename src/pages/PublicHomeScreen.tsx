@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { MapPin, Calendar, Users, LogIn, UserPlus, Shield } from 'lucide-react';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';

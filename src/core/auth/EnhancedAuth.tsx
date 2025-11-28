@@ -25,7 +25,9 @@ function EnhancedAuth() {
         // Use URL param redirect
         navigate(redirectUrl, { replace: true });
       } else if (pendingGameId) {
-        // Legacy: redirect to authenticated game page
+        // Legacy: redirect to authenticated game page with auto-join
+        localStorage.setItem('autoJoinGame', pendingGameId);
+        localStorage.removeItem('pendingGameJoin');
         navigate(`/app/game/${pendingGameId}`, { replace: true });
       } else {
         navigate('/', { replace: true });

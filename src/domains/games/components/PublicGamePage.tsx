@@ -40,31 +40,17 @@ export default function PublicGamePage() {
   const [joiningError, setJoiningError] = useState<string | null>(null);
   const [capacity, setCapacity] = useState<any | null>(null);
 
-  // Check authentication status and redirect if authenticated
+  // Check authentication status (but don't auto-redirect - let user choose to join)
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      const authenticated = !!session;
-      setIsAuthenticated(authenticated);
-      
-      // Redirect authenticated users to the full app game page
-      if (authenticated && gameId) {
-        console.log('User is authenticated, redirecting to app game page');
-        navigate(`/app/game/${gameId}`);
-      }
+      setIsAuthenticated(!!session);
     };
     checkAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      const authenticated = !!session;
-      setIsAuthenticated(authenticated);
-      
-      // Redirect authenticated users to the full app game page
-      if (authenticated && gameId) {
-        console.log('User authenticated, redirecting to app game page');
-        navigate(`/app/game/${gameId}`);
-      }
+      setIsAuthenticated(!!session);
     });
 
     return () => subscription.unsubscribe();
@@ -121,42 +107,25 @@ export default function PublicGamePage() {
   const handleJoinGame = async () => {
     if (!gameId) return;
 
-    try {
-      setIsJoining(true);
-      setJoiningError(null);
-
-      // Store game ID for post-auth join if needed
-      localStorage.setItem('pendingGameJoin', gameId);
-
-      // Join the game using authenticated RPC
-      await SupabaseService.joinGame(gameId);
-      
-      setHasJoined(true);
-      localStorage.removeItem('pendingGameJoin');
-      toast.success('Successfully joined the activity!');
-      
-      // Refresh capacity
-      const { data } = await supabase
-        .from('game_rsvp_stats')
-        .select('*')
-        .eq('game_id', gameId)
-        .single();
-      if (data) setCapacity(data);
-    } catch (error: any) {
-      console.error('Join game error:', error);
-      setJoiningError(error.message || 'Failed to join activity');
-      toast.error('Failed to join activity. Please try again.');
-    } finally {
-      setIsJoining(false);
+    // If user is authenticated, redirect them to the full app page to join
+    if (isAuthenticated) {
+      console.log('Authenticated user joining - redirecting to app page');
+      localStorage.setItem('autoJoinGame', gameId);
+      navigate(`/app/game/${gameId}`);
+      return;
     }
+
+    // Unauthenticated users should not reach this point, but handle gracefully
+    toast.info('Please sign in to join this game');
   };
 
   const handleSignInWithGoogle = async () => {
     if (!gameId) return;
 
     try {
-      // Store the intended destination for post-auth redirect
+      // Store the intended destination for post-auth redirect and auto-join intent
       localStorage.setItem('authRedirect', `/app/game/${gameId}`);
+      localStorage.setItem('autoJoinGame', gameId);
 
       const redirectUrl = `${env.APP_URL}/auth/callback`;
       const { error } = await supabase.auth.signInWithOAuth({
@@ -175,14 +144,16 @@ export default function PublicGamePage() {
     } catch (error: any) {
       console.error('OAuth error:', error);
       localStorage.removeItem('authRedirect');
+      localStorage.removeItem('autoJoinGame');
       toast.error('Failed to initiate sign in. Please try again.');
     }
   };
 
   const handleSignInWithEmail = () => {
     if (!gameId) return;
-    // Store the intended destination and redirect to auth page
+    // Store the intended destination and auto-join intent
     localStorage.setItem('authRedirect', `/app/game/${gameId}`);
+    localStorage.setItem('autoJoinGame', gameId);
     // Add method=email to auto-show email form on auth page
     navigate('/auth?redirect=' + encodeURIComponent(`/app/game/${gameId}`) + '&method=email');
   };

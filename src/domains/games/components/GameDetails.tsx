@@ -179,6 +179,37 @@ function GameDetails() {
     })();
     return () => { cancelled = true; };
   }, [gameId, participants.length]);
+
+  // Auto-join game if redirected from public page
+  useEffect(() => {
+    const autoJoinGameId = localStorage.getItem('autoJoinGame');
+    
+    if (autoJoinGameId && gameId && autoJoinGameId === gameId && game && user) {
+      // Check if user is already a participant
+      const isParticipant = participants.some(p => p.id === user.id);
+      
+      if (!isParticipant && !actionLoading) {
+        console.log('🎯 Auto-joining game from public page redirect:', gameId);
+        
+        // Clear the auto-join flag immediately to prevent duplicate attempts
+        localStorage.removeItem('autoJoinGame');
+        
+        // Auto-join the game
+        toggleJoin(gameId, false).then(() => {
+          toast.success('Successfully joined the game!');
+          // Refresh participants list
+          refetchParticipants();
+        }).catch((error) => {
+          console.error('Auto-join failed:', error);
+          toast.error('Failed to join game. You can try joining manually.');
+        });
+      } else if (isParticipant) {
+        // User is already in the game, just clear the flag
+        console.log('✅ User already in game, clearing auto-join flag');
+        localStorage.removeItem('autoJoinGame');
+      }
+    }
+  }, [gameId, game, user, participants, actionLoading, toggleJoin, refetchParticipants]);
   
   // Process participants data to mark the host correctly
   const players = useMemo(() => {

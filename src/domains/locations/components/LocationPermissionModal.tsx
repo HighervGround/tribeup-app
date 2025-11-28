@@ -49,6 +49,8 @@ export function LocationPermissionModal({
 
   const handleDeny = () => {
     onDeny();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -63,9 +65,9 @@ export function LocationPermissionModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <h3 className="font-semibold text-sm text-center mb-3">Why we need your location</h3>
-          
           <h4 className="font-semibold text-sm text-center mb-3">Why we need your location</h4>
+          
+          <div className="space-y-4">
             <BenefitItem
               icon={<Users className="w-5 h-5 text-primary" />}
               title="Find Nearby Games"
@@ -100,9 +102,9 @@ export function LocationPermissionModal({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button onClick={handleAllow} className="w-full">
         <DialogFooter>
+          <Button onClick={handleAllow} className="w-full">
+            <MapPin className="w-4 h-4 mr-2" />
             Allow Location Access
           </Button>
           <Button variant="ghost" onClick={handleDeny} className="w-full">

@@ -34,6 +34,7 @@ import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/appStore';
+import { AccountDeletionSection } from '@/domains/users/components/AccountDeletionSection';
 
 function Settings() {
   const navigate = useNavigate();
@@ -281,14 +282,14 @@ function Settings() {
         {/* Account Actions */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
+            <CardTitle className="flex items-center gap-2">
               <LogOut className="w-5 h-5" />
-              Account
+              Session
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={handleSignOut}
               disabled={isSigningOut}
               className="w-full"
@@ -298,6 +299,9 @@ function Settings() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Account Deletion */}
+        <AccountDeletionSection />
       </div>
     </div>
   );

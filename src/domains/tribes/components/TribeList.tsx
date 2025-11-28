@@ -5,8 +5,8 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Search, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/shared/components/ui/card';
 import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
+import { EmptyStateEnhanced } from '@/shared/components/ui/empty-state-enhanced';
 import { DEFAULT_SPORTS } from '@/domains/games/components/SportPicker';
 
 export function TribeList() {
@@ -83,15 +83,28 @@ export function TribeList() {
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              {searchQuery.length >= 2
-                ? 'No tribes found matching your search'
-                : 'No tribes available yet'}
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyStateEnhanced
+          variant={searchQuery.length >= 2 ? 'no-results' : 'no-data'}
+          title={searchQuery.length >= 2 ? 'No tribes found' : 'No tribes yet'}
+          description={
+            searchQuery.length >= 2
+              ? 'Try adjusting your search or filters to find what you\'re looking for.'
+              : 'Be the first to create a tribe and start building your community!'
+          }
+          primaryAction={
+            searchQuery.length >= 2
+              ? {
+                  label: 'Clear Search',
+                  onClick: () => setSearchQuery(''),
+                  variant: 'outline',
+                }
+              : {
+                  label: 'Create Tribe',
+                  onClick: () => navigate('/tribe/create'),
+                  icon: <Plus className="w-4 h-4" />,
+                }
+          }
+        />
       )}
     </div>
   );

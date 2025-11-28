@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -197,7 +198,14 @@ export function QuickJoinModal({ isOpen, onClose, gameTitle, gameId, onJoinSucce
                   </Button>
                   
                   <p className="text-xs text-muted-foreground text-center">
-                    By joining, you agree to our Terms of Service and Privacy Policy
+                    By joining, you agree to our{' '}
+                    <Link to="/legal/terms" className="text-primary hover:underline">
+                      Terms of Service
+                    </Link>
+                    {' '}and{' '}
+                    <Link to="/legal/privacy" className="text-primary hover:underline">
+                      Privacy Policy
+                    </Link>
                   </p>
                   
                   <Button 

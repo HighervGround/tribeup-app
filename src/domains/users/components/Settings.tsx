@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Switch } from '@/shared/components/ui/switch';
@@ -25,7 +25,9 @@ import {
   Sun,
   Moon,
   Monitor,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  FileText,
+  Scale
 } from 'lucide-react';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
@@ -236,6 +238,43 @@ function Settings() {
               </div>
               <ChevronRight className="w-4 h-4" />
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Legal Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="w-5 h-5" />
+              Legal
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Link to="/legal/terms">
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Terms of Service
+                </div>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+
+            <Link to="/legal/privacy">
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Privacy Policy
+                </div>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 

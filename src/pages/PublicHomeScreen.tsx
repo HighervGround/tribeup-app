@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { MapPin, Calendar, Users, LogIn, UserPlus } from 'lucide-react';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
@@ -263,9 +263,19 @@ export default function PublicHomeScreen() {
           </div>
         )}
       </main>
-      <footer className="px-4 py-8 text-center text-xs text-gray-500 border-t mt-8">
-        <div className="max-w-7xl mx-auto">
-          Browse games publicly. Sign in when you're ready to join or create.
+      <footer className="px-4 py-8 text-center text-xs text-muted-foreground border-t mt-8">
+        <div className="max-w-7xl mx-auto space-y-3">
+          <p>Browse games publicly. Sign in when you're ready to join or create.</p>
+          <nav className="flex items-center justify-center gap-4" aria-label="Legal links">
+            <Link to="/legal/terms" className="hover:text-foreground hover:underline">
+              Terms of Service
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link to="/legal/privacy" className="hover:text-foreground hover:underline">
+              Privacy Policy
+            </Link>
+          </nav>
+          <p className="text-muted-foreground/80">© {new Date().getFullYear()} TribeUp. All rights reserved.</p>
         </div>
       </footer>
     </div>

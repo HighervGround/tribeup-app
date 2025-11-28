@@ -48,7 +48,21 @@ export class ErrorBoundary extends Component<Props, State> {
       this.props.onError(error, errorInfo);
     }
 
-    // Log to error reporting service (e.g., Sentry)
+    // Log to PostHog error tracking
+    // Use dynamic import to avoid circular dependencies
+    import('@/core/analytics/analyticsService')
+      .then(({ analyticsService }) => {
+        analyticsService.captureException(error, {
+          componentStack: errorInfo.componentStack,
+          errorBoundary: true,
+        });
+      })
+      .catch((err) => {
+        // Silently fail if analytics service isn't available
+        if (import.meta.env.DEV) {
+          console.warn('Failed to send error to PostHog:', err);
+        }
+      });
   }
 
   handleRetry = () => {

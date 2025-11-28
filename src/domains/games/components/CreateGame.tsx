@@ -475,6 +475,17 @@ function CreateGame() {
       });
     }
     
+    // Log skill level changes
+    if (name === 'skillLevel') {
+      console.log('[CreateGame] Skill level changed:', {
+        oldValue: formData.skillLevel,
+        newValue: value,
+        valueType: typeof value,
+        isEmpty: value === '',
+        isNone: value === 'none'
+      });
+    }
+    
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
       
@@ -656,8 +667,14 @@ function CreateGame() {
         imageUrl: formData.imageUrl || null,
         plannedRoute: plannedRoute,
         tribeId: formData.tribeId || undefined,
-        skillLevel: formData.skillLevel || undefined
+        skillLevel: formData.skillLevel && formData.skillLevel.trim() !== '' ? formData.skillLevel.trim() : undefined
       };
+      
+      console.log('📝 [CreateGame] Payload skillLevel:', {
+        formDataSkillLevel: formData.skillLevel,
+        payloadSkillLevel: payload.skillLevel,
+        type: typeof formData.skillLevel
+      });
       
       const createdGame = await SupabaseService.createGame(payload as any);
       toast.success('Activity created successfully!');

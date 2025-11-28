@@ -196,12 +196,18 @@ class AnalyticsService {
     }
 
     try {
-      posthog.capture('$exception', {
-        $exception_message: error.message,
-        $exception_type: error.name,
-        $exception_stack_trace_raw: error.stack,
-        ...context,
-      });
+      // Use PostHog's captureException method if available (from @posthog/react)
+      // Otherwise fall back to manual $exception event
+      if (typeof posthog.captureException === 'function') {
+        posthog.captureException(error, context);
+      } else {
+        posthog.capture('$exception', {
+          $exception_message: error.message,
+          $exception_type: error.name,
+          $exception_stack_trace_raw: error.stack,
+          ...context,
+        });
+      }
     } catch (err) {
       console.error('Failed to capture exception:', err);
     }

@@ -127,12 +127,6 @@ export const Facepile = React.forwardRef<HTMLDivElement, FacepileProps>(
     const overflowCount = users.length - maxVisible;
     const hasOverflow = overflowCount > 0;
 
-    const handleAvatarClick = (user: FacepileUser) => {
-      if (onUserClick) {
-        onUserClick(user);
-      }
-    };
-
     const renderAvatar = (user: FacepileUser, index: number) => {
       const avatarElement = user.id ? (
         <ClickableAvatar
@@ -145,7 +139,8 @@ export const Facepile = React.forwardRef<HTMLDivElement, FacepileProps>(
             'hover:z-10 transition-all duration-200 hover:scale-110',
             index > 0 && '-ml-2'
           )}
-          onClick={onUserClick ? () => handleAvatarClick(user) : undefined}
+          // Let ClickableAvatar handle navigation via its built-in userId-based routing
+          // Don't pass custom onClick as it overrides the built-in navigation behavior
         />
       ) : (
         <Avatar

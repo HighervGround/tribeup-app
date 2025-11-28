@@ -120,7 +120,16 @@ function AuthCallback() {
           }
         }, 100); // Small delay to allow UI to update first
 
-        // Check for pending game join and automatically join the game
+        // Check for custom redirect destination
+        const authRedirect = localStorage.getItem('authRedirect');
+        if (authRedirect) {
+          console.log('[AuthCallback] Redirecting to stored destination:', authRedirect);
+          localStorage.removeItem('authRedirect');
+          setTimeout(() => navigate(authRedirect), 800);
+          return;
+        }
+
+        // Legacy: Check for pending game join and automatically join the game
         const pendingGameId = localStorage.getItem('pendingGameJoin');
         if (pendingGameId) {
           try {
@@ -133,13 +142,13 @@ function AuthCallback() {
             console.log('[AuthCallback] Successfully joined game');
             localStorage.removeItem('pendingGameJoin');
             
-            // Redirect to public game page to show success state
-            setTimeout(() => navigate(`/public/game/${pendingGameId}`), 800);
+            // Redirect to authenticated game page with full app navigation
+            setTimeout(() => navigate(`/app/game/${pendingGameId}`), 800);
           } catch (joinError: any) {
             console.error('[AuthCallback] Failed to join game:', joinError);
-            // Still redirect but user will see error on game page
+            // Still redirect to authenticated page but user can join manually
             localStorage.removeItem('pendingGameJoin');
-            setTimeout(() => navigate(`/public/game/${pendingGameId}`), 800);
+            setTimeout(() => navigate(`/app/game/${pendingGameId}`), 800);
           }
         } else {
           // Send authenticated users to the app layout, not public landing

@@ -12,14 +12,21 @@ function EnhancedAuth() {
   // Redirect if already authenticated (login is public route, AuthGate doesn't run here)
   useEffect(() => {
     if (user) {
-      // Check for redirect URL or pending game join
+      // Check for redirect URL in URL params or localStorage
       const redirectUrl = searchParams.get('redirect');
+      const authRedirect = localStorage.getItem('authRedirect');
       const pendingGameId = localStorage.getItem('pendingGameJoin');
       
-      if (pendingGameId) {
-        navigate(`/public/game/${pendingGameId}`, { replace: true });
+      if (authRedirect) {
+        // Use stored redirect destination (preferred)
+        localStorage.removeItem('authRedirect');
+        navigate(authRedirect, { replace: true });
       } else if (redirectUrl) {
+        // Use URL param redirect
         navigate(redirectUrl, { replace: true });
+      } else if (pendingGameId) {
+        // Legacy: redirect to authenticated game page
+        navigate(`/app/game/${pendingGameId}`, { replace: true });
       } else {
         navigate('/', { replace: true });
       }

@@ -210,8 +210,8 @@ function PrivacyPolicy() {
             </h2>
             <p>If you have any questions about this Privacy Policy or our data practices, please contact us:</p>
             <ul>
-              <li><strong>Email:</strong> <a href="mailto:support@tribeup.app" className="text-primary hover:underline">support@tribeup.app</a></li>
-              <li><strong>Privacy Inquiries:</strong> <a href="mailto:privacy@tribeup.app" className="text-primary hover:underline">privacy@tribeup.app</a></li>
+              <li><strong>Email:</strong> <a href="mailto:support@tribeup.fit" className="text-primary hover:underline">support@tribeup.fit</a></li>
+              <li><strong>Privacy Inquiries:</strong> <a href="mailto:privacy@tribeup.fit" className="text-primary hover:underline">privacy@tribeup.fit</a></li>
             </ul>
             <p className="mt-4">
               We will respond to your inquiry within 30 days. For GDPR-related requests, 

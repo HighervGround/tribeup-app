@@ -49,10 +49,10 @@ if ('serviceWorker' in navigator && (import.meta as any).env.PROD) {
 if ((import.meta as any).env.PROD && 'performance' in window) {
   const startTime = performance.now()
   window.addEventListener('load', () => {
-    const loadTime = performance.now() - startTime
-n    console.log(`🚀 App loaded in: ${loadTime.toFixed(2)} ms`)
-    console.log(`🔄 DEPLOYMENT VERSION: v2.1 - ${new Date().toISOString()}`)
-  })
+    const loadTime = performance.now() - startTime;
+    console.log(`🚀 App loaded in: ${loadTime.toFixed(2)} ms`);
+    console.log(`🔄 DEPLOYMENT VERSION: v2.1 - ${new Date().toISOString()}`);
+  });
 }
 
 // Initialize app directly - disable cache corruption detector temporarily

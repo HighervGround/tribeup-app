@@ -33,14 +33,15 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
   const [isSending, setIsSending] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
 
-  // Enhanced scroll to bottom with smooth animation
+  // Enhanced scroll to bottom - scrolls only the chat container, not the page
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'end'
-    });
+    // Use scrollTop on the container instead of scrollIntoView to prevent page scrolling
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, []);
 
   // Load existing messages from database using chat_messages_with_author view
@@ -330,7 +331,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
       </CardHeader>
       <CardContent className="p-0">
         {/* Messages Area */}
-        <div className="h-64 overflow-y-auto p-4 space-y-4">
+        <div ref={messagesContainerRef} className="h-64 overflow-y-auto p-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-muted-foreground">Loading messages...</div>

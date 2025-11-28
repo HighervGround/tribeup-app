@@ -7,8 +7,8 @@ RETURNS BOOLEAN AS $$
 DECLARE
   current_user_id UUID;
 BEGIN
-  -- Get the current authenticated user's ID
-  current_user_id := auth.uid();
+  -- Get the current authenticated user's ID (use SELECT for consistent performance)
+  current_user_id := (SELECT auth.uid());
   
   -- Verify user is authenticated
   IF current_user_id IS NULL THEN
@@ -39,8 +39,9 @@ BEGIN
   -- 6. Delete tribe memberships
   DELETE FROM tribe_members WHERE user_id = current_user_id;
   
-  -- 7. Delete tribes created by the user (transfers ownership or deletes)
-  -- For simplicity, delete tribes where user is sole creator
+  -- 7. Delete tribes created by the user
+  -- Note: For simplicity, we delete tribes where user is the creator.
+  -- A more complex implementation could transfer ownership to another member.
   DELETE FROM tribes WHERE creator_id = current_user_id;
   
   -- 8. Delete user presence data

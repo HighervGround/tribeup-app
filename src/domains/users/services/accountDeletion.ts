@@ -57,18 +57,3 @@ export async function deleteUserAccount(): Promise<AccountDeletionResult> {
     };
   }
 }
-
-/**
- * Validates that the confirmation text matches the expected value.
- * Used for two-step confirmation before account deletion.
- * 
- * @param confirmationText - The text entered by the user
- * @param expectedText - The expected confirmation text (typically "DELETE" or user's email)
- * @returns boolean - Whether the confirmation matches
- */
-export function validateDeletionConfirmation(
-  confirmationText: string, 
-  expectedText: string
-): boolean {
-  return confirmationText.trim().toUpperCase() === expectedText.trim().toUpperCase();
-}

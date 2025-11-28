@@ -327,7 +327,7 @@ function TermsOfService() {
               If you have any questions about these Terms of Service, please contact us at:
             </p>
             <ul>
-              <li>Email: <a href="mailto:support@tribeup.app" className="text-primary hover:underline">support@tribeup.app</a></li>
+              <li>Email: <a href="mailto:support@tribeup.fit" className="text-primary hover:underline">support@tribeup.fit</a></li>
             </ul>
           </section>
 

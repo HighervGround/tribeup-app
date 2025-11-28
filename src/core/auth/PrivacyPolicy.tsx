@@ -47,7 +47,7 @@ function PrivacyPolicy() {
           <li>Request data export or deletion by contacting support</li>
         </ul>
         <h2>Contact</h2>
-        <p>Questions? Contact support at support@tribeup.app</p>
+        <p>Questions? Contact support at support@tribeup.fit</p>
       </div>
     </div>
   );

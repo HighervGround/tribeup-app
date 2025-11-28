@@ -139,8 +139,7 @@ export const Facepile = React.forwardRef<HTMLDivElement, FacepileProps>(
             'hover:z-10 transition-all duration-200 hover:scale-110',
             index > 0 && '-ml-2'
           )}
-          // Let ClickableAvatar handle navigation via its built-in userId-based routing
-          // Don't pass custom onClick as it overrides the built-in navigation behavior
+          onClick={onUserClick ? () => onUserClick(user) : undefined}
         />
       ) : (
         <Avatar
@@ -235,6 +234,7 @@ export const Facepile = React.forwardRef<HTMLDivElement, FacepileProps>(
                               src={user.image || undefined}
                               alt={user.name}
                               size="sm"
+                              onClick={onUserClick ? () => onUserClick(user) : undefined}
                             />
                           ) : (
                             <Avatar className="size-8">

@@ -174,6 +174,7 @@ export function AttendeeList({
                               variant="compact"
                               showStats={false}
                               showActions={false}
+                              onViewProfile={() => handleAttendeeClick(attendee)}
                             />
                             {attendee.isHost && (
                               <Badge variant="secondary" className="text-xs">
@@ -214,6 +215,7 @@ export function AttendeeList({
                               variant="compact"
                               showStats={false}
                               showActions={false}
+                              onViewProfile={() => handleAttendeeClick(attendee)}
                             />
                           </div>
                         ))}
@@ -244,6 +246,7 @@ export function AttendeeList({
                               variant="compact"
                               showStats={false}
                               showActions={false}
+                              onViewProfile={() => handleAttendeeClick(attendee)}
                             />
                           </div>
                         ))}

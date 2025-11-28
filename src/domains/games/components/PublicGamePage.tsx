@@ -323,15 +323,32 @@ export default function PublicGamePage() {
     }
   };
 
-  // Capacity data
+  // Capacity data - prioritize game data from games_with_counts view
+  // This ensures we use the correct total_players from the view
   const capacityData = useMemo(() => {
-    if (!capacity) return null;
+    // Primary: Use game data from games_with_counts view (most accurate)
+    if (game?.totalPlayers !== undefined && game?.totalPlayers !== null) {
+      return {
+        totalPlayers: game.totalPlayers,
+        maxPlayers: game.maxPlayers ?? 0,
+        availableSpots: game.availableSpots ?? Math.max(0, (game.maxPlayers ?? 0) - (game.totalPlayers ?? 0))
+      };
+    }
+    // Fallback: Use capacity stats if game data not available
+    if (capacity) {
+      return {
+        totalPlayers: capacity.total_rsvps ?? 0,
+        maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
+        availableSpots: capacity.capacity_remaining ?? 0
+      };
+    }
+    // Final fallback
     return {
-      totalPlayers: capacity.total_rsvps ?? 0,
-      maxPlayers: capacity.capacity ?? game?.maxPlayers ?? 0,
-      availableSpots: capacity.capacity_remaining ?? 0
+      totalPlayers: 0,
+      maxPlayers: game?.maxPlayers ?? 0,
+      availableSpots: game?.maxPlayers ?? 0
     };
-  }, [capacity, game?.maxPlayers]);
+  }, [game?.totalPlayers, game?.maxPlayers, game?.availableSpots, capacity]);
 
   if (loading) {
     return (
@@ -442,13 +459,13 @@ export default function PublicGamePage() {
                 <Users className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="font-medium mb-1">
-                    {capacity ? (
+                    {capacityData ? (
                       <>
-                        {capacity.total_rsvps ?? 0}/{capacity.capacity || Number((game as any).max_players ?? game.maxPlayers ?? 0)} players
+                        {capacityData.totalPlayers}/{capacityData.maxPlayers} players
                       </>
                     ) : (
                       <>
-                        {game.totalPlayers ?? 0}/{game.maxPlayers ?? 0} players
+                        {game?.totalPlayers ?? 0}/{game?.maxPlayers ?? 0} players
                       </>
                     )}
                   </div>

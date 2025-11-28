@@ -32,6 +32,7 @@ import { useSimpleAuth } from '@/core/auth/SimpleAuthProvider';
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/appStore';
+import { DataExportSection } from '@/domains/users/components/DataExportSection';
 
 function Settings() {
   const navigate = useNavigate();
@@ -273,6 +274,9 @@ function Settings() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Data Export Section for GDPR Compliance */}
+        <DataExportSection />
 
         {/* Account Actions */}
         <Card>

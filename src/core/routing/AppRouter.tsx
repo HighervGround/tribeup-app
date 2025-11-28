@@ -141,6 +141,7 @@ export function AppRouter() {
 
               {/* Legacy redirects (backward compatibility with pre-/app paths) */}
               <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
+              <Route path="/profile/edit" element={<Navigate to="/app/profile/edit" replace />} />
               <Route path="/search" element={<Navigate to="/app/search" replace />} />
               <Route path="/create" element={<Navigate to="/app/create" replace />} />
               <Route path="/notifications" element={<Navigate to="/app/notifications" replace />} />

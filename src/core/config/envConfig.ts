@@ -76,8 +76,8 @@ class EnvironmentConfig {
       vapidPublicKey: env.VITE_VAPID_PUBLIC_KEY,
       
       // Analytics & Monitoring (optional)
-      posthogApiKey: env.VITE_POSTHOG_API_KEY,
-      posthogHost: env.VITE_POSTHOG_HOST || 'https://app.posthog.com',
+      posthogApiKey: env.VITE_PUBLIC_POSTHOG_KEY,
+      posthogHost: env.VITE_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
       
       // Timeouts and Intervals
       profileCheckTimeout: parseInt(env.VITE_PROFILE_CHECK_TIMEOUT || '5000'),
@@ -166,7 +166,7 @@ class EnvironmentConfig {
     }
     
     if (!this.config.posthogApiKey) {
-      warnings.push('VITE_POSTHOG_API_KEY not set - analytics and error tracking will be disabled');
+      warnings.push('VITE_PUBLIC_POSTHOG_KEY not set - analytics and error tracking will be disabled');
     }
     
     if (warnings.length > 0) {

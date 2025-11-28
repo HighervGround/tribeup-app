@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -121,6 +122,7 @@ function GameDetails() {
     duration: number | string;
     maxPlayers: number;
     cost: string;
+    skillLevel?: string;
   }>({
     title: '',
     description: '',
@@ -129,7 +131,8 @@ function GameDetails() {
     time: '',
     duration: 60,
     maxPlayers: 0,
-    cost: ''
+    cost: '',
+    skillLevel: ''
   });
   const [deleteReason, setDeleteReason] = useState('');
   const [capacity, setCapacity] = useState<any | null>(null);
@@ -692,7 +695,8 @@ function GameDetails() {
       time: game.time || '',
       duration: Number(game.duration) || 60,
       maxPlayers: game.maxPlayers || 0,
-      cost: game.cost || ''
+      cost: game.cost || '',
+      skillLevel: game.skillLevel || ''
     };
     
     console.log('🚨 [EDIT] Setting form data:', formData);
@@ -1724,6 +1728,25 @@ function GameDetails() {
                   placeholder="FREE or $10"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="edit-skillLevel" className="text-sm font-medium">
+                Skill Level <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+              </label>
+              <Select 
+                value={editFormData.skillLevel || 'none'} 
+                onValueChange={(value) => setEditFormData(prev => ({ ...prev, skillLevel: value === 'none' ? '' : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Levels" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">All Levels</SelectItem>
+                  <SelectItem value="beginner">Beginner</SelectItem>
+                  <SelectItem value="intermediate">Intermediate</SelectItem>
+                  <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

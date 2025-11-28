@@ -1172,6 +1172,7 @@ export class SupabaseService {
     maxPlayers: number;
     cost: string;
     imageUrl: string;
+    skillLevel?: string;
   }>): Promise<Game> {
     const currentUser = await this.getCurrentUser();
     if (!currentUser) throw new Error('User not authenticated');
@@ -1233,6 +1234,7 @@ export class SupabaseService {
     if (updates.maxPlayers !== undefined) updateData.max_players = updates.maxPlayers;
     if (cost !== undefined) updateData.cost = cost;
     if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl;
+    if (updates.skillLevel !== undefined) updateData.skill_level = updates.skillLevel || null;
 
     console.log('🚨 [SERVICE] Final updateData being sent to database:', updateData);
     

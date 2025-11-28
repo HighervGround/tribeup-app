@@ -42,6 +42,9 @@ class AnalyticsService {
     try {
       posthog.init(apiKey, {
         api_host: host || 'https://app.posthog.com',
+        defaults: '2025-05-24',
+        capture_exceptions: true,
+        debug: isDevelopment,
         loaded: (posthog) => {
           if (isDevelopment) {
             console.log('✅ PostHog initialized (development mode)');
@@ -251,4 +254,3 @@ export const analyticsService = AnalyticsService.getInstance();
 
 // Export for convenience
 export default analyticsService;
-

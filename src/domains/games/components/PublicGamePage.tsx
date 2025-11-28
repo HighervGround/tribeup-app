@@ -40,17 +40,31 @@ export default function PublicGamePage() {
   const [joiningError, setJoiningError] = useState<string | null>(null);
   const [capacity, setCapacity] = useState<any | null>(null);
 
-  // Check authentication status (but don't auto-redirect - let user choose to join)
+  // Check authentication status and redirect authenticated users to app
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
+      const authenticated = !!session;
+      setIsAuthenticated(authenticated);
+      
+      // Redirect authenticated users to the full app game page
+      if (authenticated && gameId) {
+        console.log('Authenticated user detected, redirecting to app game page');
+        navigate(`/app/game/${gameId}`);
+      }
     };
     checkAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      setIsAuthenticated(!!session);
+      const authenticated = !!session;
+      setIsAuthenticated(authenticated);
+      
+      // Redirect authenticated users to the full app game page
+      if (authenticated && gameId) {
+        console.log('User authenticated, redirecting to app game page');
+        navigate(`/app/game/${gameId}`);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -105,17 +119,9 @@ export default function PublicGamePage() {
   }, [gameId]);
 
   const handleJoinGame = async () => {
+    // This function should never be called since authenticated users are auto-redirected
+    // But just in case, handle it gracefully
     if (!gameId) return;
-
-    // If user is authenticated, redirect them to the full app page to join
-    if (isAuthenticated) {
-      console.log('Authenticated user joining - redirecting to app page');
-      localStorage.setItem('autoJoinGame', gameId);
-      navigate(`/app/game/${gameId}`);
-      return;
-    }
-
-    // Unauthenticated users should not reach this point, but handle gracefully
     toast.info('Please sign in to join this game');
   };
 

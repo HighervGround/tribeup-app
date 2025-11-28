@@ -619,13 +619,6 @@ export default function PublicGamePage() {
                     Continue with Email
                   </Button>
                   
-                  <SimpleCalendarButton 
-                    game={game} 
-                    variant="outline" 
-                    size="default"
-                    className="w-full"
-                  />
-                  
                   <p className="text-xs text-muted-foreground text-center">
                     By joining, you'll receive updates about this activity.
                   </p>

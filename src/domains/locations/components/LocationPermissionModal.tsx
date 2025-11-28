@@ -45,12 +45,10 @@ export function LocationPermissionModal({
 }: LocationPermissionModalProps) {
   const handleAllow = () => {
     onAllow();
-    onOpenChange(false);
   };
 
   const handleDeny = () => {
     onDeny();
-    onOpenChange(false);
   };
 
   return (
@@ -118,5 +116,3 @@ export function LocationPermissionModal({
     </Dialog>
   );
 }
-
-export default LocationPermissionModal;

@@ -181,12 +181,6 @@ function Onboarding({ onComplete }: OnboardingProps) {
     }
   };
 
-  // Handle when user denies location access from the modal
-  const handleLocationDeny = () => {
-    // Just close the modal without requesting permission
-    // User can still proceed with onboarding
-  };
-
   const canProceed = () => {
     switch (currentStep) {
       case 1: return true;
@@ -495,7 +489,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
         open={showLocationModal}
         onOpenChange={setShowLocationModal}
         onAllow={handleLocationAllow}
-        onDeny={handleLocationDeny}
+        onDeny={() => setShowLocationModal(false)}
       />
     </div>
   );

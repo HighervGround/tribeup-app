@@ -40,28 +40,35 @@ export default function PublicGamePage() {
   const [joiningError, setJoiningError] = useState<string | null>(null);
   const [capacity, setCapacity] = useState<any | null>(null);
 
-  // Check authentication status
+  // Check authentication status and redirect if authenticated
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
+      const authenticated = !!session;
+      setIsAuthenticated(authenticated);
+      
+      // Redirect authenticated users to the full app game page
+      if (authenticated && gameId) {
+        console.log('User is authenticated, redirecting to app game page');
+        navigate(`/app/game/${gameId}`);
+      }
     };
     checkAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      setIsAuthenticated(!!session);
-      // If user just authenticated and we have a pending join, auto-join
-      if (session && gameId) {
-        const pendingJoin = localStorage.getItem('pendingGameJoin');
-        if (pendingJoin === gameId) {
-          handleJoinGame();
-        }
+      const authenticated = !!session;
+      setIsAuthenticated(authenticated);
+      
+      // Redirect authenticated users to the full app game page
+      if (authenticated && gameId) {
+        console.log('User authenticated, redirecting to app game page');
+        navigate(`/app/game/${gameId}`);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [gameId]);
+  }, [gameId, navigate]);
 
   // Check if user has already joined
   useEffect(() => {
@@ -148,8 +155,8 @@ export default function PublicGamePage() {
     if (!gameId) return;
 
     try {
-      // Store game ID for post-auth join
-      localStorage.setItem('pendingGameJoin', gameId);
+      // Store the intended destination for post-auth redirect
+      localStorage.setItem('authRedirect', `/app/game/${gameId}`);
 
       const redirectUrl = `${env.APP_URL}/auth/callback`;
       const { error } = await supabase.auth.signInWithOAuth({
@@ -167,17 +174,17 @@ export default function PublicGamePage() {
       // OAuth will redirect automatically
     } catch (error: any) {
       console.error('OAuth error:', error);
-      localStorage.removeItem('pendingGameJoin');
+      localStorage.removeItem('authRedirect');
       toast.error('Failed to initiate sign in. Please try again.');
     }
   };
 
   const handleSignInWithEmail = () => {
     if (!gameId) return;
-    // Store game ID for post-auth join
-    localStorage.setItem('pendingGameJoin', gameId);
+    // Store the intended destination and redirect to auth page
+    localStorage.setItem('authRedirect', `/app/game/${gameId}`);
     // Add method=email to auto-show email form on auth page
-    navigate('/auth?redirect=' + encodeURIComponent(`/public/game/${gameId}`) + '&method=email');
+    navigate('/auth?redirect=' + encodeURIComponent(`/app/game/${gameId}`) + '&method=email');
   };
 
   const handleShare = async () => {

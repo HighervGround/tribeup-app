@@ -285,7 +285,22 @@ export default function PublicHomeScreen() {
       </main>
       <footer className="px-4 py-8 text-center text-xs text-gray-500 border-t mt-8">
         <div className="max-w-7xl mx-auto">
-          Browse games publicly. Sign in when you're ready to join or create.
+          <p className="mb-4">Browse games publicly. Sign in when you're ready to join or create.</p>
+          <div className="flex justify-center gap-4">
+            <button 
+              onClick={() => navigate('/legal/privacy')} 
+              className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-gray-300">|</span>
+            <button 
+              onClick={() => navigate('/legal/terms')} 
+              className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            >
+              Terms of Service
+            </button>
+          </div>
         </div>
       </footer>
 

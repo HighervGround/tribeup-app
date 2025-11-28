@@ -41,7 +41,7 @@ function TermsOfService() {
           The service is provided "as is" without warranties. We are not liable for damages arising from use of the service.
         </p>
         <h2>Contact</h2>
-        <p>Questions? Contact support at support@tribeup.app</p>
+        <p>Questions? Contact support at support@tribeup.fit</p>
       </div>
     </div>
   );

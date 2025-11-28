@@ -15,6 +15,7 @@ interface UseLocationWithPermissionModalResult extends ReturnType<typeof useLoca
  */
 export function useLocationWithPermissionModal(options?: Parameters<typeof useLocation>[0]): UseLocationWithPermissionModalResult {
   const location = useLocation({ ...options, autoRequest: false });
+  const { permission, requestLocation } = location;
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   /**
@@ -23,15 +24,15 @@ export function useLocationWithPermissionModal(options?: Parameters<typeof useLo
    */
   const requestLocationWithExplanation = useCallback(() => {
     // If permission is already granted, just request location directly
-    if (location.permission === 'granted') {
-      location.requestLocation();
+    if (permission === 'granted') {
+      requestLocation();
       return;
     }
     
     // If permission was denied, we can still show the modal to let user try again
     // or understand why they might want to enable it in settings
     setShowPermissionModal(true);
-  }, [location.permission, location.requestLocation]);
+  }, [permission, requestLocation]);
 
   /**
    * Called when user clicks "Allow" in the permission modal.
@@ -39,8 +40,8 @@ export function useLocationWithPermissionModal(options?: Parameters<typeof useLo
    */
   const handlePermissionAllow = useCallback(async () => {
     setShowPermissionModal(false);
-    await location.requestLocation();
-  }, [location.requestLocation]);
+    await requestLocation();
+  }, [requestLocation]);
 
   /**
    * Called when user clicks "Not Now" in the permission modal.

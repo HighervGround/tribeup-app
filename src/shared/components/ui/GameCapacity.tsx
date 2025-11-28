@@ -50,13 +50,13 @@ export function GameCapacity({
       </div>
       
       {isFull && (
-        <Badge variant="destructive" className="text-xs px-2 py-0.5">
+        <Badge variant="destructive" size="sm">
           Full
         </Badge>
       )}
       
       {isNearlyFull && !isFull && (
-        <Badge variant="outline" className="text-xs px-2 py-0.5 border-orange-500 text-orange-600">
+        <Badge variant="orange" size="sm">
           {available} left
         </Badge>
       )}

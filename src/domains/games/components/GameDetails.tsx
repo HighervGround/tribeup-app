@@ -1529,13 +1529,19 @@ function GameDetails() {
           onRSVPChange={handleRSVPChange}
           onInvite={() => setShowInvite(true)}
           onAttendeeClick={(attendee) => {
+            console.log('🎯 [GameDetails] onAttendeeClick called:', { attendee });
             // Navigate to user profile if attendee has a valid user ID
             if (attendee?.id && typeof attendee.id === 'string' && !attendee.id.startsWith('guest-') && !attendee.id.startsWith('temp-')) {
               try {
+                console.log('🚀 [GameDetails] Navigating to user:', attendee.id);
                 navigateToUser(attendee.id);
               } catch (error) {
-                console.error('Failed to navigate to user profile:', error);
+                console.error('❌ [GameDetails] Failed to navigate to user profile:', error);
+                toast.error('Could not open user profile.');
               }
+            } else {
+              console.warn('⚠️ [GameDetails] Invalid attendee ID:', attendee?.id);
+              toast.info('Cannot open profile for this attendee.');
             }
           }}
           showFullList={true}

@@ -45,9 +45,9 @@ export function ClickableAvatar({
       // Route normalization: if user taps their own card, redirect to own profile route
       const currentUserId = user?.id;
       if (userId === currentUserId) {
-        navigate('/profile/me');
+        navigate('/app/profile/me');
       } else {
-        navigate(`/user/${userId}`);
+        navigate(`/app/user/${userId}`);
       }
     }
   };

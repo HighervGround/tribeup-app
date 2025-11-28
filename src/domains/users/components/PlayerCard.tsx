@@ -120,6 +120,7 @@ export function PlayerCard({
             src={player.avatar || undefined}
             alt={player.name}
             size="sm"
+            onClick={onViewProfile ? handleViewProfile : undefined}
           />
         ) : (
           <Avatar className="size-8">

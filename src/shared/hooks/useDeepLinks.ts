@@ -152,9 +152,9 @@ export function useDeepLinks() {
     const currentUserId = user?.id;
     
     if (userId && userId === currentUserId) {
-      navigate('/profile/me', { state });
+      navigate('/app/profile/me', { state });
     } else {
-      navigate(`/user/${userId}`, { state });
+      navigate(`/app/user/${userId}`, { state });
     }
   }, [navigate, user?.id]);
 

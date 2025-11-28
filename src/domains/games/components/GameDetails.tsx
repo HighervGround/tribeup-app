@@ -884,18 +884,28 @@ function GameDetails() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute top-4 right-4">
+              <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
                 <Badge className={`${game.sportColor} text-white border-none`}>
                   {game.sport}
                 </Badge>
+                {game.skillLevel && (
+                  <Badge variant="outline" className="capitalize bg-background/90 backdrop-blur-sm">
+                    {game.skillLevel}
+                  </Badge>
+                )}
               </div>
             </div>
           )}
           {!game.imageUrl && (
-            <div className="p-4 border-b">
+            <div className="p-4 border-b flex items-center gap-2 flex-wrap">
               <Badge className={`${game.sportColor} text-white border-none`}>
                 {game.sport}
               </Badge>
+              {game.skillLevel && (
+                <Badge variant="outline" className="capitalize">
+                  {game.skillLevel}
+                </Badge>
+              )}
             </div>
           )}
           

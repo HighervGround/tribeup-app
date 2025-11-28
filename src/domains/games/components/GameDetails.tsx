@@ -304,8 +304,18 @@ function GameDetails() {
     return formatCalendarInfo(game.date, game.time);
   }, [game?.date, game?.time]);
 
-  // Capacity data from stats view
+  // Capacity data - prioritize game data from games_with_counts view
+  // This ensures we use the correct total_players from the view
   const capacityData = useMemo(() => {
+    // Primary: Use game data from games_with_counts view (most accurate)
+    if (game?.totalPlayers !== undefined && game?.totalPlayers !== null) {
+      return {
+        totalPlayers: game.totalPlayers,
+        maxPlayers: game.maxPlayers ?? 0,
+        availableSpots: game.availableSpots ?? Math.max(0, (game.maxPlayers ?? 0) - (game.totalPlayers ?? 0))
+      };
+    }
+    // Fallback: Use capacity stats if game data not available
     if (capacity) {
       return {
         totalPlayers: capacity.total_rsvps ?? 0,
@@ -313,13 +323,13 @@ function GameDetails() {
         availableSpots: capacity.capacity_remaining ?? 0
       };
     }
-    // Fallback to game data
+    // Final fallback: Use participants count
     return {
-      totalPlayers: game?.totalPlayers ?? 0,
+      totalPlayers: participants?.length ?? 0,
       maxPlayers: game?.maxPlayers ?? 0,
-      availableSpots: Math.max(0, (game?.maxPlayers ?? 0) - (game?.totalPlayers ?? 0))
+      availableSpots: Math.max(0, (game?.maxPlayers ?? 0) - (participants?.length ?? 0))
     };
-  }, [capacity, game?.maxPlayers, game?.totalPlayers]);
+  }, [game?.totalPlayers, game?.maxPlayers, game?.availableSpots, capacity, participants?.length]);
 
   const isFull = capacityData.availableSpots === 0;
   const tags: string[] | undefined = game ? (game as any).tags : undefined;
@@ -921,15 +931,7 @@ function GameDetails() {
                 <Users className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="font-medium mb-1">
-                    {capacity ? (
-                      <>
-                        {(capacity.total_rsvps ?? 0)}/{(capacity.capacity || game.maxPlayers) ?? 0} players
-                      </>
-                    ) : (
-                      <>
-                        {(game.totalPlayers ?? 0)}/{(game.maxPlayers ?? 0)} players
-                      </>
-                    )}
+                    {capacityData.totalPlayers}/{capacityData.maxPlayers} players
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {capacityData && capacityData.availableSpots > 0 ? (

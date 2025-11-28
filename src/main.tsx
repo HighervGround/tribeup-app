@@ -8,7 +8,7 @@ import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector'
 import { useThemeStore } from '@/store/themeStore'
 import { analyticsService } from '@/core/analytics/analyticsService'
 import { initializeErrorMonitoring } from '@/core/notifications/errorMonitoring'
-import { PostHogProvider } from 'posthog-js/react'
+import { PostHogProvider, PostHogErrorBoundary } from '@posthog/react'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization
@@ -80,18 +80,48 @@ async function initializeApp() {
     } catch {}
     
     // Start React app immediately
+    const posthogOptions = {
+      api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
+      defaults: '2025-05-24',
+      capture_exceptions: true, // Enable automatic exception capture
+      debug: import.meta.env.MODE === 'development',
+    };
+
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>
         <PostHogProvider
           apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-          options={{
-            api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-            defaults: '2025-05-24',
-            capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
-            debug: import.meta.env.MODE === 'development',
-          }}
+          options={posthogOptions}
         >
-          <App />
+          <PostHogErrorBoundary
+            fallback={({ error, componentStack }) => (
+              <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="w-full max-w-md text-center space-y-4">
+                  <h2 className="text-2xl font-bold">Something went wrong</h2>
+                  <p className="text-muted-foreground">
+                    An error occurred. This has been reported and we'll look into it.
+                  </p>
+                  {import.meta.env.DEV && (
+                    <details className="text-left text-xs bg-muted p-4 rounded">
+                      <summary className="cursor-pointer mb-2">Error Details</summary>
+                      <pre className="whitespace-pre-wrap break-words">
+                        {error?.toString()}
+                        {componentStack}
+                      </pre>
+                    </details>
+                  )}
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90"
+                  >
+                    Reload Page
+                  </button>
+                </div>
+              </div>
+            )}
+          >
+            <App />
+          </PostHogErrorBoundary>
         </PostHogProvider>
       </React.StrictMode>,
     )

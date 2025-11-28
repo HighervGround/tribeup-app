@@ -1082,13 +1082,18 @@ export class SupabaseService {
     }
 
     // Add skill_level if provided (optional field)
-    if (gameData.skillLevel && gameData.skillLevel.trim() !== '') {
-      payload.skill_level = gameData.skillLevel;
+    // Only set if it's a valid non-empty string value
+    if (gameData.skillLevel !== undefined && gameData.skillLevel !== null && gameData.skillLevel.trim() !== '') {
+      payload.skill_level = gameData.skillLevel.trim();
+      console.log('✅ [createGame] Setting skill_level:', payload.skill_level);
+    } else {
+      console.log('ℹ️ [createGame] No skill_level provided or empty, omitting from payload');
     }
 
     console.log('📤 [createGame] Inserting game with payload:', {
       ...payload,
-      planned_route: payload.planned_route ? '[JSON object]' : null
+      planned_route: payload.planned_route ? '[JSON object]' : null,
+      skill_level: payload.skill_level || 'not set'
     });
 
     const { data, error } = await supabase

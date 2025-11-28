@@ -15,6 +15,7 @@ import { useActivityFilters } from '@/domains/games/hooks/useActivityFilters';
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { brandColors } from '@/shared/config/theme';
 import { useActivityGrouping } from '@/domains/games/hooks/useActivityGrouping';
+import { NoFriendsEmptyState } from '@/shared/components/common/EmptyState';
 
 
 
@@ -378,25 +379,11 @@ function HomeScreen() {
               ) : showFollowingOnly ? (
                 // Special empty state for following filter
                 <div className="col-span-full">
-                  <div className="text-center py-12 px-4 space-y-6 bg-card rounded-lg shadow-sm border border-border">
-                    <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto">
-                      <UsersIcon className="w-10 h-10 text-blue-600" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-foreground">Not Following Anyone Yet</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                      Follow other players to see their activities here.
-                    </p>
-                    <div className="flex flex-col sm:flex-row justify-center gap-3">
-                      <Button onClick={() => navigate('/profile#following')} className="flex items-center gap-2">
-                        <UsersIcon className="w-4 h-4" /> Find People to Follow
-                      </Button>
-                      <Button variant="outline" onClick={() => setShowFollowingOnly(false)} className="flex items-center gap-2">
-                        View All Activities
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-6">
-                      💡 Tip: Join activities to meet people, then follow them to see their future activities!
-                    </p>
+                  <div className="bg-card rounded-lg shadow-sm border border-border">
+                    <NoFriendsEmptyState 
+                      onFindFriends={() => navigate('/profile#following')}
+                      onExploreGames={() => setShowFollowingOnly(false)}
+                    />
                   </div>
                 </div>
               ) : (

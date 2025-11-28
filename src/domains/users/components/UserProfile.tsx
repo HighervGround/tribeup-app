@@ -13,6 +13,14 @@ import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 import { AchievementGrid } from './AchievementBadge';
 import { StatGroup } from '@/shared/components/ui';
 import { formatTimeString } from '@/shared/utils/dateUtils';
+import { 
+  EmptyState,
+  NoSportsSelectedEmptyState,
+  NoTribesEmptyState,
+  NoRecentGamesEmptyState,
+  NoAchievementsEmptyState,
+  NoFriendsEmptyState
+} from '@/shared/components/common/EmptyState';
 
 function UserProfile() {
   const navigate = useNavigate();
@@ -136,17 +144,9 @@ function UserProfile() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                <p className="text-sm">No sports selected yet</p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  onClick={() => navigate('/profile/edit')}
-                  className="mt-2"
-                >
-                  Add your sports
-                </Button>
-              </div>
+              <NoSportsSelectedEmptyState 
+                onEditProfile={() => navigate('/profile/edit')} 
+              />
             )}
           </CardContent>
         </Card>
@@ -199,18 +199,9 @@ function UserProfile() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                <Users2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">You haven't joined any tribes yet</p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  onClick={() => navigate('/app/tribes')}
-                  className="mt-2"
-                >
-                  Discover Tribes
-                </Button>
-              </div>
+              <NoTribesEmptyState 
+                onExplore={() => navigate('/app/tribes')}
+              />
             )}
           </CardContent>
         </Card>
@@ -259,11 +250,9 @@ function UserProfile() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>No recent games</p>
-                      <p className="text-sm">Join your first game to see it here!</p>
-                    </div>
+                    <NoRecentGamesEmptyState 
+                      onFindGames={() => navigate('/app')}
+                    />
                   )}
                 </div>
               </CardContent>
@@ -292,11 +281,9 @@ function UserProfile() {
                     showScore={true}
                   />
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No achievements yet</p>
-                    <p className="text-sm">Play games to unlock your first achievement!</p>
-                  </div>
+                  <NoAchievementsEmptyState 
+                    onFindGames={() => navigate('/app')}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -339,12 +326,10 @@ function UserProfile() {
               </Card>
             ) : (
               <Card key="no-following-card">
-                <CardContent className="py-8 text-center">
-                  <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="font-medium mb-2">Not Following Anyone Yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Follow players to see them here
-                  </p>
+                <CardContent className="p-0">
+                  <NoFriendsEmptyState 
+                    onExploreGames={() => navigate('/app')}
+                  />
                 </CardContent>
               </Card>
             )}

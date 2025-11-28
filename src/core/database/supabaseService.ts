@@ -704,7 +704,7 @@ export class SupabaseService {
         .select(`
           id, title, sport, description, location, latitude, longitude, date, time, cost, image_url, 
           max_players, creator_id, created_at, duration,
-          current_players
+          current_players, skill_level
         `)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })

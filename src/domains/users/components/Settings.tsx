@@ -207,7 +207,7 @@ function Settings() {
             <Button
               variant="outline"
               className="w-full justify-between"
-              onClick={() => navigate('/profile/edit')}
+              onClick={() => navigate('/app/profile/edit')}
             >
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />

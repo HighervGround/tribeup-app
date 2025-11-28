@@ -108,7 +108,7 @@ function UserProfile() {
               </div>
             </div>
 
-            <Button variant="outline" className="w-full" onClick={() => navigate('/profile/edit')}>
+            <Button variant="outline" className="w-full" onClick={() => navigate('/app/profile/edit')}>
               Edit Profile
             </Button>
           </CardContent>
@@ -147,7 +147,7 @@ function UserProfile() {
               </div>
             ) : (
               <NoSportsSelectedEmptyState 
-                onEditProfile={() => navigate('/profile/edit')} 
+                onEditProfile={() => navigate('/app/profile/edit')} 
               />
             )}
           </CardContent>

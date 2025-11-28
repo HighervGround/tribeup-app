@@ -6,6 +6,7 @@ import { useAppStore } from '@/store/appStore';
 import { ProfileEnsurer } from '@/core/auth/ProfileEnsurer';
 import { env } from '@/core/config/envUtils';
 import { toast } from 'sonner';
+import { analyticsService } from '@/core/analytics/analyticsService';
 
 interface SimpleAuthContextType {
   user: User | null;
@@ -168,6 +169,12 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
           if (!currentUser || currentUser.id !== user.id) {
             console.log('🔄 Setting basic user profile immediately:', user.id);
             setAppUser(basicUser);
+            // Identify user in analytics
+            analyticsService.identify(basicUser.id, {
+              email: basicUser.email,
+              username: basicUser.username,
+              name: basicUser.name,
+            });
           }
         }
         
@@ -244,6 +251,12 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               if (!currentUser || currentUser.id !== profile.id) {
                 console.log('🔄 Updating with complete user profile:', profile.id);
                 setAppUser(profile);
+                // Identify user in analytics
+                analyticsService.identify(profile.id, {
+                  email: profile.email,
+                  username: profile.username,
+                  name: profile.name,
+                });
               } else {
                 // Same user - update if database profile has more complete data
                 // Check if profile has sports/preferences that basic user doesn't have
@@ -327,6 +340,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         } else if (event === 'SIGNED_OUT') {
           console.log('👋 User signed out');
           setAppUser(null);
+          // Reset analytics on sign out
+          analyticsService.reset();
           toast.success('Signed out successfully');
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           console.log('🔄 Token refreshed, checking if profile update needed');
@@ -364,6 +379,10 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Track sign in event
+      analyticsService.trackEvent('sign_in', {
+        method: 'email',
+      });
     } catch (error) {
       console.error('SignIn failed - network issue:', error);
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
@@ -386,6 +405,11 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     });
     if (error) throw error;
     
+    // Track sign up event
+    analyticsService.trackEvent('sign_up', {
+      method: 'email',
+    });
+    
     // Profile will be created automatically by the auth listener
   };
 
@@ -394,6 +418,13 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     const origin = env.ENVIRONMENT === 'development' ? window.location.origin : env.APP_URL;
     const redirectUrl = `${origin}/auth/callback`;
     console.log('🔐 Starting OAuth flow:', { provider, redirectUrl, origin });
+    
+    // Track OAuth initiation
+    analyticsService.trackEvent('sign_in_initiated', {
+      method: 'oauth',
+      provider,
+    });
+    
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -427,6 +458,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   };
 
   const signOut = async () => {
+    // Track sign out event before signing out
+    analyticsService.trackEvent('sign_out');
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

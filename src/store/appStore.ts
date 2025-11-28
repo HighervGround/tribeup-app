@@ -46,6 +46,8 @@ export interface Game {
     username?: string;
     rating?: string | number;
   };
+  // Optional skill level
+  skillLevel?: 'beginner' | 'intermediate' | 'advanced' | 'mixed';
 }
 
 export interface UserPreferences {

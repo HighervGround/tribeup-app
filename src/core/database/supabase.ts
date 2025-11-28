@@ -171,6 +171,8 @@ export const transformGameFromDB = (dbGame: any, isJoined: boolean = false): any
     createdAt: dbGame.created_at,
     // planned_route is JSONB, so it's already an object - no need to parse
     plannedRoute: (dbGame as any).planned_route || undefined,
+    // skill_level from database (optional)
+    skillLevel: (dbGame as any).skill_level || undefined,
   };
   
   // Debug log route transformation

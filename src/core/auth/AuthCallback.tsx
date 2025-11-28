@@ -83,6 +83,13 @@ function AuthCallback() {
         setUser(userProfile);
         setStatus('success');
         setMessage('Authentication successful! Redirecting...');
+        
+        // Track OAuth sign in
+        const { analyticsService } = await import('@/core/analytics/analyticsService');
+        analyticsService.trackEvent('sign_in', {
+          method: 'oauth',
+          provider: user.app_metadata?.provider || 'unknown',
+        });
 
         // Handle profile creation asynchronously (non-blocking)
         setTimeout(async () => {

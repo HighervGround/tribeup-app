@@ -402,24 +402,51 @@ class ErrorMonitor {
     severity: ErrorSeverity,
     category: ErrorCategory
   ) {
-    // Integration with external monitoring services like Sentry, DataDog, etc.
+    // Integration with PostHog error tracking
     try {
-      // Example: Send to Sentry
-      if (window.Sentry) {
-        window.Sentry.captureException(error, {
-          tags: {
-            category,
-            severity,
-            operation: context.operation
-          },
-          contexts: {
-            error_context: context
-          },
-          fingerprint: [errorId]
-        });
+      // Dynamically import to avoid circular dependencies
+      const { analyticsService } = await import('@/core/analytics/analyticsService');
+      
+      if (!analyticsService.isReady()) {
+        return;
       }
+
+      // Map severity to PostHog level
+      const level = this.mapSeverityToLevel(severity);
+
+      // Capture exception with context
+      analyticsService.captureException(error, {
+        errorId,
+        category,
+        severity,
+        level,
+        operation: context.operation,
+        url: context.url,
+        userAgent: context.userAgent,
+        userId: context.userId,
+        gameId: context.gameId,
+        timestamp: context.timestamp?.toISOString(),
+        ...context.metadata,
+      });
     } catch (monitoringError) {
-      console.error('Failed to send to monitoring service:', monitoringError);
+      // Silently fail to avoid error loops
+      if (import.meta.env.DEV) {
+        console.error('Failed to send to monitoring service:', monitoringError);
+      }
+    }
+  }
+
+  private mapSeverityToLevel(severity: ErrorSeverity): 'info' | 'warning' | 'error' {
+    switch (severity) {
+      case ErrorSeverity.LOW:
+        return 'info';
+      case ErrorSeverity.MEDIUM:
+        return 'warning';
+      case ErrorSeverity.HIGH:
+      case ErrorSeverity.CRITICAL:
+        return 'error';
+      default:
+        return 'error';
     }
   }
 

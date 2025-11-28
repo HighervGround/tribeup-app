@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/shared/components/ui/loading-spinner';
 import { ProtectedRoute } from '@/core/routing/ProtectedRoute';
 import AuthGate from '@/core/auth/AuthGate';
 import AppContent from '@/shared/components/layout/AppContent';
+import { RouteTracker } from '@/shared/components/common/RouteTracker';
 
 // Lazy load components for better performance
 const HomeScreen = lazy(() => import('@/domains/games/components/HomeScreen'));
@@ -56,6 +57,7 @@ const AppWrapper = ({ children }: { children: React.ReactNode }) => (
 export function AppRouter() {
   return (
     <BrowserRouter>
+      <RouteTracker />
       <ErrorBoundary>
         <QueryErrorBoundary>
           <AppWrapper>

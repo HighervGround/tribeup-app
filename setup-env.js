@@ -22,6 +22,11 @@ VITE_SUPABASE_URL=${supabaseUrl}
 VITE_SUPABASE_ANON_KEY=your_anon_key_here
 
 # Replace 'your_anon_key_here' with the actual anon key from your Supabase dashboard
+
+# Analytics & Monitoring (Optional)
+# Get your PostHog API key from: https://app.posthog.com/project/settings
+VITE_POSTHOG_API_KEY=your_posthog_api_key_here
+VITE_POSTHOG_HOST=https://app.posthog.com
 `;
 
 const envPath = path.join(__dirname, '.env');

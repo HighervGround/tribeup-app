@@ -8,6 +8,7 @@ import { Users, Search, UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import { useFriends, useUserSearch } from '../hooks/useFriends';
 import { FriendSuggestion } from '../services/friendService';
 import { toast } from 'sonner';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 
 interface FriendListProps {
   onClose?: () => void;
@@ -22,6 +23,7 @@ export function FriendList({
 }: FriendListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(!showSearch);
+  const { navigateToUser } = useDeepLinks();
 
   const {
     suggestions,
@@ -60,7 +62,10 @@ export function FriendList({
 
     return (
       <div className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div 
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+          onClick={() => navigateToUser(user.id)}
+        >
           <Avatar className="w-10 h-10 flex-shrink-0">
             <AvatarImage src={user.avatar_url || undefined} alt={displayName} />
             <AvatarFallback>
@@ -89,7 +94,10 @@ export function FriendList({
           <Button
             size="sm"
             variant={isFollowing ? "outline" : "default"}
-            onClick={() => handleFollow(user.id, displayName)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleFollow(user.id, displayName);
+            }}
             disabled={isFollowingLoading}
             className="flex-shrink-0 ml-2"
           >

@@ -13,6 +13,7 @@ import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 import { AchievementGrid } from './AchievementBadge';
 import { StatGroup } from '@/shared/components/ui';
 import { formatTimeString } from '@/shared/utils/dateUtils';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 import { 
   EmptyState,
   NoSportsSelectedEmptyState,
@@ -25,6 +26,7 @@ import {
 function UserProfile() {
   const navigate = useNavigate();
   const { user } = useAppStore();
+  const { navigateToUser } = useDeepLinks();
   
   // Support deep linking to specific tab via URL hash
   const urlHash = window.location.hash.replace('#', '');
@@ -302,7 +304,7 @@ function UserProfile() {
                       <div 
                         key={friend.id} 
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/user/${friend.id}`)}
+                        onClick={() => navigateToUser(friend.id)}
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="w-10 h-10">
@@ -350,7 +352,7 @@ function UserProfile() {
                       >
                         <div 
                           className="flex items-center gap-3 flex-1 cursor-pointer"
-                          onClick={() => navigate(`/user/${suggestion.id}`)}
+                          onClick={() => navigateToUser(suggestion.id)}
                         >
                           <Avatar className="w-10 h-10">
                             <AvatarImage src={suggestion.avatar_url || undefined} />

@@ -4,14 +4,13 @@ import { SupabaseService } from '@/core/database/supabaseService';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
-import { ArrowLeft, Search, SlidersHorizontal, Clock, Users } from 'lucide-react';
+import { ArrowLeft, Search, SlidersHorizontal, Plus } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useGames } from '@/domains/games/hooks/useGames';
 import { UnifiedGameCard } from './UnifiedGameCard';
 import { GameCardSkeleton } from './GameCardSkeleton';
 import { formatTimeString } from '@/shared/utils/dateUtils';
 import { EmptyStateEnhanced } from '@/shared/components/ui/empty-state-enhanced';
-import { Plus } from 'lucide-react';
 
 
 

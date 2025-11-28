@@ -8,6 +8,7 @@ import { CacheCorruptionDetector } from '@/shared/utils/cacheCorruptionDetector'
 import { useThemeStore } from '@/store/themeStore'
 import { analyticsService } from '@/core/analytics/analyticsService'
 import { initializeErrorMonitoring } from '@/core/notifications/errorMonitoring'
+import { PostHogProvider } from 'posthog-js/react'
 
 // Performance optimization: In production, CSS is bundled into main assets automatically
 // No manual preloading needed as Vite handles this optimization
@@ -19,82 +20,92 @@ if ('serviceWorker' in navigator && (import.meta as any).env.PROD) {
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
         updateViaCache: 'none' // Always check for updates
-      });
+      })
       
-      console.log('✅ Service Worker registered:', registration);
+      console.log('✅ Service Worker registered:', registration)
       
       // Handle service worker updates
       registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
+        const newWorker = registration.installing
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // New content is available, prompt user to refresh
               if (confirm('New version available! Refresh to update?')) {
-                window.location.reload();
+                window.location.reload()
               }
             }
-          });
+          })
         }
-      });
+      })
       
     } catch (error) {
-      console.error('❌ Service Worker registration failed:', error);
+      console.error('❌ Service Worker registration failed:', error)
     }
-  });
+  })
 }
 
 // Performance monitoring in production
 if ((import.meta as any).env.PROD && 'performance' in window) {
-  const startTime = performance.now();
+  const startTime = performance.now()
   window.addEventListener('load', () => {
-    const loadTime = performance.now() - startTime;
-    console.log(`🚀 App loaded in: ${loadTime.toFixed(2)} ms`);
-    console.log(`🔄 DEPLOYMENT VERSION: v2.1 - ${new Date().toISOString()}`);
-  });
+    const loadTime = performance.now() - startTime
+n    console.log(`🚀 App loaded in: ${loadTime.toFixed(2)} ms`)
+    console.log(`🔄 DEPLOYMENT VERSION: v2.1 - ${new Date().toISOString()}`)
+  })
 }
 
 // Initialize app directly - disable cache corruption detector temporarily
 async function initializeApp() {
-  console.log('🚀 [App] Starting TribeUp initialization...');
+  console.log('🚀 [App] Starting TribeUp initialization...')
   
   try {
-    console.log('✅ [App] Skipping cache corruption check, starting React app directly...');
+    console.log('✅ [App] Skipping cache corruption check, starting React app directly...')
 
     // Initialize error monitoring first (before React)
-    initializeErrorMonitoring();
+    initializeErrorMonitoring()
 
     // Initialize analytics (PostHog)
     // Check for user consent - default to true for now, can be enhanced with consent management
-    const hasConsent = localStorage.getItem('analytics_consent') !== 'false';
-    analyticsService.setConsent(hasConsent);
-    analyticsService.initialize();
+    const hasConsent = localStorage.getItem('analytics_consent') !== 'false'
+    analyticsService.setConsent(hasConsent)
+    analyticsService.initialize()
 
     // Apply stored theme before React mounts (avoid flash)
     try {
-      const stored = localStorage.getItem('theme');
+      const stored = localStorage.getItem('theme')
       if (stored === 'dark') {
-        document.documentElement.classList.add('dark');
+        document.documentElement.classList.add('dark')
       }
     } catch {}
     
     // Start React app immediately
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>
-        <App />
+        <PostHogProvider
+          apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+          options={{
+            api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+            defaults: '2025-05-24',
+            capture_exceptions: true, // This enables capturing exceptions using Error Tracking, set to false if you don't want this
+            debug: import.meta.env.MODE === 'development',
+          }}
+        >
+          <App />
+        </PostHogProvider>
       </React.StrictMode>,
-    );
+    )
     
   } catch (error) {
-    console.error('❌ [App] Initialization failed:', error);
+    console.error('❌ [App] Initialization failed:', error)
     
     // Simple fallback without cache cleaning
-    console.log('🚨 [App] Retrying app initialization...');
+    console.log('🚨 [App] Retrying app initialization...')
     setTimeout(() => {
-      window.location.reload();
-    }, 1000);
+      window.location.reload()
+    }, 1000)
   }
 }
 
 // Start the initialization
-initializeApp();
+initializeApp()

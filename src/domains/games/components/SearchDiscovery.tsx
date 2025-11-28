@@ -49,6 +49,18 @@ function SearchDiscovery() {
   // Use React Query for consistent data loading
   const { data: games = [], isLoading: loading, error } = useGames();
 
+  // Debug: Log games with skill levels
+  useEffect(() => {
+    if (games.length > 0 && import.meta.env.DEV) {
+      const gamesWithSkillLevel = games.filter(g => g.skillLevel);
+      console.log('🔍 [SearchDiscovery] Games with skill level:', {
+        total: games.length,
+        withSkillLevel: gamesWithSkillLevel.length,
+        skillLevels: gamesWithSkillLevel.map(g => ({ id: g.id, title: g.title, skillLevel: g.skillLevel }))
+      });
+    }
+  }, [games]);
+
   const handleGameSelect = (gameId: string) => {
     navigate(`/game/${gameId}`);
   };
@@ -95,8 +107,10 @@ function SearchDiscovery() {
       // Skill level filter - show games that match the selected level
       // When "All Levels" is selected, show all games (including those without skill level)
       // When a specific level is selected, only show games with that exact skill level
-      const matchesSkillLevel = selectedSkillLevel === 'all' || 
-                               (game.skillLevel?.toLowerCase() === selectedSkillLevel.toLowerCase());
+      const gameSkillLevel = game.skillLevel?.toLowerCase().trim();
+      const selectedLevel = selectedSkillLevel.toLowerCase().trim();
+      const matchesSkillLevel = selectedLevel === 'all' || 
+                               (gameSkillLevel && gameSkillLevel === selectedLevel);
       
       return matchesSearch && matchesSport && matchesSkillLevel;
     });

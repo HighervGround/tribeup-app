@@ -31,6 +31,7 @@ interface Game {
   cost?: string;
   category?: string;
   followerCount?: number;
+  skillLevel?: 'beginner' | 'intermediate' | 'advanced' | 'mixed';
   host?: {
     id?: string;
     name: string;
@@ -216,9 +217,16 @@ export function UnifiedGameCard({
             <div className="space-y-3">
               <div>
                 <h3 className="font-semibold text-lg mb-1">{gameToRender.title}</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{gameToRender.location}</span>
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4" />
+                    <span>{gameToRender.location}</span>
+                  </div>
+                  {gameToRender.skillLevel && (
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {gameToRender.skillLevel}
+                    </Badge>
+                  )}
                 </div>
               </div>
               

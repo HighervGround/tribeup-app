@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useLocation, LocationState } from './useLocation';
+import { useLocation } from './useLocation';
 
 interface UseLocationWithPermissionModalResult extends ReturnType<typeof useLocation> {
   showPermissionModal: boolean;
@@ -31,7 +31,7 @@ export function useLocationWithPermissionModal(options?: Parameters<typeof useLo
     // If permission was denied, we can still show the modal to let user try again
     // or understand why they might want to enable it in settings
     setShowPermissionModal(true);
-  }, [location]);
+  }, [location.permission, location.requestLocation]);
 
   /**
    * Called when user clicks "Allow" in the permission modal.
@@ -40,7 +40,7 @@ export function useLocationWithPermissionModal(options?: Parameters<typeof useLo
   const handlePermissionAllow = useCallback(async () => {
     setShowPermissionModal(false);
     await location.requestLocation();
-  }, [location]);
+  }, [location.requestLocation]);
 
   /**
    * Called when user clicks "Not Now" in the permission modal.

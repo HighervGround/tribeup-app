@@ -44,10 +44,14 @@ export function LocationPermissionModal({
   onDeny,
 }: LocationPermissionModalProps) {
   const handleAllow = () => {
-    onAllow();
+    console.log('🔍 LocationPermissionModal: Allow button clicked');
+    onOpenChange(false); // Close modal first
+    onAllow(); // Then trigger the permission request
   };
 
   const handleDeny = () => {
+    console.log('🔍 LocationPermissionModal: Deny button clicked');
+    onOpenChange(false); // Close modal
     onDeny();
   };
 

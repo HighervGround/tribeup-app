@@ -223,20 +223,22 @@ function Onboarding({ onComplete }: OnboardingProps) {
 
   // Handle when user allows location access from the modal
   const handleLocationAllow = () => {
+    console.log('🔍 Onboarding: handleLocationAllow called');
     if (navigator.geolocation) {
+      console.log('🔍 Onboarding: Requesting geolocation permission...');
       navigator.geolocation.getCurrentPosition(
-        () => {
+        (position) => {
+          console.log('✅ Onboarding: Location permission granted', position);
           setLocationPermission('granted');
-          setShowLocationModal(false); // Close modal on success
         },
-        () => {
+        (error) => {
+          console.error('❌ Onboarding: Location permission denied', error);
           setLocationPermission('denied');
-          setShowLocationModal(false); // Close modal on error
         }
       );
     } else {
+      console.error('❌ Onboarding: Geolocation not supported');
       setLocationPermission('denied');
-      setShowLocationModal(false); // Close modal if geolocation not supported
     }
   };
 

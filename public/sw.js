@@ -269,44 +269,120 @@ async function removePendingAction(actionId) {
 // Push notifications
 self.addEventListener('push', (event) => {
   if (event.data) {
-    const data = event.data.json();
+    let data;
+    try {
+      data = event.data.json();
+    } catch (e) {
+      // If not JSON, treat as text
+      data = {
+        title: 'TribeUp',
+        body: event.data.text()
+      };
+    }
     
+    // Get notification options based on type
     const options = {
-      body: data.body,
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
+      body: data.body || '',
+      icon: data.icon || '/icon-192x192.png',
+      badge: data.badge || '/badge-72x72.png',
       vibrate: [100, 50, 100],
+      tag: data.tag || 'tribeup-notification',
+      requireInteraction: data.requireInteraction || false,
       data: {
         dateOfArrival: Date.now(),
-        primaryKey: data.primaryKey
+        url: data.data?.url || '/',
+        type: data.data?.type || 'general',
+        gameId: data.data?.gameId,
+        ...data.data
       },
-      actions: [
-        {
-          action: 'explore',
-          title: 'View Game',
-          icon: '/icon-192x192.png'
-        },
-        {
-          action: 'close',
-          title: 'Close',
-          icon: '/icon-192x192.png'
-        }
-      ]
+      actions: data.actions || getDefaultActions(data.data?.type)
     };
     
     event.waitUntil(
-      self.registration.showNotification(data.title, options)
+      self.registration.showNotification(data.title || 'TribeUp', options)
     );
   }
 });
+
+// Helper function to get default actions based on notification type
+function getDefaultActions(type) {
+  switch (type) {
+    case 'game_reminder':
+      return [
+        { action: 'view', title: 'View Game', icon: '/icon-192x192.png' },
+        { action: 'dismiss', title: 'Dismiss' }
+      ];
+    case 'new_message':
+      return [
+        { action: 'reply', title: 'Reply' },
+        { action: 'view', title: 'View' }
+      ];
+    case 'join_request':
+      return [
+        { action: 'approve', title: 'Approve' },
+        { action: 'view', title: 'View' }
+      ];
+    case 'game_update':
+    case 'player_joined':
+    case 'player_left':
+    case 'weather_alert':
+      return [
+        { action: 'view', title: 'View Game' }
+      ];
+    default:
+      return [
+        { action: 'view', title: 'View' },
+        { action: 'close', title: 'Close' }
+      ];
+  }
+}
 
 // Notification click handling
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+  const data = event.notification.data || {};
+  let url = data.url || '/';
+  
+  // Handle specific actions
+  if (event.action === 'view' || event.action === 'explore') {
+    // Navigate to the relevant page
+    if (data.gameId) {
+      url = `/app/game/${data.gameId}`;
+    }
+  } else if (event.action === 'reply' && data.gameId) {
+    url = `/app/game/${data.gameId}/chat`;
+  } else if (event.action === 'dismiss' || event.action === 'close') {
+    // Just close, don't open anything
+    return;
   }
+  
+  // Open or focus the app
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            // Focus the existing window and use postMessage to navigate
+            return client.focus().then((focusedClient) => {
+              focusedClient.postMessage({
+                type: 'NAVIGATE',
+                url: url
+              });
+            });
+          }
+        }
+        // If no window is open, open a new one with the target URL
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      })
+  );
+});
+
+// Notification close handling
+self.addEventListener('notificationclose', (event) => {
+  const data = event.notification.data || {};
+  console.log('Notification closed:', data.type);
 });

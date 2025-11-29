@@ -1,37 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-
-export interface PushSubscription {
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
-  };
-}
+import { NotificationService, PushSubscriptionData } from '@/core/notifications/notificationService';
+import { envConfig } from '@/core/config/envConfig';
 
 export interface PushNotificationState {
   isSupported: boolean;
   permission: NotificationPermission;
   isSubscribed: boolean;
-  subscription: PushSubscription | null;
+  subscription: PushSubscriptionData | null;
   isLoading: boolean;
   error: string | null;
 }
 
 interface UsePushNotificationsOptions {
-  vapidPublicKey?: string;
   autoSubscribe?: boolean;
-  serviceWorkerUrl?: string;
 }
 
-const DEFAULT_VAPID_KEY = 'BCmjGZmgUDGgJG3g5y8FPAGgGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGGjGG'; // Mock VAPID key
-
 export function usePushNotifications(options: UsePushNotificationsOptions = {}) {
-  const {
-    vapidPublicKey = DEFAULT_VAPID_KEY,
-    autoSubscribe = false,
-    serviceWorkerUrl = '/sw.js'
-  } = options;
+  const { autoSubscribe = false } = options;
 
   const [state, setState] = useState<PushNotificationState>({
     isSupported: false,
@@ -46,11 +32,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
 
   // Check if push notifications are supported
   const checkSupport = useCallback(() => {
-    const isSupported = 
-      'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      'Notification' in window;
-
+    const isSupported = NotificationService.isSupported();
     setState(prev => ({ ...prev, isSupported }));
     return isSupported;
   }, []);
@@ -63,7 +45,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     }
 
     try {
-      const registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
+      const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });
       
@@ -79,7 +61,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       setState(prev => ({ ...prev, error: 'Failed to register service worker' }));
       return null;
     }
-  }, [serviceWorkerUrl]);
+  }, []);
 
   // Request notification permission
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
@@ -116,9 +98,12 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
   }, []);
 
   // Subscribe to push notifications
-  const subscribe = useCallback(async (): Promise<PushSubscription | null> => {
-    if (!serviceWorkerRegistration) {
-      toast.error('Service worker not available');
+  const subscribe = useCallback(async (): Promise<PushSubscriptionData | null> => {
+    // Check for VAPID key
+    const vapidPublicKey = envConfig.get('vapidPublicKey');
+    if (!vapidPublicKey) {
+      console.warn('VAPID public key not configured');
+      setState(prev => ({ ...prev, error: 'Push notifications not configured' }));
       return null;
     }
 
@@ -132,34 +117,25 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Convert VAPID key to Uint8Array
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+      // Use NotificationService to subscribe
+      const subscriptionData = await NotificationService.subscribeToPush();
 
-      const pushSubscription = await serviceWorkerRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey
-      });
-
-      const subscriptionData: PushSubscription = {
-        endpoint: pushSubscription.endpoint,
-        keys: {
-          p256dh: arrayBufferToBase64(pushSubscription.getKey('p256dh')!),
-          auth: arrayBufferToBase64(pushSubscription.getKey('auth')!)
-        }
-      };
-
-      // Send subscription to server
-      await sendSubscriptionToServer(subscriptionData);
-
-      setState(prev => ({
-        ...prev,
-        isSubscribed: true,
-        subscription: subscriptionData,
-        isLoading: false
-      }));
-
-      // Removed excessive success toast - user can see the switch change
-      return subscriptionData;
+      if (subscriptionData) {
+        setState(prev => ({
+          ...prev,
+          isSubscribed: true,
+          subscription: subscriptionData,
+          isLoading: false
+        }));
+        return subscriptionData;
+      } else {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Failed to create push subscription'
+        }));
+        return null;
+      }
 
     } catch (error) {
       console.error('Push subscription failed:', error);
@@ -172,27 +148,14 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       toast.error('Failed to enable push notifications');
       return null;
     }
-  }, [serviceWorkerRegistration, state.permission, requestPermission, vapidPublicKey]);
+  }, [state.permission, requestPermission]);
 
   // Unsubscribe from push notifications
   const unsubscribe = useCallback(async (): Promise<boolean> => {
-    if (!serviceWorkerRegistration) {
-      return false;
-    }
-
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const pushSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
-      
-      if (pushSubscription) {
-        await pushSubscription.unsubscribe();
-        
-        // Remove subscription from server
-        if (state.subscription) {
-          await removeSubscriptionFromServer(state.subscription);
-        }
-      }
+      const success = await NotificationService.unsubscribeFromPush();
 
       setState(prev => ({
         ...prev,
@@ -201,8 +164,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         isLoading: false
       }));
 
-      // Removed toast - user can see the switch change
-      return true;
+      return success;
 
     } catch (error) {
       console.error('Unsubscribe failed:', error);
@@ -213,24 +175,14 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       }));
       return false;
     }
-  }, [serviceWorkerRegistration, state.subscription]);
+  }, []);
 
   // Check current subscription status
   const checkSubscription = useCallback(async () => {
-    if (!serviceWorkerRegistration) return;
-
     try {
-      const pushSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
+      const subscriptionData = await NotificationService.getCurrentSubscription();
       
-      if (pushSubscription) {
-        const subscriptionData: PushSubscription = {
-          endpoint: pushSubscription.endpoint,
-          keys: {
-            p256dh: arrayBufferToBase64(pushSubscription.getKey('p256dh')!),
-            auth: arrayBufferToBase64(pushSubscription.getKey('auth')!)
-          }
-        };
-
+      if (subscriptionData) {
         setState(prev => ({
           ...prev,
           isSubscribed: true,
@@ -246,40 +198,33 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
     } catch (error) {
       console.error('Failed to check subscription:', error);
     }
-  }, [serviceWorkerRegistration]);
+  }, []);
 
   // Send test notification
   const sendTestNotification = useCallback(async () => {
-    if (!state.isSubscribed || !state.subscription) {
+    if (!state.isSubscribed) {
       toast.error('Not subscribed to notifications');
       return;
     }
 
+    setState(prev => ({ ...prev, isLoading: true }));
+
     try {
-      await fetch('/api/notifications/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscription: state.subscription,
-          notification: {
-            title: 'Test Notification',
-            body: 'This is a test notification from TribeUp!',
-            data: {
-              type: 'test',
-              url: '/'
-            }
-          }
-        })
-      });
+      // Send a local notification for testing
+      await NotificationService.sendLocalNotification(
+        'Test Notification',
+        'This is a test notification from TribeUp! 🎉',
+        { type: 'test', url: '/' }
+      );
 
       toast.success('Test notification sent!');
     } catch (error) {
       console.error('Failed to send test notification:', error);
       toast.error('Failed to send test notification');
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [state.isSubscribed, state.subscription]);
+  }, [state.isSubscribed]);
 
   // Initialize
   useEffect(() => {
@@ -302,8 +247,8 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
         
         // Auto-subscribe if requested and permission granted
         if (autoSubscribe && Notification.permission === 'granted') {
-          const existingSubscription = await registration.pushManager.getSubscription();
-          if (!existingSubscription) {
+          const isSubscribed = await NotificationService.isSubscribed();
+          if (!isSubscribed) {
             await subscribe();
           }
         }
@@ -332,43 +277,5 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
   };
 }
 
-// Utility functions
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
-}
-
-async function sendSubscriptionToServer(subscription: PushSubscription): Promise<void> {
-  // Mock implementation - in a real app, send to your backend
-  console.log('Sending subscription to server:', subscription);
-  
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-}
-
-async function removeSubscriptionFromServer(subscription: PushSubscription): Promise<void> {
-  // Mock implementation - in a real app, remove from your backend
-  console.log('Removing subscription from server:', subscription);
-  
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-}
+// Re-export the PushSubscriptionData type for convenience
+export type { PushSubscriptionData };

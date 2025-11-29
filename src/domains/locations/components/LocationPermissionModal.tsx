@@ -103,7 +103,7 @@ export function LocationPermissionModal({
         </div>
 
         <DialogFooter>
-          <Button onClick={handleAllow} className="w-full">
+          <Button variant="default" onClick={handleAllow} className="w-full">
             <MapPin className="w-4 h-4 mr-2" />
             Allow Location Access
           </Button>

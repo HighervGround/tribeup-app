@@ -16,6 +16,7 @@ import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { brandColors } from '@/shared/config/theme';
 import { useActivityGrouping } from '@/domains/games/hooks/useActivityGrouping';
 import { NoFriendsEmptyState } from '@/shared/components/common/EmptyState';
+import { SuccessfulGamesSection } from './SuccessfulGamesSection';
 
 
 
@@ -270,6 +271,13 @@ function HomeScreen() {
                 </div>
               </div>
             </div>
+
+            {/* Popular Games Section - Showcases successful/high-participation games */}
+            <SuccessfulGamesSection 
+              limit={6} 
+              showFeatured={true}
+              className="mb-6"
+            />
 
             {/* Activities List Header */}
             <div className="flex items-center justify-between mb-4">

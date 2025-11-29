@@ -5,13 +5,14 @@ import { Button } from '@/shared/components/ui/button';
 import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { ClickableAvatar } from '@/shared/components/ui/clickable-avatar';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
-import { MapPin, Calendar, Users, Clock, Star, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, Users, Clock, Star, ChevronRight, Flame, TrendingUp } from 'lucide-react';
 import { ActivityLikeButton } from './ActivityLikeButton';
 import { ActivityMapPreview } from './ActivityMapPreview';
 import { useGameCard } from '@/domains/games/hooks/useGameCard';
 import { formatTimeString, formatCost, formatEventHeader } from '@/shared/utils/dateUtils';
 import { GameCapacity } from '@/shared/components/ui/GameCapacity';
 import { SimpleCalendarButton } from '@/shared/components/common/SimpleCalendarButton';
+import { getGameSuccessMetrics } from '@/domains/games/services/gameMetrics';
 
 interface Game {
   id: string;
@@ -423,6 +424,31 @@ export function UnifiedGameCard({
                     {formatCost(gameToRender.cost)}
                   </Badge>
                 )}
+                {/* Success/Popular indicator for high participation games */}
+                {(() => {
+                  const metrics = getGameSuccessMetrics(
+                    gameToRender.totalPlayers || gameToRender.currentPlayers || 0,
+                    gameToRender.maxPlayers || 0,
+                    gameToRender.date
+                  );
+                  if (metrics.isHighAttendance) {
+                    return (
+                      <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-600">
+                        <Flame className="w-3 h-3" aria-hidden="true" />
+                        Popular
+                      </Badge>
+                    );
+                  }
+                  if (metrics.participationRate >= 70) {
+                    return (
+                      <Badge variant="outline" className="text-xs gap-1 text-green-600 border-green-300 dark:text-green-400 dark:border-green-600">
+                        <TrendingUp className="w-3 h-3" aria-hidden="true" />
+                        {metrics.participationRate}% Full
+                      </Badge>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>

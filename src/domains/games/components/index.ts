@@ -10,4 +10,5 @@ export { AttendeeList } from './AttendeeList';
 export type { AttendeeListProps, Attendee, RSVPStatus } from './AttendeeList';
 export { RSVPSection } from './RSVPSection';
 export type { RSVPSectionProps } from './RSVPSection';
+export { SuccessfulGamesSection } from './SuccessfulGamesSection';
 

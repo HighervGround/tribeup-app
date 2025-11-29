@@ -309,7 +309,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 mb-1">
-                        <UsersIcon className="w-4 h-4 text-secondary" />
+                        <Users className="w-4 h-4 text-secondary" />
                         <div className="text-2xl font-bold text-secondary">
                           {platformStats.totalUsers > 0 ? platformStats.totalUsers : '...'}
                         </div>
@@ -334,7 +334,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
             <div className="grid grid-cols-3 gap-6 w-full max-w-sm">
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <UsersIcon className="w-6 h-6 text-primary" />
+                  <Users className="w-6 h-6 text-primary" />
                 </div>
                 <div className="text-sm font-medium">Find Players</div>
                 <div className="text-xs text-muted-foreground mt-1">Near you</div>
@@ -599,7 +599,7 @@ function Onboarding({ onComplete }: OnboardingProps) {
                             Quick start
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
-                            <UsersIcon className="w-3 h-3 mr-1" />
+                            <Users className="w-3 h-3 mr-1" />
                             Meet players
                           </Badge>
                         </div>

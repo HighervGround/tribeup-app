@@ -417,72 +417,92 @@ function Onboarding({ onComplete }: OnboardingProps) {
         {/* Step 3: Location Permission */}
         {currentStep === 3 && (
           <div className="flex flex-col items-center text-center space-y-6">
-            <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center">
-              <MapPin className="w-16 h-16 text-primary" />
+            <div className={`w-32 h-32 rounded-full flex items-center justify-center ${
+              locationPermission === 'granted' ? 'bg-success/10' : 'bg-primary/10'
+            }`}>
+              {locationPermission === 'granted' ? (
+                <Check className="w-16 h-16 text-success" />
+              ) : (
+                <MapPin className="w-16 h-16 text-primary" />
+              )}
             </div>
             
             <div className="space-y-4">
-              <h2 className="text-2xl font-semibold">Enable Location Access</h2>
+              <h2 className="text-2xl font-semibold">
+                {locationPermission === 'granted' ? 'Location Enabled!' : 'Enable Location Access'}
+              </h2>
               <p className="text-muted-foreground max-w-sm">
-                Help us show you sports activities and players near you.
+                {locationPermission === 'granted' 
+                  ? 'Great! We can now show you sports activities and players near you.'
+                  : 'Help us show you sports activities and players near you.'}
               </p>
             </div>
 
-            {/* Benefits section */}
-            <div className="w-full max-w-sm space-y-3">
-              <div className="flex items-start gap-3 text-left p-3 bg-muted/30 rounded-lg">
-                <Users className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-sm">Find Nearby Games</h4>
-                  <p className="text-xs text-muted-foreground">Discover pickup games happening close to you.</p>
+            {locationPermission === 'granted' ? (
+              <Card className="w-full max-w-sm border-success bg-success/5">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 text-success">
+                    <Check className="w-5 h-5 flex-shrink-0" />
+                    <div className="text-left">
+                      <h4 className="font-semibold text-sm">Location Access Granted</h4>
+                      <p className="text-xs text-muted-foreground">
+                        You'll see games sorted by distance and get personalized recommendations.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Benefits section */}
+                <div className="w-full max-w-sm space-y-3">
+                  <div className="flex items-start gap-3 text-left p-3 bg-muted/30 rounded-lg">
+                    <Users className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-sm">Find Nearby Games</h4>
+                      <p className="text-xs text-muted-foreground">Discover pickup games happening close to you.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 text-left p-3 bg-muted/30 rounded-lg">
+                    <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-sm">Sort by Distance</h4>
+                      <p className="text-xs text-muted-foreground">See games sorted by how far they are from you.</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3 text-left p-3 bg-muted/30 rounded-lg">
-                <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-sm">Sort by Distance</h4>
-                  <p className="text-xs text-muted-foreground">See games sorted by how far they are from you.</p>
-                </div>
-              </div>
-            </div>
 
-            {locationPermission === 'pending' && (
-              <Button 
-                onClick={showLocationExplanation}
-                className="w-full max-w-sm"
-              >
-                <MapPin className="w-4 h-4 mr-2" />
-                Enable Location Access
-              </Button>
-            )}
-
-            {locationPermission === 'granted' && (
-              <div className="w-full max-w-sm">
-                <div className="flex items-center justify-center gap-2 text-success mb-4">
-                  <Check className="w-5 h-5" />
-                  Location access granted
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Great! We can now show you games near your location.
-                </div>
-              </div>
+                {locationPermission === 'pending' && (
+                  <Button 
+                    onClick={showLocationExplanation}
+                    className="w-full max-w-sm"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Enable Location Access
+                  </Button>
+                )}
+              </>
             )}
 
             {locationPermission === 'denied' && (
               <div className="w-full max-w-sm">
-                <div className="text-warning mb-4">
-                  Location access denied
-                </div>
-                <div className="text-sm text-muted-foreground mb-4">
-                  You can still use TribeUp, but you'll need to search for games manually.
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={showLocationExplanation}
-                  className="w-full"
-                >
-                  Try Again
-                </Button>
+                <Card className="border-warning bg-warning/5">
+                  <CardContent className="pt-6">
+                    <div className="text-warning mb-4">
+                      Location access denied
+                    </div>
+                    <div className="text-sm text-muted-foreground mb-4">
+                      You can still use TribeUp, but you'll need to search for games manually.
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={showLocationExplanation}
+                      className="w-full"
+                    >
+                      Try Again
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             )}
 

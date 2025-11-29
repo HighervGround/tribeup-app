@@ -53,7 +53,7 @@ export function LocationPermissionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-center sm:text-center">
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <MapPin className="w-8 h-8 text-primary" />
@@ -88,7 +88,7 @@ export function LocationPermissionModal({
           </div>
         </div>
 
-        <div className="bg-muted/50 rounded-lg p-3 mb-2">
+        <div className="bg-muted/50 rounded-lg p-3">
           <div className="flex items-start gap-2">
             <Shield className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="text-xs text-muted-foreground">
@@ -102,8 +102,8 @@ export function LocationPermissionModal({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="default" onClick={handleAllow} className="w-full">
+        <div className="flex flex-col gap-2 pt-4">
+          <Button variant="default" onClick={handleAllow} className="w-full" size="lg">
             <MapPin className="w-4 h-4 mr-2" />
             Allow Location Access
           </Button>
@@ -111,7 +111,7 @@ export function LocationPermissionModal({
             <X className="w-4 h-4 mr-2" />
             Not Now
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

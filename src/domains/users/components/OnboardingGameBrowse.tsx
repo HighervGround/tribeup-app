@@ -166,6 +166,18 @@ export const OnboardingGameBrowse: React.FC<OnboardingGameBrowseProps> = ({
     }
   };
 
+  const formatTime = (timeStr: string) => {
+    try {
+      // Parse time string (HH:mm format)
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes);
+      return format(date, 'h:mm a'); // 12-hour format with AM/PM
+    } catch {
+      return timeStr;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -227,7 +239,7 @@ export const OnboardingGameBrowse: React.FC<OnboardingGameBrowseProps> = ({
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {game.time}
+                    {formatTime(game.time)}
                   </div>
                   <div className="flex items-center gap-1 col-span-2">
                     <MapPin className="w-3 h-3" />

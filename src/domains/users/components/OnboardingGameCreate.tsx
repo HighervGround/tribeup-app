@@ -28,7 +28,16 @@ interface OnboardingGameCreateProps {
   onBack: () => void;
 }
 
-const quickTimeSlots = ['09:00', '12:00', '15:00', '17:00', '18:00', '19:00', '20:00'];
+const quickTimeSlots = [
+  { value: '09:00', label: '9:00 AM' },
+  { value: '12:00', label: '12:00 PM' },
+  { value: '15:00', label: '3:00 PM' },
+  { value: '17:00', label: '5:00 PM' },
+  { value: '18:00', label: '6:00 PM' },
+  { value: '19:00', label: '7:00 PM' },
+  { value: '20:00', label: '8:00 PM' },
+  { value: '21:00', label: '9:00 PM' },
+];
 
 export const OnboardingGameCreate: React.FC<OnboardingGameCreateProps> = ({
   selectedSports,
@@ -229,12 +238,14 @@ export const OnboardingGameCreate: React.FC<OnboardingGameCreateProps> = ({
                   onValueChange={(value) => setFormData({ ...formData, time: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {quickTimeSlots.find(slot => slot.value === formData.time)?.label || formData.time}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {quickTimeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
+                    {quickTimeSlots.map((slot) => (
+                      <SelectItem key={slot.value} value={slot.value}>
+                        {slot.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

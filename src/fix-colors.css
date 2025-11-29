@@ -13,8 +13,8 @@
   color: #111827 !important;
 }
 
-:root:not(.dark) .bg-orange-700 {
-  background-color: #c2410c !important;
+:root:not(.dark) .bg-orange-600 {
+  background-color: #ea580c !important;
 }
 
 /* Dark mode colors */
@@ -30,8 +30,8 @@
   color: #f9fafb !important;
 }
 
-:root.dark .bg-orange-700 {
-  background-color: #c2410c !important;
+:root.dark .bg-orange-600 {
+  background-color: #ea580c !important;
 }
 
 /* Navigation button fixes */
@@ -44,7 +44,7 @@
 }
 
 /* Active navigation buttons */
-button[data-slot="button"].bg-orange-700 {
-  background-color: #c2410c !important;
+button[data-slot="button"].bg-orange-600 {
+  background-color: #ea580c !important;
   color: #ffffff !important;
 }

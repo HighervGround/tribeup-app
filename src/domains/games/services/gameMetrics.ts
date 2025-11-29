@@ -37,6 +37,7 @@ export interface SuccessfulGamesResult {
 // Thresholds for success metrics
 const PARTICIPATION_THRESHOLD = 70; // 70% or more is considered high participation
 const HIGH_ATTENDANCE_THRESHOLD = 80; // 80% or more is considered high attendance
+const MIN_PLAYERS_FOR_SUCCESS = 2; // Minimum players required to consider a game successful
 
 /**
  * Calculate participation rate as a percentage
@@ -163,7 +164,7 @@ export async function getSuccessfulGames(limit: number = 10): Promise<GameMetric
     // Filter to only include successful games (high participation OR completed with participants)
     const successfulGames = gamesWithMetrics.filter(game => 
       game.participationRate >= PARTICIPATION_THRESHOLD || 
-      (game.isCompleted && game.currentPlayers >= 2) ||
+      (game.isCompleted && game.currentPlayers >= MIN_PLAYERS_FOR_SUCCESS) ||
       game.isHighAttendance
     );
 
@@ -237,7 +238,7 @@ export async function getFeaturedGameOfWeek(): Promise<GameMetrics | null> {
       const highAttendance = isHighAttendance(currentPlayers, maxPlayers);
       const successScore = calculateSuccessScore(participationRate, completed, highAttendance);
 
-      if (successScore > highestScore && currentPlayers >= 2) {
+      if (successScore > highestScore && currentPlayers >= MIN_PLAYERS_FOR_SUCCESS) {
         highestScore = successScore;
         
         const creator = creatorMap.get(game.creator_id);
@@ -290,7 +291,7 @@ export function getGameSuccessMetrics(
   const highAttendance = isHighAttendance(currentPlayers, maxPlayers);
   const successScore = calculateSuccessScore(participationRate, completed, highAttendance);
   const isSuccessful = participationRate >= PARTICIPATION_THRESHOLD || 
-                       (completed && currentPlayers >= 2) ||
+                       (completed && currentPlayers >= MIN_PLAYERS_FOR_SUCCESS) ||
                        highAttendance;
 
   return {

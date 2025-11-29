@@ -110,6 +110,9 @@ async function generateVapidJwt(audience: string): Promise<string> {
 }
 
 // Send push notification to a single subscription
+// Note: This implementation uses a simplified approach for sending push notifications.
+// For production use with full browser compatibility, consider using the web-push library
+// which handles the complete encryption process using the subscription's p256dh and auth keys.
 async function sendPushNotification(
   subscription: PushSubscriptionData,
   payload: Record<string, any>
@@ -122,7 +125,12 @@ async function sendPushNotification(
     const vapidJwt = await generateVapidJwt(audience);
     const vapidAuth = `vapid t=${vapidJwt}, k=${VAPID_PUBLIC_KEY}`;
 
-    // Encrypt the payload (simplified - in production, use proper encryption)
+    // Prepare the payload
+    // Note: For Chrome/Firefox, the payload can be sent as JSON with proper Content-Type
+    // For full Web Push spec compliance, the payload should be encrypted using 
+    // the subscription's p256dh and auth keys with aes128gcm encoding.
+    // This simplified implementation works for testing but may need the web-push 
+    // npm package for production-grade encryption.
     const payloadString = JSON.stringify(payload);
     const payloadBytes = new TextEncoder().encode(payloadString);
 
@@ -131,12 +139,11 @@ async function sendPushNotification(
       method: "POST",
       headers: {
         Authorization: vapidAuth,
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
+        "Content-Type": "application/json",
         TTL: "86400", // 24 hours
         Urgency: "normal",
       },
-      body: payloadBytes,
+      body: payloadString,
     });
 
     if (response.status === 201 || response.status === 200) {

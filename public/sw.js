@@ -364,13 +364,16 @@ self.addEventListener('notificationclick', (event) => {
         // Check if there's already a window open
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            client.focus();
-            // Navigate to the target URL
-            client.navigate(url);
-            return;
+            // Focus the existing window and use postMessage to navigate
+            return client.focus().then((focusedClient) => {
+              focusedClient.postMessage({
+                type: 'NAVIGATE',
+                url: url
+              });
+            });
           }
         }
-        // If no window is open, open a new one
+        // If no window is open, open a new one with the target URL
         if (clients.openWindow) {
           return clients.openWindow(url);
         }

@@ -39,7 +39,8 @@ description: Documents core game and sports activity data models, relationships,
 ### Game Management
 - No edits within 2 hours of start time
 - No deletion within 4 hours of start time
-- Automatic archival after completion
+- Games remain visible until end time + 2 hour buffer (for post-game interaction)
+- Automatic database archival 7 days after game date
 - Weather-based game status updates
 - Location-based player recommendations
 

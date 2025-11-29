@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { gameKeys } from './useGames';
+import { isGameActive } from '@/shared/utils/dateUtils';
 
 // Helper function to get sport colors
 const getSportColor = (sport: string): string => {
@@ -105,12 +106,14 @@ export function useGamesWithCreators() {
 
         if (gamesErr) throw gamesErr;
         
-        // Filter out past activities (check both date AND time, not just date)
-        const now = new Date();
+        // Filter out past activities (keep visible until end time + 2 hour buffer)
+        // This allows for post-game reviews, chat continuation, and social interaction
         const futureGames = (gamesData ?? []).filter(game => {
           if (!game.date || !game.time) return false;
-          const gameDateTime = new Date(`${game.date}T${game.time}`);
-          return gameDateTime > now;
+          
+          // Use the shared utility function for consistent game expiry calculation
+          const durationMinutes = game.duration_minutes || game.duration || 120;
+          return isGameActive(game.date, game.time, durationMinutes);
         });
         
         setGames(futureGames);

@@ -168,3 +168,61 @@ export function formatTimeString(timeStr: string): string {
     return timeStr; // Return original if parsing fails
   }
 }
+
+/**
+ * Calculate game expiry time (end time + buffer for post-game interaction)
+ * 
+ * Business Rule: Games remain visible until their end time + 2 hour buffer.
+ * This allows for:
+ * - Post-game reviews and ratings
+ * - Chat/photos sharing after completion
+ * - Late arrivals to still see details
+ * - Social interaction continuation
+ * 
+ * @param dateStr - Game date (YYYY-MM-DD format)
+ * @param timeStr - Game time (HH:MM format, 24-hour)
+ * @param durationMinutes - Game duration in minutes (default: 120)
+ * @param bufferMinutes - Buffer time after game ends (default: 120 = 2 hours)
+ * @returns Date object representing when game should be hidden, or null if invalid input
+ */
+export function calculateGameExpiryTime(
+  dateStr: string,
+  timeStr: string,
+  durationMinutes: number = 120,
+  bufferMinutes: number = 120
+): Date | null {
+  if (!dateStr || !timeStr) return null;
+  
+  try {
+    const gameStartTime = new Date(`${dateStr}T${timeStr}`);
+    if (isNaN(gameStartTime.getTime())) return null;
+    
+    const totalMinutes = durationMinutes + bufferMinutes;
+    const expiryTime = new Date(gameStartTime.getTime() + totalMinutes * 60 * 1000);
+    
+    return expiryTime;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if a game is still active (not yet expired)
+ * @param dateStr - Game date
+ * @param timeStr - Game time
+ * @param durationMinutes - Game duration
+ * @param bufferMinutes - Buffer time after game ends
+ * @returns true if game should still be visible
+ */
+export function isGameActive(
+  dateStr: string,
+  timeStr: string,
+  durationMinutes: number = 120,
+  bufferMinutes: number = 120
+): boolean {
+  const expiryTime = calculateGameExpiryTime(dateStr, timeStr, durationMinutes, bufferMinutes);
+  if (!expiryTime) return false;
+  
+  return expiryTime > new Date();
+}
+

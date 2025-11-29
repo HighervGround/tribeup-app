@@ -227,13 +227,16 @@ function Onboarding({ onComplete }: OnboardingProps) {
       navigator.geolocation.getCurrentPosition(
         () => {
           setLocationPermission('granted');
+          setShowLocationModal(false); // Close modal on success
         },
         () => {
           setLocationPermission('denied');
+          setShowLocationModal(false); // Close modal on error
         }
       );
     } else {
       setLocationPermission('denied');
+      setShowLocationModal(false); // Close modal if geolocation not supported
     }
   };
 

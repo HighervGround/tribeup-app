@@ -14,7 +14,7 @@
 }
 
 :root:not(.dark) .bg-orange-600 {
-  background-color: #ea580c !important;
+  background-color: #c2410c !important;
 }
 
 /* Dark mode colors */
@@ -31,7 +31,7 @@
 }
 
 :root.dark .bg-orange-600 {
-  background-color: #ea580c !important;
+  background-color: #c2410c !important;
 }
 
 /* Navigation button fixes */
@@ -45,6 +45,6 @@
 
 /* Active navigation buttons */
 button[data-slot="button"].bg-orange-600 {
-  background-color: #ea580c !important;
+  background-color: #c2410c !important;
   color: #ffffff !important;
 }

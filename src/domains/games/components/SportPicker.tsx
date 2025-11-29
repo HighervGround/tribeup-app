@@ -19,7 +19,7 @@ export const DEFAULT_SPORTS: Sport[] = [
   { value: 'soccer', label: 'Soccer', icon: '⚽', color: '#22884C' },
   { value: 'tennis', label: 'Tennis', icon: '🎾', color: '#0021A5' },
   { value: 'pickleball', label: 'Pickleball', icon: '🥒', color: '#22884C' },
-  { value: 'volleyball', label: 'Volleyball', icon: '🏐', color: '#F2A900' },
+  { value: 'volleyball', label: 'Volleyball', icon: '🏐', color: '#D97706' },
   { value: 'football', label: 'Football', icon: '🏈', color: '#6A2A60' },
   { value: 'baseball', label: 'Baseball', icon: '⚾', color: '#D32737' },
   { value: 'running', label: 'Running', icon: '🏃', color: '#FA4616' },

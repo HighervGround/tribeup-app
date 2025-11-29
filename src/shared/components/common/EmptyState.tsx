@@ -110,7 +110,7 @@ const variantConfigs: Record<EmptyStateVariant, VariantConfig> = {
   'no-games': {
     icon: Calendar,
     iconBgClass: 'bg-orange-100 dark:bg-orange-900/30',
-    iconColorClass: 'text-orange-600',
+    iconColorClass: 'text-orange-700',
     title: 'No activities yet',
     description: 'Be the first to create an activity and start building your community!',
   },

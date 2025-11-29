@@ -107,7 +107,7 @@ export const sportColors = {
   basketball: '#FA4616',
   soccer: '#22884C',
   tennis: '#0021A5',
-  volleyball: '#F2A900',
+  volleyball: '#D97706',
   football: '#6A2A60',
   baseball: '#D32737',
 } as const;
@@ -122,9 +122,9 @@ export const statusColors = {
     bg: 'rgba(0, 33, 165, 0.1)',
   },
   inProgress: {
-    color: '#F2A900',
+    color: '#D97706',
     foreground: '#000000',
-    bg: 'rgba(242, 169, 0, 0.1)',
+    bg: 'rgba(217, 119, 6, 0.1)',
   },
   completed: {
     color: '#343741',
@@ -195,7 +195,7 @@ export const brandColors = {
   primaryDark: '#D32F02',
   secondary: '#0021A5',
   bottlebrush: '#D32737',
-  alachua: '#F2A900',
+  alachua: '#D97706',
   gator: '#22884C',
   darkBlue: '#002657',
   perennial: '#6A2A60',

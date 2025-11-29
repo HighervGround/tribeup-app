@@ -55,7 +55,7 @@ const brandColors = [
   { name: 'Core Orange', hex: '#FA4616', usage: 'Primary brand color, CTAs' },
   { name: 'Core Blue', hex: '#0021A5', usage: 'Secondary color, text' },
   { name: 'Bottlebrush', hex: '#D32737', usage: 'Error states, alerts' },
-  { name: 'Alachua', hex: '#F2A900', usage: 'Warning states, highlights' },
+  { name: 'Alachua', hex: '#D97706', usage: 'Warning states, highlights' },
   { name: 'Gator', hex: '#22884C', usage: 'Success states, confirmation' },
   { name: 'Dark Blue', hex: '#002657', usage: 'Dark text, headers' },
   { name: 'Perennial', hex: '#6A2A60', usage: 'Accent color, premium' },

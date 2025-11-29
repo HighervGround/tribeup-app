@@ -39,7 +39,7 @@
 --uf-core-orange: #FA4616    /* Primary brand color */
 --uf-core-blue: #0021A5      /* Secondary brand color */
 --uf-bottlebrush: #D32737    /* Accent/destructive actions */
---uf-alachua: #F2A900        /* Warning/highlight color */
+--uf-alachua: #D97706        /* Warning/highlight color */
 --uf-gator: #22884C          /* Success/positive actions */
 --uf-dark-blue: #002657      /* Dark accent */
 --uf-perennial: #6A2A60      /* Purple accent */
@@ -59,7 +59,7 @@ Each sport has a designated color for visual categorization:
 --sport-basketball: #FA4616  /* Orange - High energy */
 --sport-soccer: #22884C      /* Green - Field/grass */
 --sport-tennis: #0021A5      /* Blue - Professional */
---sport-volleyball: #F2A900  /* Yellow - Beach/sun */
+--sport-volleyball: #D97706  /* Amber - Sand courts */
 --sport-football: #6A2A60    /* Purple - Premium */
 --sport-baseball: #D32737    /* Red - Classic American */
 ```

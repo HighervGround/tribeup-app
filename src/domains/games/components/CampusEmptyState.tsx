@@ -65,7 +65,7 @@ export function CampusEmptyState({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
             <div className="text-center">
               <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Calendar className="w-6 h-6 text-orange-600" />
+                <Calendar className="w-6 h-6 text-orange-700" />
               </div>
               <h4 className="font-medium text-sm mb-1">Pick Your Time</h4>
               <p className="text-xs text-muted-foreground">Weekdays after 5pm or weekends work great</p>

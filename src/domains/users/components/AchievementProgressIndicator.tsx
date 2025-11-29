@@ -119,7 +119,7 @@ export function QuickProgress({
     blue: 'text-blue-600 bg-blue-50 border-blue-200',
     green: 'text-green-600 bg-green-50 border-green-200',
     purple: 'text-purple-600 bg-purple-50 border-purple-200',
-    orange: 'text-orange-600 bg-orange-50 border-orange-200'
+    orange: 'text-orange-700 bg-orange-50 border-orange-200'
   };
 
   return (

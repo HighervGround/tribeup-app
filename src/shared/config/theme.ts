@@ -1,9 +1,9 @@
-// Brand Colors - Centralized theme configuration (Strava-inspired muted palette)
+// Brand Colors - Centralized theme configuration aligned with UF palette
 export const brandColors = {
-  primary: '#E85A2B', // Muted from #FA4616 (reduced saturation ~15%)
-  primaryHover: '#D14A1F',
-  primaryLight: '#F07A4F',
-  primaryDark: '#C03D0A',
+  primary: '#FA4616',
+  primaryHover: '#E63E14',
+  primaryLight: '#FF6B3D',
+  primaryDark: '#D32F02',
 } as const;
 
 // Layout Constants

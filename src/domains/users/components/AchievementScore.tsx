@@ -39,7 +39,7 @@ export function AchievementScore({ achievements, className = '' }: AchievementSc
     if (score >= 150) return { title: 'Champion', icon: '🏆', color: 'text-purple-600' };
     if (score >= 100) return { title: 'Expert', icon: '⭐', color: 'text-blue-600' };
     if (score >= 50) return { title: 'Rising Star', icon: '🌟', color: 'text-green-600' };
-    if (score >= 25) return { title: 'Rookie', icon: '🎯', color: 'text-orange-600' };
+    if (score >= 25) return { title: 'Rookie', icon: '🎯', color: 'text-orange-700' };
     return { title: 'Beginner', icon: '🔰', color: 'text-gray-600' };
   };
 
@@ -155,7 +155,7 @@ export function useAchievementScore(achievements: Achievement[]) {
     if (score >= 150) return { title: 'Champion', icon: '🏆', color: 'text-purple-600', level: 5 };
     if (score >= 100) return { title: 'Expert', icon: '⭐', color: 'text-blue-600', level: 4 };
     if (score >= 50) return { title: 'Rising Star', icon: '🌟', color: 'text-green-600', level: 3 };
-    if (score >= 25) return { title: 'Rookie', icon: '🎯', color: 'text-orange-600', level: 2 };
+    if (score >= 25) return { title: 'Rookie', icon: '🎯', color: 'text-orange-700', level: 2 };
     return { title: 'Beginner', icon: '🔰', color: 'text-gray-600', level: 1 };
   };
 

@@ -638,7 +638,7 @@ export function InteractiveRoutePlanner({ centerLat, centerLng, onRouteSave, spo
                 <p className="font-semibold">{routeAnalysis.duration}</p>
               </div>
               <div className="text-center">
-                <Mountain className="w-6 h-6 mx-auto mb-2 text-orange-600" />
+                <Mountain className="w-6 h-6 mx-auto mb-2 text-orange-700" />
                 <p className="text-sm text-muted-foreground">Elevation Gain</p>
                 <p className="font-semibold">{routeAnalysis.elevationGain}m</p>
               </div>

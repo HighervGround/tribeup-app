@@ -1253,7 +1253,7 @@ function GameDetails() {
                         <p className="font-semibold">{game.plannedRoute.analysis.duration}</p>
                       </div>
                       <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <Mountain className="w-5 h-5 mx-auto mb-2 text-orange-600" />
+                        <Mountain className="w-5 h-5 mx-auto mb-2 text-orange-700" />
                         <p className="text-sm text-muted-foreground">Elevation Gain</p>
                         <p className="font-semibold">{game.plannedRoute.analysis.elevationGain}m</p>
                       </div>

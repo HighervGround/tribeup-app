@@ -75,7 +75,7 @@ export const sportIconColors: Record<string, string> = {
   basketball: '#FA4616',
   soccer: '#22884C',
   tennis: '#0021A5',
-  volleyball: '#F2A900',
+  volleyball: '#D97706',
   football: '#6A2A60',
   baseball: '#D32737',
   pickleball: '#22884C',

@@ -152,7 +152,7 @@ const color = getSportIconColor('basketball'); // Returns '#FA4616'
 - Basketball: `#FA4616` (Orange)
 - Soccer: `#22884C` (Green)
 - Tennis: `#0021A5` (Blue)
-- Volleyball: `#F2A900` (Yellow)
+- Volleyball: `#D97706` (Amber)
 - Football: `#6A2A60` (Purple)
 - Baseball: `#D32737` (Red)
 

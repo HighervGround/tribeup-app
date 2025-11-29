@@ -43,6 +43,17 @@ if ('serviceWorker' in navigator && (import.meta as any).env.PROD) {
       console.error('❌ Service Worker registration failed:', error)
     }
   })
+  
+  // Handle messages from service worker (e.g., navigation from notification clicks)
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'NAVIGATE') {
+      const targetUrl = event.data.url
+      if (targetUrl && targetUrl.startsWith('/')) {
+        // Use React Router's navigation if available, otherwise use window.location
+        window.location.href = targetUrl
+      }
+    }
+  })
 }
 
 // Performance monitoring in production

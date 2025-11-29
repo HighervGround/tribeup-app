@@ -7,3 +7,6 @@
 export { PlayerCard } from './PlayerCard';
 export type { PlayerCardProps, PlayerStats } from './PlayerCard';
 
+export { OnboardingGameBrowse } from './OnboardingGameBrowse';
+export { OnboardingGameCreate } from './OnboardingGameCreate';
+

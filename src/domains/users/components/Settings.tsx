@@ -35,6 +35,7 @@ import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/appStore';
 import { AccountDeletionSection } from '@/domains/users/components/AccountDeletionSection';
+import { DataExportSection } from '@/domains/users/components/DataExportSection';
 
 function Settings() {
   const navigate = useNavigate();
@@ -300,8 +301,21 @@ function Settings() {
           </CardContent>
         </Card>
 
-        {/* Account Deletion */}
-        <AccountDeletionSection />
+        {/* Privacy & Data Section */}
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">Privacy & Data</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage your data and privacy settings
+            </p>
+          </div>
+
+          {/* Data Export */}
+          <DataExportSection />
+
+          {/* Account Deletion */}
+          <AccountDeletionSection />
+        </div>
       </div>
     </div>
   );

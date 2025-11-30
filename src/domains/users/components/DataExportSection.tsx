@@ -211,7 +211,10 @@ export function DataExportSection() {
 
         // If function is missing/unavailable, optionally fall back
         if (response.status === 404 || response.status === 403) {
-          if (import.meta.env.DEV || import.meta.env.VITE_EXPORT_FALLBACK === 'true') {
+          const fallbackEnabled = import.meta.env.DEV || 
+            import.meta.env.VITE_EXPORT_FALLBACK === 'true' || 
+            import.meta.env.VITE_EXPORT_FALLBACK === true;
+          if (fallbackEnabled) {
             console.warn('[DataExport] Edge Function not available, using client-side fallback');
             return clientSideExport();
           }
@@ -228,8 +231,9 @@ export function DataExportSection() {
           return clientSideExport();
         }
         const msg = (networkErr?.message || '').toLowerCase();
-        const canFallback = import.meta.env.VITE_EXPORT_FALLBACK === 'true';
-        if (canFallback && (msg.includes('load failed') || msg.includes('failed to fetch') || msg.includes('network'))) {
+        const canFallback = import.meta.env.VITE_EXPORT_FALLBACK === 'true' || 
+          import.meta.env.VITE_EXPORT_FALLBACK === true;
+        if (canFallback && (msg.includes('load failed') || msg.includes('failed to fetch') || msg.includes('network') || msg.includes('cors'))) {
           console.warn('[DataExport] Network error calling Edge Function, using client-side fallback');
           return clientSideExport();
         }

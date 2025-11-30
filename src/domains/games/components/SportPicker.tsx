@@ -159,17 +159,17 @@ export function SportPicker({
   const sizeClasses = {
     sm: {
       card: 'p-2',
-      icon: 'text-xl',
+      icon: 'text-lg',
       label: 'text-xs',
     },
     md: {
-      card: 'p-3',
-      icon: 'text-2xl',
+      card: 'p-2',
+      icon: 'text-xl',
       label: 'text-sm',
     },
     lg: {
-      card: 'p-4',
-      icon: 'text-3xl',
+      card: 'p-3',
+      icon: 'text-2xl',
       label: 'text-base',
     },
   }[size];
@@ -268,8 +268,8 @@ export function SportPicker({
         </div>
       )}
 
-      <ScrollArea className="h-[400px]">
-        <div className="space-y-6 pr-4">
+      <ScrollArea className="h-[320px]">
+        <div className="space-y-4 pr-3">
           {/* Favorites Section */}
           {showFavorites && favoriteSportsList.length > 0 && (
             <div className="space-y-3">
@@ -277,7 +277,7 @@ export function SportPicker({
                 <Star className="size-4 text-warning fill-current" />
                 <h3 className="text-sm font-semibold">Favorites</h3>
               </div>
-              <div className={cn('grid gap-3', gridColsClass)}>
+              <div className={cn('grid gap-2', gridColsClass)}>
                 {favoriteSportsList.map((sport, index) =>
                   renderSportCard(sport, index, true)
                 )}
@@ -292,7 +292,7 @@ export function SportPicker({
                 <Clock className="size-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold">Recent</h3>
               </div>
-              <div className={cn('grid gap-3', gridColsClass)}>
+              <div className={cn('grid gap-2', gridColsClass)}>
                 {recentSportsList.map((sport, index) =>
                   renderSportCard(
                     sport,
@@ -311,7 +311,7 @@ export function SportPicker({
                 <h3 className="text-sm font-semibold">Select a Sport</h3>
               )}
             {filteredSports.length > 0 ? (
-              <div className={cn('grid gap-3', gridColsClass)}>
+              <div className={cn('grid gap-2', gridColsClass)}>
                 {filteredSports.map((sport, index) =>
                   renderSportCard(
                     sport,

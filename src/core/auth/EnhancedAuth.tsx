@@ -61,11 +61,16 @@ function EnhancedAuth() {
     }
   };
 
+  const handleForgotPassword = () => {
+    navigate('/auth/forgot-password');
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <LoginForm 
           onEmailAuth={handleEmailAuth}
+          onForgotPassword={handleForgotPassword}
           className="w-full"
         />
         

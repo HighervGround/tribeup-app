@@ -311,6 +311,52 @@ export async function getUserFriends(userId?: string): Promise<FriendSuggestion[
 }
 
 /**
+ * Get users who follow the target user
+ */
+export async function getUserFollowers(userId?: string): Promise<FriendSuggestion[]> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const targetUserId = userId || user.id;
+
+    // Get connections where someone follows the target user
+    const { data: connections, error } = await supabase
+      .from('user_connections')
+      .select('follower_id')
+      .eq('following_id', targetUserId)
+      .eq('status', 'accepted');
+
+    if (error) throw error;
+    if (!connections || connections.length === 0) return [];
+
+    const followerIds = connections.map((c: any) => c.follower_id);
+
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, display_name, username, avatar_url, bio')
+      .in('id', followerIds);
+
+    if (usersError) throw usersError;
+
+    return (users || []).map((u: any) => ({
+      id: u.id,
+      display_name: u.display_name,
+      username: u.username,
+      avatar_url: u.avatar_url,
+      bio: u.bio,
+      common_games_count: 0,
+      shared_games: [],
+      // Whether current user is following this follower back
+      is_following: connections.some((c: any) => c.follower_id === u.id && c.following_id === targetUserId) ? false : false
+    }));
+  } catch (error) {
+    console.error('Error getting user followers:', error);
+    throw error;
+  }
+}
+
+/**
  * Check if current user is following another user
  */
 export async function isFollowing(targetUserId: string): Promise<boolean> {

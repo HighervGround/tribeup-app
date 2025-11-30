@@ -6,6 +6,7 @@ import {
   searchUsers,
   followUser as followUserService,
   getUserFriends,
+  getUserFollowers,
   isFollowing,
   FriendSuggestion
 } from '../services/friendService';
@@ -18,6 +19,7 @@ export const friendKeys = {
   search: (query: string) => [...friendKeys.all, 'search', query] as const,
   following: (userId: string) => [...friendKeys.all, 'following', userId] as const,
   userFriends: (userId?: string) => [...friendKeys.all, 'userFriends', userId] as const,
+  userFollowers: (userId?: string) => [...friendKeys.all, 'userFollowers', userId] as const,
 };
 
 /**
@@ -69,6 +71,21 @@ export function useUserFriends(userId?: string) {
     queryKey: friendKeys.userFriends(targetUserId),
     queryFn: () => getUserFriends(targetUserId),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!targetUserId,
+  });
+}
+
+/**
+ * Hook to get users who follow you (followers)
+ */
+export function useUserFollowers(userId?: string) {
+  const { user } = useAppStore();
+  const targetUserId = userId || user?.id;
+
+  return useQuery({
+    queryKey: friendKeys.userFollowers(targetUserId),
+    queryFn: () => getUserFollowers(targetUserId),
+    staleTime: 5 * 60 * 1000,
     enabled: !!targetUserId,
   });
 }

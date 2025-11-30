@@ -15,6 +15,9 @@ const SearchDiscovery = lazy(() => import('@/domains/games/components/SearchDisc
 const CreateGame = lazy(() => import('@/domains/games/components/CreateGame'));
 const UserProfile = lazy(() => import('@/domains/users/components/UserProfile'));
 const EditProfile = lazy(() => import('@/domains/users/components/EditProfile'));
+const FollowingPage = lazy(() => import('@/domains/users/pages/FollowingPage'));
+const FollowersPage = lazy(() => import('@/domains/users/pages/FollowersPage'));
+const AchievementsPage = lazy(() => import('@/domains/users/pages/AchievementsPage'));
 const GameDetails = lazy(() => import('@/domains/games/components/GameDetails'));
 const OtherUserProfile = lazy(() => import('@/domains/users/components/OtherUserProfile'));
 const NotificationCenter = lazy(() => import('@/shared/components/common/NotificationCenter'));
@@ -28,6 +31,8 @@ const AdminDashboard = lazy(() => import('@/shared/components/common/AdminDashbo
 import AuthCallback from '@/core/auth/AuthCallback';
 const TermsOfService = lazy(() => import('@/core/auth/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('@/core/auth/PrivacyPolicy'));
+const ForgotPasswordPage = lazy(() => import('@/core/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/core/auth/ResetPasswordPage'));
 const FeedbackPage = lazy(() => import('@/domains/users/components/FeedbackPage'));
 
 const Onboarding = lazy(() => import('@/domains/users/components/Onboarding'));
@@ -82,6 +87,9 @@ export function AppRouter() {
                 <Route path="profile" element={<UserProfile />} />
                 <Route path="profile/me" element={<UserProfile />} />
                 <Route path="profile/edit" element={<EditProfile />} />
+                <Route path="profile/following" element={<FollowingPage />} />
+                <Route path="profile/followers" element={<FollowersPage />} />
+                <Route path="profile/achievements" element={<AchievementsPage />} />
 
                 {/* Game Routes */}
                 <Route path="game/:gameId" element={<GameDetails />} />
@@ -139,6 +147,22 @@ export function AppRouter() {
               <Route
                 path="/auth/callback"
                 element={<AuthCallback />}
+              />
+              <Route
+                path="/auth/forgot-password"
+                element={
+                  <Suspense fallback={<RouteLoader text="Loading..." />}>
+                    <ForgotPasswordPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/auth/reset-password"
+                element={
+                  <Suspense fallback={<RouteLoader text="Loading..." />}>
+                    <ResetPasswordPage />
+                  </Suspense>
+                }
               />
 
               {/* Legacy redirects (backward compatibility with pre-/app paths) */}

@@ -209,34 +209,31 @@ export function DataExportSection() {
           return response.blob();
         }
 
-        // If function is missing/unavailable, optionally fall back
+        // If function is missing/unavailable, use client-side fallback
         if (response.status === 404 || response.status === 403) {
-          const fallbackEnabled = import.meta.env.DEV || 
-            import.meta.env.VITE_EXPORT_FALLBACK === 'true' || 
-            import.meta.env.VITE_EXPORT_FALLBACK === true;
-          if (fallbackEnabled) {
-            console.warn('[DataExport] Edge Function not available, using client-side fallback');
-            return clientSideExport();
-          }
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.message || 'Export service not available');
+          console.warn('[DataExport] Edge Function not available (status:', response.status, '), using client-side fallback');
+          return clientSideExport();
         }
 
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || 'Failed to export data');
       } catch (networkErr: any) {
         // Handle network/CORS/preflight failures (e.g., TypeError: Load failed)
-        if (import.meta.env.DEV) {
-          console.warn('[DataExport] Dev mode: falling back to client-side export due to network error:', networkErr);
-          return clientSideExport();
-        }
+        // Check if this is a network error (CORS, fetch failure, etc.)
         const msg = (networkErr?.message || '').toLowerCase();
-        const canFallback = import.meta.env.VITE_EXPORT_FALLBACK === 'true' || 
-          import.meta.env.VITE_EXPORT_FALLBACK === true;
-        if (canFallback && (msg.includes('load failed') || msg.includes('failed to fetch') || msg.includes('network') || msg.includes('cors'))) {
-          console.warn('[DataExport] Network error calling Edge Function, using client-side fallback');
+        const isNetworkError = msg.includes('load failed') || 
+          msg.includes('failed to fetch') || 
+          msg.includes('network') || 
+          msg.includes('cors') ||
+          msg.includes('blocked') ||
+          networkErr?.name === 'TypeError';
+        
+        if (isNetworkError) {
+          console.warn('[DataExport] Network error calling Edge Function, using client-side fallback:', networkErr.message);
           return clientSideExport();
         }
+        
+        // For other errors, throw
         throw new Error('Unable to reach export service');
       }
     },

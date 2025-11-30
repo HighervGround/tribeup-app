@@ -24,22 +24,32 @@ export function DataExportSection() {
   const { data: exportHistory, isLoading: isLoadingHistory, error: historyError } = useQuery<ExportHistory[]>({
     queryKey: ['user-data-exports'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_data_exports')
-        .select('id, requested_at, completed_at, status, error_message')
-        .order('requested_at', { ascending: false })
-        .limit(5);
+      try {
+        const { data, error } = await supabase
+          .from('user_data_exports')
+          .select('id, requested_at, completed_at, status, error_message')
+          .order('requested_at', { ascending: false })
+          .limit(5);
 
-      // If table doesn't exist yet (migrations not applied), return empty array
-      if (error?.code === '42P01' || error?.code === 'PGRST204') {
-        console.warn('user_data_exports table not found - migrations may not be applied yet');
+        // If table doesn't exist yet (migrations not applied), return empty array
+        if (error?.code === '42P01' || error?.code === 'PGRST204') {
+          console.warn('user_data_exports table not found - migrations may not be applied yet');
+          return [];
+        }
+
+        if (error) {
+          // Swallow errors to avoid global toasts; show inline alert via historyError
+          console.warn('Failed to load export history:', error);
+          return [];
+        }
+        return data || [];
+      } catch (err) {
+        console.warn('Unexpected error loading export history:', err);
         return [];
       }
-
-      if (error) throw error;
-      return data || [];
     },
     retry: false,
+    throwOnError: false,
     staleTime: 30000, // Cache for 30 seconds
   });
 

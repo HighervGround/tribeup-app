@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui
 import { Settings, Trophy, Calendar, MapPin, Users, UserPlus, Users2 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
-import { useUserFriends, useFriendSuggestions, useFollowUser } from '@/domains/users/hooks/useFriends';
+import { useUserFriends, useUserFollowers, useFriendSuggestions, useFollowUser } from '@/domains/users/hooks/useFriends';
 import { useUserTribes } from '@/domains/tribes/hooks/useTribes';
 import { AchievementGrid } from './AchievementBadge';
 import { StatGroup } from '@/shared/components/ui';
@@ -32,9 +32,39 @@ function UserProfile() {
   const urlHash = window.location.hash.replace('#', '');
   const initialTab = ['overview', 'following', 'achievements'].includes(urlHash) ? urlHash : 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [showAllFollowing, setShowAllFollowing] = useState(false);
+  const [showAllFollowers, setShowAllFollowers] = useState(false);
+  const [showAllAchievements, setShowAllAchievements] = useState(false);
+  const pendingScrollRef = useRef<string | null>(null);
+
+  // Smooth scroll utility that accounts for fixed headers on mobile
+  const smoothScrollTo = (elementId: string) => {
+    try {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      // Compute dynamic offset: sticky tabs height + any top padding
+      const tabsEl = document.getElementById('profile-tabs');
+      const tabsH = tabsEl ? tabsEl.offsetHeight : 48;
+      const offset = Math.max(tabsH + 16, 64);
+      const y = window.scrollY + rect.top - offset;
+      window.scrollTo({ top: Math.max(y, 0), behavior: 'smooth' });
+    } catch {}
+  };
+
+  // Perform deferred scroll after tab content renders
+  useEffect(() => {
+    if (pendingScrollRef.current) {
+      const targetId = pendingScrollRef.current;
+      pendingScrollRef.current = null;
+      const t = setTimeout(() => smoothScrollTo(targetId), 120);
+      return () => clearTimeout(t);
+    }
+  }, [activeTab]);
   
-  // Fetch users you're following
+  // Fetch users you're following and followers
   const { data: userFriends = [], isLoading: friendsLoading } = useUserFriends(user?.id);
+  const { data: userFollowers = [], isLoading: followersLoading } = useUserFollowers(user?.id);
   const { data: friendSuggestions = [], isLoading: suggestionsLoading } = useFriendSuggestions(10);
   const friendMutation = useFollowUser();
   
@@ -114,20 +144,257 @@ function UserProfile() {
           </CardContent>
         </Card>
 
-        {/* Stats */}
+        {/* Stats - now clickable */}
         <Card>
           <CardHeader>
-            <CardTitle>Stats</CardTitle>
+            <CardTitle id="profile-stats">Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <StatGroup
-              stats={userStats.map((stat) => ({
-                label: stat.label,
-                value: stat.value,
-                icon: <stat.icon className="w-5 h-5" />,
-              }))}
-              columns={2}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              {userStats.map((stat) => {
+                const handleClick = () => {
+                  if (stat.label === 'Following') {
+                    setActiveTab('following');
+                    pendingScrollRef.current = 'following-top';
+                  } else if (stat.label === 'Achievements') {
+                    setActiveTab('achievements');
+                    pendingScrollRef.current = 'achievements-top';
+                  } else if (stat.label === 'Activities Hosted' || stat.label === 'Activities Joined') {
+                    // Navigate to recent games section by switching to overview and scrolling
+                    setActiveTab('overview');
+                    pendingScrollRef.current = 'overview-top';
+                  }
+                };
+                return (
+                  <button
+                    key={stat.label}
+                    onClick={handleClick}
+                    className="w-full rounded-lg border p-3 text-left hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <div className="flex items-center gap-3">
+                      <stat.icon className="w-5 h-5" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">{stat.label}</div>
+                        <div className="text-lg font-semibold">{stat.value}</div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Social: Segmented control with inline content to avoid long scrolls */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Social
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="following">Following</TabsTrigger>
+                <TabsTrigger value="followers">Followers</TabsTrigger>
+                <TabsTrigger value="achievements">Achievements</TabsTrigger>
+              </TabsList>
+              <div className="mt-4" />
+              <TabsContent value="following" className="space-y-4">
+                {userFriends.length > 0 ? (
+                  <div className="space-y-2">
+                    {(showAllFollowing ? userFriends : userFriends.slice(0, 6)).map((friend) => (
+                      <div 
+                        key={friend.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => navigateToUser(friend.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={friend.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {(friend.display_name || friend.username || 'U').charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{friend.display_name || friend.username || 'User'}</p>
+                            {friend.bio && (
+                              <p className="text-sm text-muted-foreground truncate max-w-[200px]">{friend.bio}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">Following</Badge>
+                      </div>
+                    ))}
+                    {userFriends.length > 6 && (
+                      <div className="flex justify-end gap-4">
+                        {showAllFollowing ? (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => setShowAllFollowing(false)}
+                            aria-label="Show less following"
+                          >
+                            Show less
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => setShowAllFollowing(true)}
+                              aria-label="Show more following"
+                            >
+                              Show more
+                            </Button>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => navigate('/app/profile/following')}
+                              aria-label="See all following"
+                            >
+                              See all
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <NoFriendsEmptyState onExploreGames={() => navigate('/app')} />
+                )}
+              </TabsContent>
+              <TabsContent value="followers" className="space-y-4">
+                {followersLoading ? (
+                  <div className="py-4 text-center text-muted-foreground">
+                    <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                    Loading followers...
+                  </div>
+                ) : userFollowers.length > 0 ? (
+                  <div className="space-y-2">
+                    {(showAllFollowers ? userFollowers : userFollowers.slice(0, 6)).map((follower) => (
+                      <div 
+                        key={follower.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => navigateToUser(follower.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={follower.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {(follower.display_name || follower.username || 'U').charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{follower.display_name || follower.username || 'User'}</p>
+                            {follower.bio && (
+                              <p className="text-sm text-muted-foreground truncate max-w-[200px]">{follower.bio}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            friendMutation.mutate(follower.id);
+                          }}
+                          disabled={friendMutation.isPending}
+                          className="ml-2"
+                        >
+                          Follow back
+                        </Button>
+                      </div>
+                    ))}
+                    {userFollowers.length > 6 && (
+                      <div className="flex justify-end gap-4">
+                        {showAllFollowers ? (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => setShowAllFollowers(false)}
+                            aria-label="Show less followers"
+                          >
+                            Show less
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => setShowAllFollowers(true)}
+                              aria-label="Show more followers"
+                            >
+                              Show more
+                            </Button>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => navigate('/app/profile/followers')}
+                              aria-label="See all followers"
+                            >
+                              See all
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No followers yet.</div>
+                )}
+              </TabsContent>
+              <TabsContent value="achievements" className="space-y-4">
+                {achievements.length > 0 ? (
+                  <AchievementGrid 
+                    achievements={achievements.map((ua: any) => ({
+                      ...ua.achievements,
+                      earned_at: ua.earned_at
+                    }))} 
+                    maxDisplay={showAllAchievements ? achievements.length : 8}
+                    size="sm"
+                    layout="card"
+                    showScore={true}
+                  />
+                ) : (
+                  <NoAchievementsEmptyState onFindGames={() => navigate('/app')} />
+                )}
+                {achievements.length > 8 && (
+                  <div className="flex justify-end gap-4">
+                    {showAllAchievements ? (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => setShowAllAchievements(false)}
+                        aria-label="Show fewer achievements"
+                      >
+                        Show less
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => setShowAllAchievements(true)}
+                          aria-label="Show more achievements"
+                        >
+                          Show more
+                        </Button>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => navigate('/app/profile/achievements')}
+                          aria-label="See all achievements"
+                        >
+                          See all
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -208,19 +475,18 @@ function UserProfile() {
           </CardContent>
         </Card>
 
-        {/* Tabs for different sections */}
+        {/* Sections below: keep Overview only to avoid duplicate content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="following">Following</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+          <TabsList id="profile-tabs" className="grid w-full grid-cols-1 sticky top-0 z-10 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <TabsTrigger value="overview" onClick={() => { pendingScrollRef.current = 'overview-top'; }}>Overview</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
+            <div id="overview-top" />
             {/* Recent Games */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Games</CardTitle>
+                <CardTitle id="recent-games">Recent Games</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -261,145 +527,11 @@ function UserProfile() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="achievements" className="space-y-6">
-            {/* Achievement Badges */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5" />
-                  My Achievements ({achievements.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {achievements.length > 0 ? (
-                  <AchievementGrid 
-                    achievements={achievements.map((ua: any) => ({
-                      ...ua.achievements,
-                      earned_at: ua.earned_at
-                    }))} 
-                    maxDisplay={12}
-                    size="md"
-                    layout="card"
-                    showScore={true}
-                  />
-                ) : (
-                  <NoAchievementsEmptyState 
-                    onFindGames={() => navigate('/app')}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* Achievements shown inline in Social above */}
 
-          <TabsContent value="following" className="space-y-6">
-            {/* People You Follow */}
-            {userFriends.length > 0 ? (
-              <Card key="following-card">
-                <CardHeader>
-                  <CardTitle>Following ({userFriends.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {userFriends.map((friend) => (
-                      <div 
-                        key={friend.id} 
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => navigateToUser(friend.id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={friend.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {(friend.display_name || friend.username || 'U').charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{friend.display_name || friend.username || 'User'}</p>
-                            {friend.bio && (
-                              <p className="text-sm text-muted-foreground truncate max-w-[200px]">{friend.bio}</p>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">Following</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card key="no-following-card">
-                <CardContent className="p-0">
-                  <NoFriendsEmptyState 
-                    onExploreGames={() => navigate('/app')}
-                  />
-                </CardContent>
-              </Card>
-            )}
+          {/* Following/Friends shown inline in Social above */}
 
-            {/* People to Follow */}
-            {friendSuggestions.length > 0 && (
-              <Card key="suggestions-card">
-                <CardHeader>
-                  <CardTitle>People to Follow</CardTitle>
-                  <p className="text-sm text-muted-foreground">Based on activities you've joined together</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {friendSuggestions.slice(0, 10).map((suggestion) => (
-                      <div 
-                        key={suggestion.id} 
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div 
-                          className="flex items-center gap-3 flex-1 cursor-pointer"
-                          onClick={() => navigateToUser(suggestion.id)}
-                        >
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={suggestion.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {(suggestion.display_name || suggestion.username || 'U').charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{suggestion.display_name || suggestion.username || 'User'}</p>
-                              {suggestion.common_games_count > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {suggestion.common_games_count} {suggestion.common_games_count !== 1 ? 'activities' : 'activity'} together
-                                </Badge>
-                              )}
-                            </div>
-                            {suggestion.bio && (
-                              <p className="text-sm text-muted-foreground truncate">{suggestion.bio}</p>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant={suggestion.is_following ? "outline" : "default"}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            friendMutation.mutate(suggestion.id);
-                          }}
-                          disabled={friendMutation.isPending}
-                          className="ml-2"
-                        >
-                          {suggestion.is_following ? (
-                            <>Following</>
-                          ) : (
-                            <>
-                              <UserPlus className="w-3 h-3 mr-1" />
-                              Follow
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+          {/* Followers shown inline in Social above */}
 
         </Tabs>
       </div>

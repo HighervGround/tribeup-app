@@ -348,7 +348,7 @@ function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="flex items-center gap-4 px-4 pt-12 pb-6">
         <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -475,12 +475,13 @@ function EditProfile() {
         </Card>
       </div>
 
-      {/* Fixed Save Button at Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+      {/* Fixed Save Button at Bottom - mobile-friendly, respects safe area */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border"
+           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
         <Button 
           onClick={handleSave} 
           disabled={!isDirty || loading || checkingUsername || !!usernameError || !!avatarError || !formData.fullName || !formData.username}
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full h-12 text-base font-semibold flex items-center justify-center gap-2"
         >
           <Save className="w-4 h-4" />
           {loading ? 'Saving...' : 'Save Changes'}

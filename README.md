@@ -102,3 +102,4 @@ Visit `/design-system` route (when authenticated) to see interactive demos.
 ---
 
 Questions or deployment changes? Coordinate with the TribeUp platform team to keep the Vercel and Supabase environments aligned.
+

@@ -114,20 +114,45 @@ function UserProfile() {
           </CardContent>
         </Card>
 
-        {/* Stats */}
+        {/* Stats - now clickable */}
         <Card>
           <CardHeader>
             <CardTitle>Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <StatGroup
-              stats={userStats.map((stat) => ({
-                label: stat.label,
-                value: stat.value,
-                icon: <stat.icon className="w-5 h-5" />,
-              }))}
-              columns={2}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              {userStats.map((stat) => {
+                const handleClick = () => {
+                  if (stat.label === 'Following') {
+                    setActiveTab('following');
+                  } else if (stat.label === 'Achievements') {
+                    setActiveTab('achievements');
+                  } else if (stat.label === 'Activities Hosted' || stat.label === 'Activities Joined') {
+                    // Navigate to recent games section by switching to overview and scrolling
+                    setActiveTab('overview');
+                    try {
+                      const el = document.getElementById('recent-games');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } catch {}
+                  }
+                };
+                return (
+                  <button
+                    key={stat.label}
+                    onClick={handleClick}
+                    className="w-full rounded-lg border p-3 text-left hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <div className="flex items-center gap-3">
+                      <stat.icon className="w-5 h-5" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">{stat.label}</div>
+                        <div className="text-lg font-semibold">{stat.value}</div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
@@ -220,7 +245,7 @@ function UserProfile() {
             {/* Recent Games */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Games</CardTitle>
+                <CardTitle id="recent-games">Recent Games</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -292,6 +317,26 @@ function UserProfile() {
           </TabsContent>
 
           <TabsContent value="following" className="space-y-6">
+            {/* Followers/Following toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="cursor-pointer"
+                disabled
+                title="Followers list coming soon"
+              >
+                Followers
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+              >
+                Following
+              </Button>
+            </div>
+
             {/* People You Follow */}
             {userFriends.length > 0 ? (
               <Card key="following-card">

@@ -21,7 +21,7 @@ export function DataExportSection() {
   const queryClient = useQueryClient();
 
   // Fetch recent export history
-  const { data: exportHistory, isLoading: isLoadingHistory } = useQuery<ExportHistory[]>({
+  const { data: exportHistory, isLoading: isLoadingHistory, error: historyError } = useQuery<ExportHistory[]>({
     queryKey: ['user-data-exports'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,9 +30,17 @@ export function DataExportSection() {
         .order('requested_at', { ascending: false })
         .limit(5);
 
+      // If table doesn't exist yet (migrations not applied), return empty array
+      if (error?.code === '42P01' || error?.code === 'PGRST204') {
+        console.warn('user_data_exports table not found - migrations may not be applied yet');
+        return [];
+      }
+
       if (error) throw error;
       return data || [];
     },
+    retry: false,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   // Check if user can request export (rate limiting)
@@ -75,7 +83,13 @@ export function DataExportSection() {
       );
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
+        
+        // Check if it's a 404 (Edge Function not deployed)
+        if (response.status === 404) {
+          throw new Error('Export service not available. Please contact support.');
+        }
+        
         throw new Error(error.message || 'Failed to export data');
       }
 
@@ -160,6 +174,20 @@ export function DataExportSection() {
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Error Alert for Missing Table */}
+        {historyError && (
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription className="text-sm">
+              <p className="font-medium mb-1">Database Setup Required</p>
+              <p className="text-xs">
+                The data export feature requires database migrations to be applied. 
+                Please contact support or check the deployment documentation.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Information Alert */}
         <Alert>
           <Info className="size-4" />

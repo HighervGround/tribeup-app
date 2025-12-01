@@ -120,6 +120,7 @@ export function useFollowUser() {
         queryClient.invalidateQueries({ queryKey: friendKeys.mutual() });
         queryClient.invalidateQueries({ queryKey: friendKeys.following(targetUserId) });
         queryClient.invalidateQueries({ queryKey: friendKeys.userFriends(user?.id) });
+        queryClient.invalidateQueries({ queryKey: friendKeys.userFollowers(user?.id) });
 
         // Update the suggestions cache optimistically
         queryClient.setQueryData(
@@ -130,6 +131,19 @@ export function useFollowUser() {
               suggestion.id === targetUserId
                 ? { ...suggestion, is_following: result.action === 'followed' }
                 : suggestion
+            );
+          }
+        );
+
+        // Update the followers cache optimistically
+        queryClient.setQueryData(
+          friendKeys.userFollowers(user?.id),
+          (oldData: FriendSuggestion[] | undefined) => {
+            if (!oldData) return oldData;
+            return oldData.map(follower =>
+              follower.id === targetUserId
+                ? { ...follower, is_following: result.action === 'followed' }
+                : follower
             );
           }
         );

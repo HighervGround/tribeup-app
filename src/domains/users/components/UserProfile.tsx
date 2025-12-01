@@ -207,10 +207,12 @@ function UserProfile() {
                     {(showAllFollowing ? userFriends : userFriends.slice(0, 6)).map((friend) => (
                       <div 
                         key={friend.id} 
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => navigateToUser(friend.id)}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
+                        <div
+                          className="flex items-center gap-3 cursor-pointer flex-1"
+                          onClick={() => navigateToUser(friend.id)}
+                        >
                           <Avatar className="w-10 h-10">
                             <AvatarImage src={friend.avatar_url || undefined} />
                             <AvatarFallback>
@@ -224,7 +226,18 @@ function UserProfile() {
                             )}
                           </div>
                         </div>
-                        <Badge variant="secondary" className="text-xs">Following</Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            friendMutation.mutate(friend.id);
+                          }}
+                          disabled={friendMutation.isPending}
+                          className="ml-2"
+                        >
+                          Unfollow
+                        </Button>
                       </div>
                     ))}
                     {userFriends.length > 6 && (
@@ -303,7 +316,7 @@ function UserProfile() {
                           disabled={friendMutation.isPending}
                           className="ml-2"
                         >
-                          Follow back
+                          {follower.is_following ? 'Unfollow' : 'Follow back'}
                         </Button>
                       </div>
                     ))}

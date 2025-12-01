@@ -5,7 +5,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { X, CheckCircle, MessageSquare } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { toast } from 'sonner';
 
 interface SimpleSurveyProps {
@@ -51,12 +51,6 @@ export function SimpleSurvey({ isOpen, onClose }: SimpleSurveyProps) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Thank You!</DialogTitle>
-            <DialogDescription>
-              Your feedback has been recorded and will help improve TribeUp.
-            </DialogDescription>
-          </DialogHeader>
           <div className="text-center space-y-4 py-6">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
             <h3 className="text-xl font-semibold">Thank You!</h3>

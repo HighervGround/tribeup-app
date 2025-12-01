@@ -9,7 +9,7 @@ import { Label } from '@/shared/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Progress } from '@/shared/components/ui/progress';
 import { X, CheckCircle, MessageSquare } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { SupabaseService } from '@/core/database/supabaseService';
 import { toast } from 'sonner';
 
@@ -132,6 +132,12 @@ export function UserTestingSurvey({ isOpen, onClose, triggerContext = 'general' 
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Thank You!</DialogTitle>
+            <DialogDescription>
+              Your feedback has been recorded and will help improve TribeUp.
+            </DialogDescription>
+          </DialogHeader>
           <div className="text-center space-y-4 py-6">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
             <h3 className="text-xl font-semibold">Thank You!</h3>

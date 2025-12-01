@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
 import { FriendList } from './FriendList';
 import { UserPlus, Share2 } from 'lucide-react';
@@ -80,6 +80,9 @@ export function InviteFriends({
             <UserPlus className="w-5 h-5" />
             Invite Players to {gameTitle || 'Your Game'}
           </DialogTitle>
+          <DialogDescription>
+            Invite your friends to join this game or share the game link with others.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

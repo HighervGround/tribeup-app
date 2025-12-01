@@ -1,9 +1,10 @@
 // Brand Colors - Centralized theme configuration (Strava-inspired muted palette)
+// Updated to meet WCAG AA contrast requirements (orange-700: #C2410C)
 export const brandColors = {
-  primary: '#E85A2B', // Muted from #FA4616 (reduced saturation ~15%)
-  primaryHover: '#D14A1F',
-  primaryLight: '#F07A4F',
-  primaryDark: '#C03D0A',
+  primary: '#C2410C', // orange-700 - meets WCAG AA contrast with white text
+  primaryHover: '#9A3412', // orange-800 for hover states
+  primaryLight: '#EA580C', // orange-600 for lighter accents
+  primaryDark: '#7C2D12', // orange-900 for dark variants
 } as const;
 
 // Layout Constants

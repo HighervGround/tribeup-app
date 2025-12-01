@@ -339,6 +339,22 @@ export async function getUserFollowers(userId?: string): Promise<FriendSuggestio
 
     if (usersError) throw usersError;
 
+    // Get connections where current user is following someone (to check if following back)
+    const { data: currentUserConnections, error: currentUserError } = await supabase
+      .from('user_connections')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .eq('status', 'accepted')
+      .in('following_id', followerIds);
+
+    if (currentUserError) {
+      console.error('Error checking follow-back status:', currentUserError);
+    }
+
+    const followingBackIds = new Set(
+      (currentUserConnections || []).map((c: any) => c.following_id)
+    );
+
     return (users || []).map((u: any) => ({
       id: u.id,
       display_name: u.display_name,
@@ -348,7 +364,7 @@ export async function getUserFollowers(userId?: string): Promise<FriendSuggestio
       common_games_count: 0,
       shared_games: [],
       // Whether current user is following this follower back
-      is_following: connections.some((c: any) => c.follower_id === u.id && c.following_id === targetUserId) ? false : false
+      is_following: followingBackIds.has(u.id)
     }));
   } catch (error) {
     console.error('Error getting user followers:', error);

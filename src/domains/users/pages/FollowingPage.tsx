@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
-import { Badge } from '@/shared/components/ui/badge';
 import { useAppStore } from '@/store/appStore';
-import { useUserFriends } from '@/domains/users/hooks/useFriends';
+import { useUserFriends, useFollowUser } from '@/domains/users/hooks/useFriends';
 import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 
 export default function FollowingPage() {
@@ -13,6 +12,7 @@ export default function FollowingPage() {
   const { user } = useAppStore();
   const { navigateToUser } = useDeepLinks();
   const { data: userFriends = [], isLoading } = useUserFriends(user?.id);
+  const followMutation = useFollowUser();
 
   return (
     <div className="px-4 py-6 space-y-6">
@@ -33,10 +33,12 @@ export default function FollowingPage() {
               {userFriends.map((friend) => (
                 <div
                   key={friend.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigateToUser(friend.id)}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
+                  <div
+                    className="flex items-center gap-3 cursor-pointer flex-1"
+                    onClick={() => navigateToUser(friend.id)}
+                  >
                     <Avatar className="w-10 h-10">
                       <AvatarImage src={friend.avatar_url || undefined} />
                       <AvatarFallback>
@@ -50,7 +52,17 @@ export default function FollowingPage() {
                       )}
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs">Following</Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      followMutation.mutate(friend.id);
+                    }}
+                    disabled={followMutation.isPending}
+                  >
+                    Unfollow
+                  </Button>
                 </div>
               ))}
             </div>

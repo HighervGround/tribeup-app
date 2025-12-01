@@ -58,7 +58,7 @@ export default function FollowersPage() {
                     onClick={() => followMutation.mutate(follower.id)}
                     disabled={followMutation.isPending}
                   >
-                    Follow back
+                    {follower.is_following ? 'Unfollow' : 'Follow back'}
                   </Button>
                 </div>
               ))}

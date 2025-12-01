@@ -33,9 +33,12 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
+  const oldestMessageRef = useRef<string | null>(null);
 
   // Enhanced scroll to bottom - scrolls only the chat container, not the page
   const scrollToBottom = useCallback(() => {
@@ -45,15 +48,15 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
     }
   }, []);
 
-  // Load existing messages from database using chat_messages_with_author view
+  // Load initial messages
   useEffect(() => {
     const loadMessages = async () => {
       try {
         setIsLoading(true);
+        setHasMoreMessages(true);
+        oldestMessageRef.current = null;
         
-        // Use chat_messages_with_author view to get messages with author info in one query
-        // This avoids N+1 queries by joining with user_public_profile
-        // Load only the most recent 10 messages for performance
+        // Load the most recent 10 messages
         const { data: messagesData, error } = await supabase
           .from('chat_messages_with_author')
           .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url')
@@ -73,13 +76,22 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
 
         if (!messagesData || messagesData.length === 0) {
           setMessages([]);
+          setHasMoreMessages(false);
           return;
+        }
+
+        // Check if there are more messages
+        setHasMoreMessages(messagesData.length === 10);
+        
+        // Store oldest message timestamp for pagination
+        if (messagesData.length > 0) {
+          oldestMessageRef.current = messagesData[messagesData.length - 1].created_at;
         }
 
         // Reverse to show oldest first (newest at bottom) for proper chat display
         const reversedMessages = [...messagesData].reverse();
 
-        // Transform messages - display_name is now a generated column, always present
+        // Transform messages
         const transformedMessages: ChatMessage[] = reversedMessages.map((msg: any) => {
           const authorName = msg.display_name || 'Player';
           return {
@@ -106,6 +118,97 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
 
     loadMessages();
   }, [gameId]);
+
+  // Load more messages when scrolling to top
+  const loadOlderMessages = useCallback(async () => {
+    if (isLoadingMore || !hasMoreMessages || !oldestMessageRef.current) return;
+
+    try {
+      setIsLoadingMore(true);
+      
+      const { data: messagesData, error } = await supabase
+        .from('chat_messages_with_author')
+        .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url')
+        .eq('game_id', gameId)
+        .lt('created_at', oldestMessageRef.current)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('❌ Error loading older messages:', error);
+        return;
+      }
+
+      if (!messagesData || messagesData.length === 0) {
+        setHasMoreMessages(false);
+        return;
+      }
+
+      // Check if there are more messages
+      setHasMoreMessages(messagesData.length === 10);
+      
+      // Update oldest message timestamp
+      if (messagesData.length > 0) {
+        oldestMessageRef.current = messagesData[messagesData.length - 1].created_at;
+      }
+
+      // Reverse to show oldest first
+      const reversedMessages = [...messagesData].reverse();
+
+      // Transform messages
+      const transformedMessages: ChatMessage[] = reversedMessages.map((msg: any) => {
+        const authorName = msg.display_name || 'Player';
+        return {
+          id: msg.id,
+          game_id: msg.game_id,
+          user_id: msg.user_id,
+          message: msg.message,
+          created_at: msg.created_at,
+          user: {
+            name: authorName,
+            avatar: msg.avatar_url || ''
+          }
+        };
+      });
+
+      // Preserve scroll position by prepending older messages
+      if (messagesContainerRef.current) {
+        const previousScrollHeight = messagesContainerRef.current.scrollHeight;
+        setMessages(prev => [...transformedMessages, ...prev]);
+        
+        // Restore scroll position after new messages are rendered
+        requestAnimationFrame(() => {
+          if (messagesContainerRef.current) {
+            const newScrollHeight = messagesContainerRef.current.scrollHeight;
+            messagesContainerRef.current.scrollTop = newScrollHeight - previousScrollHeight;
+          }
+        });
+      } else {
+        setMessages(prev => [...transformedMessages, ...prev]);
+      }
+    } catch (error) {
+      console.error('Error loading older messages:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [gameId, isLoadingMore, hasMoreMessages]);
+
+  // Handle scroll to load more messages
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // Load more when scrolled to top (within 50px)
+      if (container.scrollTop < 50 && hasMoreMessages && !isLoadingMore) {
+        loadOlderMessages();
+      }
+    };
+
+    // Use passive listener for better mobile performance
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hasMoreMessages, isLoadingMore, loadOlderMessages]);
 
   // Enhanced real-time subscription with presence tracking
   useEffect(() => {
@@ -404,7 +507,8 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
                   );
                 })}
               </div>
-            ))
+            ))}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>

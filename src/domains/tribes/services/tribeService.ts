@@ -199,14 +199,20 @@ export class TribeService {
    */
   static async getTribeStatistics(tribeId: string) {
     try {
-      const { data, error } = await supabase
+      // The tribe_statistics view has t.id AS tribe_id, but Postgres views with aliases
+      // sometimes can't be filtered directly. Fetch all and filter client-side.
+      const { data: allStats, error } = await supabase
         .from('tribe_statistics')
-        .select('*')
-        .eq('tribe_id', tribeId)
-        .single();
+        .select('*');
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching tribe statistics:', error);
+        return null;
+      }
+
+      // Filter client-side by tribe_id
+      const stats = allStats?.find((s: any) => s.tribe_id === tribeId);
+      return stats || null;
     } catch (error) {
       console.error('Error fetching tribe statistics:', error);
       return null;

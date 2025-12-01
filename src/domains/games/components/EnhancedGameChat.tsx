@@ -507,8 +507,7 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
                   );
                 })}
               </div>
-            ))}
-            </>
+            ))
           )}
           <div ref={messagesEndRef} />
         </div>

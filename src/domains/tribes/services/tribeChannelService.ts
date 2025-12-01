@@ -115,14 +115,20 @@ export class TribeChannelService {
    * Get messages for a channel
    * Returns the most recent messages, ordered oldest to newest for display
    */
-  static async getChannelMessages(channelId: string, limit = 10): Promise<TribeChatMessageWithAuthor[]> {
+  static async getChannelMessages(channelId: string, limit = 10, beforeDate?: string): Promise<TribeChatMessageWithAuthor[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tribe_chat_messages_with_author')
         .select('*')
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
         .limit(limit);
+
+      if (beforeDate) {
+        query = query.lt('created_at', beforeDate);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       

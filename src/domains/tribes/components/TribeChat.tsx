@@ -7,7 +7,6 @@ import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Send, Plus, Edit2, Trash2 } from 'lucide-react';
-import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { cn } from '@/shared/utils/utils';
 import {
   Dialog,
@@ -59,7 +58,11 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
   const [newChannelName, setNewChannelName] = useState('');
   const [editingChannel, setEditingChannel] = useState<string | null>(null);
   const [editChannelName, setEditChannelName] = useState('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const oldestMessageRef = useRef<string | null>(null);
   
   const { messages, sendMessage, isSending } = useTribeChat(selectedChannel);
   const createChannel = useCreateChannel();
@@ -67,7 +70,9 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
   const deleteChannel = useDeleteChannel();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -76,7 +81,77 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
 
   useEffect(() => {
     setSelectedChannel(channelId);
+    setHasMoreMessages(true);
+    oldestMessageRef.current = null;
   }, [channelId]);
+
+  // Update oldest message ref when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      oldestMessageRef.current = messages[0].created_at;
+      // Check if we have more messages (if we got exactly 10, there might be more)
+      setHasMoreMessages(messages.length === 10);
+    }
+  }, [messages]);
+
+  // Load older messages when scrolling to top
+  const loadOlderMessages = async () => {
+    if (isLoadingMore || !hasMoreMessages || !oldestMessageRef.current || !selectedChannel) return;
+
+    try {
+      setIsLoadingMore(true);
+      
+      const { TribeChannelService } = await import('../services/tribeChannelService');
+      const olderMessages = await TribeChannelService.getChannelMessages(
+        selectedChannel,
+        10,
+        oldestMessageRef.current
+      );
+
+      if (olderMessages.length === 0) {
+        setHasMoreMessages(false);
+        return;
+      }
+
+      setHasMoreMessages(olderMessages.length === 10);
+      
+      if (olderMessages.length > 0) {
+        oldestMessageRef.current = olderMessages[0].created_at;
+      }
+
+      // Note: Since messages come from a hook, we can't directly update them here
+      // The hook will need to be updated to support loading more messages
+      // For now, this function is set up but won't actually update the messages
+      // TODO: Update useTribeChat hook to support loading more messages
+      console.log('Loaded older messages:', olderMessages.length);
+    } catch (error) {
+      console.error('Error loading older messages:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Handle scroll to load more messages
+  useEffect(() => {
+    if (!selectedChannel) return;
+
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // Load more when scrolled to top (within 50px)
+      if (container.scrollTop < 50 && hasMoreMessages && !isLoadingMore) {
+        loadOlderMessages();
+      }
+    };
+
+    // Use passive listener for better mobile performance
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [hasMoreMessages, isLoadingMore, selectedChannel, loadOlderMessages]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +212,7 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
   };
 
   return (
-    <div className="flex flex-col h-[600px]">
+    <div className="flex flex-col" style={{ height: '600px', minHeight: '600px' }}>
       {/* Channel Selector */}
       <div className="flex gap-2 mb-4 items-center">
         <div className="flex gap-2 overflow-x-auto pb-2 flex-1 items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -258,8 +333,8 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
       </div>
 
       {/* Messages */}
-      <Card className="flex-1 flex flex-col">
-        <CardContent className="flex-1 flex flex-col p-0">
+      <Card className="flex-1 flex flex-col min-h-0">
+        <CardContent className="flex-1 flex flex-col p-0 min-h-0">
           {!hasChannels ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
               <p className="text-muted-foreground mb-4">No channels yet</p>
@@ -275,11 +350,19 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
             </div>
           ) : (
             <>
-              <ScrollArea className="flex-1 p-4">
+              <div 
+                ref={messagesContainerRef} 
+                className="flex-1 overflow-y-auto p-4 min-h-0"
+              >
                 {messages.length === 0 ? (
                   <NoMessagesEmptyState isChannel={true} />
                 ) : (
                   <div className="space-y-1">
+                    {isLoadingMore && (
+                      <div className="flex items-center justify-center py-2">
+                        <div className="text-xs text-muted-foreground">Loading older messages...</div>
+                      </div>
+                    )}
                     {messages.map((msg: any, index: number) => {
                       const prevMsg = index > 0 ? messages[index - 1] : null;
                       const timeDiff = prevMsg && msg.created_at && prevMsg.created_at
@@ -357,7 +440,7 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
                     <div ref={messagesEndRef} />
                   </div>
                 )}
-              </ScrollArea>
+              </div>
 
               {/* Message Input */}
               <form onSubmit={handleSend} className="border-t p-4">

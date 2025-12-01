@@ -34,6 +34,7 @@ import {
   Trash2,
   MoreVertical,
   RefreshCw,
+  Copy,
 } from 'lucide-react';
 import { ImageWithFallback } from '@/shared/components/figma/ImageWithFallback';
 import { useAppStore } from '@/store/appStore';
@@ -105,7 +106,7 @@ function GameDetails() {
     }
   }, [gameId, refetchParticipants]);
 
-  const { shareGame, navigateToChat, navigateToUser } = useDeepLinks();
+  const { shareGame, navigateToChat, navigateToUser, generateGameUrl } = useDeepLinks();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showQuickJoin, setShowQuickJoin] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -603,6 +604,23 @@ function GameDetails() {
     setShowInvite(true);
   };
 
+  const handleCopyLink = async () => {
+    if (!gameId) return;
+    
+    try {
+      const gameUrl = generateGameUrl(gameId);
+      await navigator.clipboard.writeText(gameUrl);
+      toast.success('Link copied to clipboard!', {
+        description: 'Share this link with others to invite them to the game',
+      });
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast.error('Failed to copy link', {
+        description: 'Please try again',
+      });
+    }
+  };
+
   const handleDirections = () => {
     const address = game.location || "Location not specified";
     const encodedAddress = encodeURIComponent(address);
@@ -856,6 +874,16 @@ function GameDetails() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleCopyLink}
+              data-action="copy-link"
+              aria-label="Copy game link"
+              title="Copy game link to clipboard"
+            >
+              <Copy className="w-5 h-5" />
+            </Button>
             <Button 
               variant="ghost" 
               size="icon" 

@@ -12,3 +12,12 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Generated documentation (regeneratable, too large for git)
+docs/CODEBASE_DOCUMENTATION.md
+docs/CODEBASE_STRUCTURE.txt
+docs/CODEBASE_SUMMARY.md
+docs/DOMAIN_*_DOCUMENTATION.md
+docs/API_SERVICES_DOCUMENTATION.md
+docs/HOOKS_DOCUMENTATION.md
+docs/CONFIG_DOCUMENTATION.md

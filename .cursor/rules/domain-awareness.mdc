@@ -1,0 +1,35 @@
+---
+description: Domain-driven design patterns and boundaries
+alwaysApply: true
+---
+
+# Domain Awareness Rules
+
+## Domain Structure
+Code is organized by business domain:
+- `src/domains/games/` - Game Management System (core feature)
+- `src/domains/users/` - User Engagement
+- `src/domains/locations/` - Location Services
+- `src/domains/weather/` - Weather Integration
+- `src/domains/tribes/` - Tribe/Social Features
+
+## Before Making Changes
+1. **Identify the domain** you're working in
+2. **Check domain `.cursorrules`** file: `src/domains/[domain]/.cursorrules`
+3. **Read domain README**: `src/domains/[domain]/README.md`
+4. **Understand domain boundaries** - what it's responsible for vs. not
+
+## Domain-Specific Rules
+Each domain has its own `.cursorrules` file with:
+- Domain boundaries (what it handles vs. doesn't)
+- Key components, hooks, and services
+- Business rules (e.g., 2-hour game modification rule)
+- Common patterns and examples
+
+## Cross-Domain Imports
+When importing from other domains:
+```typescript
+// ✅ CORRECT - Cross-domain import
+import { WeatherWidget } from '@/domains/weather/components/WeatherWidget';
+import { MapView } from '@/domains/locations/components/MapView';
+```

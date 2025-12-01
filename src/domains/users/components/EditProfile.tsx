@@ -12,6 +12,8 @@ import { SupabaseService } from '@/core/database/supabaseService';
 import { useUpdateUserProfile } from '@/domains/users/hooks/useUserProfile';
 import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/core/database/supabase';
+import { useLayoutState } from '@/shared/hooks/useLayoutState';
+import { useResponsive } from '@/shared/hooks/useResponsive';
 
 interface ProfileFormData {
   fullName: string;
@@ -32,6 +34,9 @@ function EditProfile() {
   const { setUser } = useAppStore();
   const updateProfileMutation = useUpdateUserProfile();
   const loading = updateProfileMutation.isPending;
+  const { layoutState } = useLayoutState();
+  const { isMobile } = useResponsive();
+  const { navigationHeight, shouldShowBottomNav } = layoutState;
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: '',
     username: '',
@@ -347,8 +352,14 @@ function EditProfile() {
     );
   }
 
+  // Calculate bottom padding for content area to account for fixed button
+  const buttonHeight = 80; // Approximate height of button container (button + padding)
+  const contentBottomPadding = isMobile && shouldShowBottomNav
+    ? buttonHeight + navigationHeight + 16
+    : buttonHeight + 16;
+
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background" style={{ paddingBottom: `${contentBottomPadding}px` }}>
       {/* Header */}
       <div className="flex items-center gap-4 px-4 pt-12 pb-6">
         <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -357,7 +368,7 @@ function EditProfile() {
         <h1 className="text-xl font-semibold">Edit Profile</h1>
       </div>
 
-      <div className="px-4 space-y-6">
+      <div className="px-4 space-y-6 pb-6">
         {/* Profile Picture */}
         <Card>
           <CardHeader>
@@ -475,9 +486,15 @@ function EditProfile() {
         </Card>
       </div>
 
-      {/* Fixed Save Button at Bottom - mobile-friendly, respects safe area */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border"
-           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+      {/* Fixed Save Button at Bottom - mobile-friendly, respects safe area and bottom nav */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-50"
+        style={{ 
+          paddingBottom: isMobile && shouldShowBottomNav 
+            ? `calc(env(safe-area-inset-bottom, 0px) + ${navigationHeight}px + 16px)`
+            : 'calc(env(safe-area-inset-bottom, 0px) + 16px)'
+        }}
+      >
         <Button 
           onClick={handleSave} 
           disabled={!isDirty || loading || checkingUsername || !!usernameError || !!avatarError || !formData.fullName || !formData.username}

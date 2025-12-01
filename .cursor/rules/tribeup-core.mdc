@@ -1,0 +1,44 @@
+---
+description: Core TribeUp codebase conventions and patterns
+alwaysApply: true
+---
+
+# TribeUp Core Rules
+
+## Project Overview
+TribeUp is a sports activity coordination platform built with React, TypeScript, Vite, and Supabase. Code is organized by business domain (games, weather, locations, users, tribes).
+
+## Import Paths
+**ALWAYS use `@/` path aliases** instead of relative imports:
+
+```typescript
+// ✅ CORRECT
+import { supabase } from '@/core/database/supabase';
+import { Button } from '@/shared/components/ui/button';
+import { useGameActions } from '@/domains/games/hooks/useGameActions';
+
+// ❌ INCORRECT
+import { supabase } from '../../../core/database/supabase';
+import { Button } from '../../shared/components/ui/button';
+```
+
+## Code Conventions
+- Functional components with TypeScript
+- Named exports for components
+- React Query for server state
+- Zustand for client state
+- Use `toast` from 'sonner' for user feedback
+- Mobile-first responsive design
+
+## File Structure
+- Components: `src/domains/[domain]/components/`
+- Hooks: `src/domains/[domain]/hooks/`
+- Services: `src/domains/[domain]/services/`
+- Shared: `src/shared/components/`, `src/shared/hooks/`, `src/shared/utils/`
+- Core: `src/core/` (auth, database, routing, config)
+
+## Error Handling
+- Use try/catch in async functions
+- Show user-friendly error messages with toast
+- Log errors for debugging
+- Implement error boundaries for components

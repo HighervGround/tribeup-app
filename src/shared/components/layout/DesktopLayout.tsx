@@ -135,13 +135,16 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
         {/* User Profile */}
         <div className={`border-t border-border ${sidebarCollapsed ? 'px-4 py-4' : 'p-4'}`}>
           {!sidebarCollapsed ? (
-            <div className="flex items-center gap-3">
-              <Avatar className="cursor-pointer" onClick={() => navigate('/app/profile')}>
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 rounded-lg p-2 -m-2 transition-colors group"
+              onClick={() => navigate('/app/profile')}
+            >
+              <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all">
                 {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
                 <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
+                <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
                   {user?.name || 'User'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
@@ -151,7 +154,10 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
             </div>
           ) : (
             <div className="w-8 h-8 mx-auto">
-              <Avatar className="cursor-pointer w-8 h-8" onClick={() => navigate('/app/profile')}>
+              <Avatar 
+                className="cursor-pointer w-8 h-8 hover:ring-2 hover:ring-primary/20 transition-all" 
+                onClick={() => navigate('/app/profile')}
+              >
                 {user?.avatar && <AvatarImage src={user.avatar} alt={user.name || 'User'} />}
                 <AvatarFallback className="text-xs">{user?.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>

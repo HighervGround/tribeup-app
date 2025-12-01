@@ -26,6 +26,7 @@ import {
 } from '@/shared/components/ui/dropdown-menu';
 import { MoreVertical } from 'lucide-react';
 import { NoMessagesEmptyState } from '@/shared/components/common/EmptyState';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 
 // Simple relative time formatter
 function formatRelativeTime(dateStr: string): string {
@@ -51,6 +52,7 @@ interface TribeChatProps {
 
 export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatProps) {
   const { user } = useAppStore();
+  const { navigateToUser } = useDeepLinks();
   const { data: channels } = useTribeChannels(tribeId);
   const [message, setMessage] = useState('');
   const [selectedChannel, setSelectedChannel] = useState(channelId);
@@ -371,6 +373,22 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
                       const showHeader = !prevMsg || prevMsg.user_id !== msg.user_id || timeDiff > 300000; // 5 minutes
                       const isOwnMessage = user && msg.user_id === user.id;
                       
+                      // Get display name for the user
+                      const getUserDisplayName = () => {
+                        if (msg.display_name && !msg.display_name.includes('@')) {
+                          return msg.display_name;
+                        }
+                        if (msg.username) {
+                          return msg.username;
+                        }
+                        if (user && msg.user_id === user.id) {
+                          return user.name || user.email?.split('@')[0] || 'You';
+                        }
+                        return 'User';
+                      };
+                      
+                      const displayName = getUserDisplayName();
+                      
                       return (
                         <div 
                           key={msg.id} 
@@ -380,39 +398,33 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
                           )}
                         >
                           {showHeader ? (
-                            <Avatar className="w-8 h-8 flex-shrink-0">
+                            <Avatar 
+                              className={cn(
+                                "w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+                              )}
+                              onClick={() => {
+                                if (msg.user_id) {
+                                  navigateToUser(msg.user_id);
+                                }
+                              }}
+                            >
                               <AvatarImage src={msg.avatar_url || undefined} />
                               <AvatarFallback>
-                                {(() => {
-                                  const displayName = msg.display_name && !msg.display_name.includes('@') 
-                                    ? msg.display_name 
-                                    : msg.username || user?.email?.split('@')[0] || 'U';
-                                  return displayName.substring(0, 2).toUpperCase();
-                                })()}
+                                {displayName.substring(0, 2).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                           ) : (
                             <div className="w-8" />
                           )}
                           <div className={cn("flex-1 max-w-[70%]", isOwnMessage ? "text-right" : "")}>
-                            {showHeader && !isOwnMessage && (
-                              <div className="flex items-center gap-2 text-xs mb-1">
-                                <span className="font-medium">
-                                  {(() => {
-                                    // Prioritize display_name (full name) over username
-                                    if (msg.display_name && !msg.display_name.includes('@')) {
-                                      return msg.display_name;
-                                    }
-                                    // Fallback to username if no proper display name
-                                    if (msg.username) {
-                                      return msg.username;
-                                    }
-                                    if (user && msg.user_id === user.id) {
-                                      return user.email?.split('@')[0] || 'You';
-                                    }
-                                    return msg.user_id ? 'User' : 'Anonymous';
-                                  })()}
-                                </span>
+                            {showHeader && (
+                              <div 
+                                className={cn(
+                                  "flex items-center gap-2 text-xs mb-1",
+                                  isOwnMessage ? "justify-end flex-row-reverse" : ""
+                                )}
+                              >
+                                <span className="font-medium">{displayName}</span>
                                 <span className="text-muted-foreground">
                                   {msg.created_at ? formatRelativeTime(msg.created_at) : ''}
                                 </span>
@@ -428,11 +440,6 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
                             >
                               {msg.message}
                             </div>
-                            {isOwnMessage && showHeader && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {msg.created_at ? formatRelativeTime(msg.created_at) : ''}
-                              </div>
-                            )}
                           </div>
                         </div>
                       );

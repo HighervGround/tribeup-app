@@ -9,6 +9,7 @@ import { supabase } from '@/core/database/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/shared/utils/utils';
 import { NoMessagesEmptyState } from '@/shared/components/common/EmptyState';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
 interface ChatMessage {
   id: string;
   game_id: string;
@@ -28,6 +29,7 @@ interface EnhancedGameChatProps {
 
 export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatProps) {
   const { user } = useAppStore();
+  const { navigateToUser } = useDeepLinks();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -465,7 +467,16 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
                       )}
                     >
                       {showHeader && (
-                        <Avatar className="w-8 h-8 flex-shrink-0">
+                        <Avatar 
+                          className={cn(
+                            "w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+                          )}
+                          onClick={() => {
+                            if (message.user_id) {
+                              navigateToUser(message.user_id);
+                            }
+                          }}
+                        >
                           {message.user?.avatar && (
                             <AvatarImage src={message.user.avatar} />
                           )}

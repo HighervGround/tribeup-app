@@ -172,6 +172,7 @@ export function AppRouter() {
               <Route path="/create" element={<Navigate to="/app/create" replace />} />
               <Route path="/notifications" element={<Navigate to="/app/notifications" replace />} />
               <Route path="/tribes" element={<Navigate to="/app/tribes" replace />} />
+              <Route path="/tribe/:tribeId" element={<LegacyTribeRedirect />} />
               <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
               {/* Dynamic legacy game route */}
               <Route path="/game/:gameId" element={<LegacyGameRedirect />} />
@@ -210,4 +211,11 @@ function LegacyGameRedirect() {
   const { gameId } = useParams();
   if (!gameId) return <Navigate to="/" replace />;
   return <Navigate to={`/app/game/${gameId}`} replace />;
+}
+
+// Component for dynamic legacy tribe redirect
+function LegacyTribeRedirect() {
+  const { tribeId } = useParams();
+  if (!tribeId) return <Navigate to="/app/tribes" replace />;
+  return <Navigate to={`/app/tribe/${tribeId}`} replace />;
 }

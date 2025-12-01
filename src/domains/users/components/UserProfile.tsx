@@ -453,7 +453,7 @@ function UserProfile() {
                   <div
                     key={tribe.id}
                     className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => navigate(`/tribe/${tribe.id}`)}
+                    onClick={() => navigate(`/app/tribe/${tribe.id}`)}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">

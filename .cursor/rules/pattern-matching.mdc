@@ -1,0 +1,38 @@
+---
+description: Reference existing code patterns when making changes
+alwaysApply: true
+---
+
+# Pattern Matching Rules
+
+## Always Reference Similar Code
+When adding features or making changes:
+1. **Find similar existing code** in the codebase
+2. **Point to specific files and line numbers**
+3. **Follow the same patterns** (structure, error handling, styling)
+4. **Use `@` mentions** to include related files for context
+
+## Example Pattern Matching
+```
+Before suggesting changes, reference:
+- Similar components: "Follow the pattern from GameDetails.tsx line 150"
+- Similar hooks: "Use the same structure as useGameActions.ts"
+- Similar services: "Follow error handling from gameParticipantService.ts"
+```
+
+## Component Patterns
+- Use existing UI components from `@/shared/components/ui/`
+- Follow styling patterns (Tailwind classes, Radix UI components)
+- Match button variants, card structures, modal patterns
+
+## Hook Patterns
+- React Query for data fetching
+- Optimistic updates for mutations
+- Real-time subscriptions for live data
+- Error handling with toast notifications
+
+## Service Patterns
+- Pure functions for business logic
+- Explicit error handling
+- Consistent response shapes
+- Use Supabase client from `@/core/database/supabase`

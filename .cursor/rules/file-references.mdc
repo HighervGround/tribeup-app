@@ -1,0 +1,30 @@
+---
+description: Always specify exact file paths and line numbers in suggestions
+alwaysApply: true
+---
+
+# File Reference Rules
+
+## Specify Exact Locations
+When suggesting code changes:
+- **Always include full file paths**: `src/domains/games/components/GameDetails.tsx`
+- **Include line numbers** when referencing specific locations: `GameDetails.tsx:150`
+- **Use proper file structure**: `src/domains/[domain]/[components|hooks|services]/[filename]`
+
+## File Path Format
+```
+✅ CORRECT: src/domains/games/components/GameDetails.tsx:150
+❌ INCORRECT: GameDetails.tsx or the game details file
+```
+
+## When Creating New Files
+Specify the exact location:
+- Components: `src/domains/[domain]/components/[ComponentName].tsx`
+- Hooks: `src/domains/[domain]/hooks/use[HookName].ts`
+- Services: `src/domains/[domain]/services/[serviceName].ts`
+
+## Related Files
+When making changes, mention related files:
+- Components that use the hook/service
+- Similar files for pattern reference
+- Domain rules and README files

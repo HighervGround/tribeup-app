@@ -1,0 +1,121 @@
+---
+description: Frontend design aesthetics and visual polish guidelines
+alwaysApply: true
+---
+
+# Frontend Aesthetics Rules
+
+## Avoid Generic "AI Slop" Aesthetics
+
+You tend to converge toward generic, "on distribution" outputs. In frontend design, this creates what users call the "AI slop" aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight while respecting TribeUp's brand identity.
+
+## Typography
+
+**Use distinctive, interesting fonts** that elevate the frontend's aesthetics. However, **respect TribeUp's existing system font stack** for performance and consistency.
+
+**When custom fonts are appropriate:**
+- For marketing pages, landing pages, or special features
+- Choose fonts that complement the energetic, sports-focused brand
+- Consider: **Syne**, **DM Sans**, **Space Grotesk**, **Satoshi**, **Cabinet Grotesk**
+- Avoid: Inter, Roboto, Arial, generic system fonts (unless using system stack for performance)
+
+**For app components:**
+- Use the existing system font stack for optimal performance
+- Maintain the established typographic scale (14px base, modular scale)
+- Use weight extremes (400 vs 700/800) for hierarchy, not 400 vs 500
+
+## Color & Theme
+
+**Commit to TribeUp's cohesive UF brand aesthetic:**
+- **Primary**: UF Orange (#FA4616) - use decisively, not timidly
+- **Secondary**: UF Blue (#0021A5) - for supporting elements
+- **Accents**: Use UF brand colors (bottlebrush, alachua, gator) with confidence
+- **Sport colors**: Use for categorization, create visual interest through contrast
+
+**Color principles:**
+- Dominant colors with sharp accents outperform timid, evenly-distributed palettes
+- Use CSS variables from `globals.css` for consistency
+- Create depth with gradients and layered backgrounds
+- Dark mode: Use established dark theme variables
+
+**Avoid:**
+- Generic purple gradients on white backgrounds
+- Clichéd color schemes that don't match UF brand
+- Overly safe, evenly-distributed color palettes
+
+## Motion & Animation
+
+**Use animations for effects and micro-interactions:**
+- Prioritize CSS-only solutions for HTML/static pages
+- Use Motion library (Framer Motion) for React components
+- Focus on high-impact moments: one well-orchestrated page load with staggered reveals creates more delight than scattered micro-interactions
+
+**Animation principles:**
+- Use `animation-delay` for staggered reveals
+- Smooth transitions for state changes (hover, focus, active)
+- Respect `prefers-reduced-motion` for accessibility
+- Reference existing animation patterns in `src/MOTION_SYSTEM.md`
+
+**Examples:**
+- Page load: Staggered fade-in with translateY
+- Cards: Subtle hover lift with shadow increase
+- Buttons: Ripple or scale effects on interaction
+- Lists: Staggered entrance animations
+
+## Backgrounds
+
+**Create atmosphere and depth** rather than defaulting to solid colors:
+- Layer CSS gradients using UF brand colors
+- Use geometric patterns that complement the sports/community theme
+- Add contextual effects that match the overall aesthetic
+- Consider subtle textures or mesh gradients for hero sections
+
+**Background patterns:**
+- Sports-themed: Subtle court lines, field patterns
+- Community: Organic shapes mixed with technical elements
+- Energy: Dynamic gradients that suggest movement
+
+## Component Design
+
+**Make distinctive, context-appropriate choices:**
+- Vary card designs: rounded corners, subtle shadows, border accents
+- Use UF brand colors creatively: orange gradients, blue accents
+- Create visual hierarchy through size, weight, and color contrast
+- Avoid cookie-cutter component patterns
+
+**Examples:**
+- Game cards: Use sport-specific color accents, dynamic hover states
+- Buttons: Vary styles (rounded, pill-shaped, outlined) based on context
+- Modals: Consider backdrop blur, subtle animations
+- Lists: Staggered animations, interesting empty states
+
+## What to Avoid
+
+**Generic AI-generated aesthetics:**
+- Overused font families (Inter, Roboto, Arial) - unless part of system stack
+- Clichéd color schemes (purple gradients on white) that don't match UF brand
+- Predictable layouts and component patterns
+- Cookie-cutter design that lacks context-specific character
+- Timid, safe design choices that blend into generic web apps
+
+## Brand Consistency
+
+**While being creative, always:**
+- Use UF brand colors from `globals.css` CSS variables
+- Maintain accessibility standards (WCAG 2.1 AA)
+- Respect the established design system in `src/DESIGN_SYSTEM.md`
+- Keep mobile-first responsive design
+- Use existing component patterns from `src/shared/components/ui/`
+
+## Interpretation
+
+**Think creatively and make unexpected choices** that feel genuinely designed for TribeUp's sports community context:
+- Sports energy: Dynamic, energetic animations
+- Community warmth: Friendly, approachable color combinations
+- University spirit: Bold, confident use of UF colors
+- Modern tech: Clean interfaces with thoughtful details
+
+**Vary your approach:**
+- Don't converge on the same choices across generations
+- Think outside the box while respecting brand guidelines
+- Make context-specific decisions that enhance the user experience

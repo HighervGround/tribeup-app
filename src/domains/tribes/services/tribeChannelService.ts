@@ -113,8 +113,9 @@ export class TribeChannelService {
 
   /**
    * Get messages for a channel
+   * Returns the most recent messages, ordered oldest to newest for display
    */
-  static async getChannelMessages(channelId: string, limit = 50): Promise<TribeChatMessageWithAuthor[]> {
+  static async getChannelMessages(channelId: string, limit = 10): Promise<TribeChatMessageWithAuthor[]> {
     try {
       const { data, error } = await supabase
         .from('tribe_chat_messages_with_author')
@@ -124,7 +125,10 @@ export class TribeChannelService {
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as TribeChatMessageWithAuthor[];
+      
+      // Reverse to show oldest first (newest at bottom) for proper chat display
+      const messages = (data || []) as TribeChatMessageWithAuthor[];
+      return messages.reverse();
     } catch (error) {
       console.error('Error fetching channel messages:', error);
       throw error;

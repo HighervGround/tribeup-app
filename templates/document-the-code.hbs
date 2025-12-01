@@ -1,0 +1,41 @@
+# Codebase Documentation
+
+Generated: {{date}}
+
+## Overview
+This document provides comprehensive documentation of the codebase structure, components, and functionality.
+
+## Directory Structure
+{{#each directories}}
+### {{path}}
+{{#each files}}
+- **{{name}}** ({{size}} bytes)
+  - Lines: {{lines}}
+  - Language: {{language}}
+{{/each}}
+{{/each}}
+
+## Source Files
+
+{{#each files}}
+### {{path}}
+
+**Type:** {{type}}  
+**Language:** {{language}}  
+**Lines:** {{lines}}  
+**Size:** {{size}} bytes
+
+\`\`\`{{language}}
+{{{content}}}
+\`\`\`
+
+---
+{{/each}}
+
+## Summary
+
+- **Total Files:** {{totalFiles}}
+- **Total Lines:** {{totalLines}}
+- **Languages Used:** {{languages}}
+- **Generated:** {{date}}
+

@@ -53,11 +53,13 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
         
         // Use chat_messages_with_author view to get messages with author info in one query
         // This avoids N+1 queries by joining with user_public_profile
+        // Load only the most recent 10 messages for performance
         const { data: messagesData, error } = await supabase
           .from('chat_messages_with_author')
           .select('id, game_id, user_id, message, created_at, display_name, username, avatar_url')
           .eq('game_id', gameId)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: false })
+          .limit(10);
 
         if (error) {
           console.error('❌ Error loading messages:', error);
@@ -74,8 +76,11 @@ export function EnhancedGameChat({ gameId, className = '' }: EnhancedGameChatPro
           return;
         }
 
+        // Reverse to show oldest first (newest at bottom) for proper chat display
+        const reversedMessages = [...messagesData].reverse();
+
         // Transform messages - display_name is now a generated column, always present
-        const transformedMessages: ChatMessage[] = messagesData.map((msg: any) => {
+        const transformedMessages: ChatMessage[] = reversedMessages.map((msg: any) => {
           const authorName = msg.display_name || 'Player';
           return {
             id: msg.id,

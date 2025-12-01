@@ -276,3 +276,4 @@ TribeUp is **85% ready for launch** with strong core functionality. The main gap
 
 Let's build TribeUp together! 🚀
 
+

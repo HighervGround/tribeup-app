@@ -32,7 +32,7 @@ export function TribeCard({ tribe, showJoinButton = true, onSelect }: TribeCardP
     if (onSelect) {
       onSelect(tribe.id);
     } else {
-      navigate(`/tribe/${tribe.id}`);
+      navigate(`/app/tribe/${tribe.id}`);
     }
   };
 
@@ -49,6 +49,15 @@ export function TribeCard({ tribe, showJoinButton = true, onSelect }: TribeCardP
     <Card
       className="cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-200"
       onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      aria-label={`View ${tribe.name} tribe details`}
     >
       <CardContent className="p-4">
         <div className="space-y-3">

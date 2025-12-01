@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTribeMembers } from '../hooks/useTribeMembers';
 import { useRemoveMember, useUpdateMemberRole } from '../hooks/useTribeMembers';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/core/database/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { EmptyState } from '@/shared/components/common/EmptyState';
+import { useAppStore } from '@/store/appStore';
 
 // Simple relative time formatter
 function formatRelativeTime(dateStr: string): string {
@@ -38,6 +40,8 @@ interface TribeMembersProps {
 }
 
 export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
+  const navigate = useNavigate();
+  const { user } = useAppStore();
   const { data: members, isLoading } = useTribeMembers(tribeId);
   const updateRole = useUpdateMemberRole();
   const removeMember = useRemoveMember();
@@ -45,6 +49,15 @@ export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+
+  const handleMemberClick = (userId: string) => {
+    // Route normalization: if user clicks their own card, redirect to own profile route
+    if (userId === user?.id) {
+      navigate('/app/profile/me');
+    } else {
+      navigate(`/app/user/${userId}`);
+    }
+  };
   
   const { data: searchResults, isLoading: isSearching } = useUserSearch(
     searchQuery,
@@ -267,7 +280,20 @@ export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
 
       <div className="space-y-2">
         {members.map((member) => (
-        <Card key={member.id}>
+        <Card 
+          key={member.id}
+          className="cursor-pointer hover:shadow-md hover:border-primary/20 transition-all duration-200"
+          onClick={() => handleMemberClick(member.user_id)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleMemberClick(member.user_id);
+            }
+          }}
+          aria-label={`View ${member.display_name || member.username || 'member'}'s profile`}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -279,7 +305,31 @@ export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{member.display_name || member.username || 'Anonymous'}</span>
+                    <span className="font-medium">
+                      {(() => {
+                        // Prioritize display_name (full name), then fallback to username
+                        const displayName = member.display_name;
+                        const username = member.username;
+                        
+                        // Check if display_name looks like an email (should use username instead)
+                        const isEmail = displayName?.includes('@');
+                        
+                        // Prefer display_name (full name) if it exists and doesn't look like an email
+                        if (displayName && !isEmail) {
+                          return displayName;
+                        }
+                        // Fallback to username if no proper display name
+                        if (username) {
+                          return username;
+                        }
+                        // Try to get from email if available
+                        if ((member as any).email) {
+                          const email = (member as any).email as string;
+                          return email.split('@')[0];
+                        }
+                        return 'Anonymous';
+                      })()}
+                    </span>
                     <Badge variant="outline" className={`${getRoleColor(member.role)} border`}>
                       {getRoleIcon(member.role)}
                       <span className="ml-1 capitalize">{member.role}</span>
@@ -294,7 +344,11 @@ export function TribeMembers({ tribeId, canManage }: TribeMembersProps) {
               {canManage && member.role !== 'admin' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>

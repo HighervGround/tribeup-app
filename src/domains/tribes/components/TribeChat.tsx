@@ -8,6 +8,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Send, Plus, Edit2, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
+import { cn } from '@/shared/utils/utils';
 import {
   Dialog,
   DialogContent,
@@ -278,47 +279,81 @@ export function TribeChat({ channelId, tribeId, canManage = false }: TribeChatPr
                 {messages.length === 0 ? (
                   <NoMessagesEmptyState isChannel={true} />
                 ) : (
-                  <div className="space-y-4">
-                    {messages.map((msg: any) => (
-                      <div key={msg.id} className="flex gap-3">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={msg.avatar_url || undefined} />
-                          <AvatarFallback>
-                            {(() => {
-                              const displayName = msg.display_name && !msg.display_name.includes('@') 
-                                ? msg.display_name 
-                                : msg.username || user?.email?.split('@')[0] || 'U';
-                              return displayName.substring(0, 2).toUpperCase();
-                            })()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">
-                              {(() => {
-                                // Prioritize display_name, then username, then current user's info, then fallback
-                                if (msg.display_name && !msg.display_name.includes('@')) {
-                                  return msg.display_name;
-                                }
-                                if (msg.username) {
-                                  return msg.username;
-                                }
-                                // If message is from current user, use their profile info
-                                if (user && msg.user_id === user.id) {
-                                  return user.email?.split('@')[0] || 'You';
-                                }
-                                // Last resort fallback
-                                return msg.user_id ? 'User' : 'Anonymous';
-                              })()}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {msg.created_at ? formatRelativeTime(msg.created_at) : ''}
-                            </span>
+                  <div className="space-y-1">
+                    {messages.map((msg: any, index: number) => {
+                      const prevMsg = index > 0 ? messages[index - 1] : null;
+                      const timeDiff = prevMsg && msg.created_at && prevMsg.created_at
+                        ? new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()
+                        : Infinity;
+                      const showHeader = !prevMsg || prevMsg.user_id !== msg.user_id || timeDiff > 300000; // 5 minutes
+                      const isOwnMessage = user && msg.user_id === user.id;
+                      
+                      return (
+                        <div 
+                          key={msg.id} 
+                          className={cn(
+                            "flex gap-3",
+                            isOwnMessage ? "flex-row-reverse" : ""
+                          )}
+                        >
+                          {showHeader ? (
+                            <Avatar className="w-8 h-8 flex-shrink-0">
+                              <AvatarImage src={msg.avatar_url || undefined} />
+                              <AvatarFallback>
+                                {(() => {
+                                  const displayName = msg.display_name && !msg.display_name.includes('@') 
+                                    ? msg.display_name 
+                                    : msg.username || user?.email?.split('@')[0] || 'U';
+                                  return displayName.substring(0, 2).toUpperCase();
+                                })()}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <div className="w-8" />
+                          )}
+                          <div className={cn("flex-1 max-w-[70%]", isOwnMessage ? "text-right" : "")}>
+                            {showHeader && !isOwnMessage && (
+                              <div className="flex items-center gap-2 text-xs mb-1">
+                                <span className="font-medium">
+                                  {(() => {
+                                    // Prioritize display_name (full name) over username
+                                    if (msg.display_name && !msg.display_name.includes('@')) {
+                                      return msg.display_name;
+                                    }
+                                    // Fallback to username if no proper display name
+                                    if (msg.username) {
+                                      return msg.username;
+                                    }
+                                    if (user && msg.user_id === user.id) {
+                                      return user.email?.split('@')[0] || 'You';
+                                    }
+                                    return msg.user_id ? 'User' : 'Anonymous';
+                                  })()}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {msg.created_at ? formatRelativeTime(msg.created_at) : ''}
+                                </span>
+                              </div>
+                            )}
+                            <div
+                              className={cn(
+                                "rounded-xl px-3 py-2 text-sm w-fit",
+                                isOwnMessage
+                                  ? "bg-primary text-primary-foreground ml-auto"
+                                  : "bg-muted"
+                              )}
+                            >
+                              {msg.message}
+                            </div>
+                            {isOwnMessage && showHeader && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {msg.created_at ? formatRelativeTime(msg.created_at) : ''}
+                              </div>
+                            )}
                           </div>
-                          <p className="text-sm">{msg.message}</p>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div ref={messagesEndRef} />
                   </div>
                 )}

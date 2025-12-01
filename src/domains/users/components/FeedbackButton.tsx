@@ -21,7 +21,7 @@ export function FeedbackButton({
     <Button
       variant={variant}
       size={size}
-      onClick={() => navigate('/feedback')}
+      onClick={() => navigate('/app/feedback')}
       className={className}
     >
       <MessageSquare className="w-4 h-4" />

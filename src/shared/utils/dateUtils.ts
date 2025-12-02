@@ -226,3 +226,32 @@ export function isGameActive(
   return expiryTime > new Date();
 }
 
+/**
+ * Format date string to human-readable format (e.g., "Saturday, December 13th")
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Formatted date string or original if parsing fails
+ */
+export function formatDateForShare(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  
+  try {
+    const date = new Date(dateStr + 'T00:00:00');
+    if (isNaN(date.getTime())) return dateStr;
+    
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const day = date.getDate();
+    
+    // Add ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
+    const getOrdinal = (n: number): string => {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    
+    return `${dayOfWeek}, ${month} ${getOrdinal(day)}`;
+  } catch {
+    return dateStr;
+  }
+}
+

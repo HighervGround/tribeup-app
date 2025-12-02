@@ -15,7 +15,9 @@ import {
   Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatTimeString } from '@/shared/utils/dateUtils';
+import { formatTimeString, formatDateForShare, formatCost } from '@/shared/utils/dateUtils';
+import { useDeepLinks } from '@/shared/hooks/useDeepLinks';
+import { analyticsService } from '@/core/analytics/analyticsService';
 
 interface ShareGameModalProps {
   game: any;
@@ -25,68 +27,179 @@ interface ShareGameModalProps {
 
 export function ShareGameModal({ game, isOpen, onClose }: ShareGameModalProps) {
   const [copied, setCopied] = useState(false);
+  const { generateGameUrl } = useDeepLinks();
   
   if (!isOpen) return null;
 
-  const gameDetailsUrl = `${window.location.origin}/public/game/${game.id}`;
-  const shareText = `Join me for ${game.sport} at ${game.location} on ${game.date}!`;
+  // Helper function to extract location name (remove full address)
+  const extractLocationName = (location: string): string => {
+    if (!location) return 'Location TBD';
+    // Split by comma and take first part (venue name)
+    const parts = location.split(',');
+    return parts[0]?.trim() || location;
+  };
+
+  // Helper function to get sport emoji
+  const getSportEmoji = (sport: string): string => {
+    const emojiMap: Record<string, string> = {
+      basketball: '🏀',
+      soccer: '⚽',
+      tennis: '🎾',
+      pickleball: '🥒',
+      volleyball: '🏐',
+      football: '🏈',
+      baseball: '⚾',
+      running: '🏃',
+      cycling: '🚴',
+      swimming: '🏊',
+      hiking: '🥾',
+      rock_climbing: '🧗',
+    };
+    return emojiMap[sport?.toLowerCase()] || '🏃';
+  };
+
+  // Helper function to format skill level
+  const formatSkillLevel = (skillLevel?: string): string => {
+    if (!skillLevel) return 'All skill levels welcome';
+    const skillMap: Record<string, string> = {
+      beginner: 'Beginner friendly',
+      intermediate: 'Intermediate level',
+      advanced: 'Advanced players',
+      mixed: 'All skill levels welcome',
+      competitive: 'Competitive',
+    };
+    return skillMap[skillLevel.toLowerCase()] || skillLevel;
+  };
+
+  // Generate improved share message
+  const generateShareMessage = (url: string): string => {
+    const sportEmoji = getSportEmoji(game.sport);
+    const locationName = extractLocationName(game.location);
+    const formattedDate = formatDateForShare(game.date);
+    const formattedTime = formatTimeString(game.time);
+    const cost = formatCost(game.cost || 'Free');
+    const totalPlayers = game.totalPlayers ?? 0;
+    const maxPlayers = game.maxPlayers ?? 0;
+    const availableSpots = Math.max(0, maxPlayers - totalPlayers);
+    const skillLevel = formatSkillLevel(game.skillLevel);
+    
+    const title = game.title || `${game.sport} at ${locationName}`;
+    
+    let message = `${sportEmoji} ${title}\n\n`;
+    message += `📅 ${formattedDate} at ${formattedTime}\n`;
+    message += `📍 ${locationName}\n`;
+    message += `👥 ${totalPlayers}/${maxPlayers} players`;
+    if (availableSpots > 0) {
+      message += ` (${availableSpots} spot${availableSpots > 1 ? 's' : ''} left)`;
+    } else if (totalPlayers >= maxPlayers) {
+      message += ' (Full)';
+    }
+    message += `\n💰 ${cost}\n`;
+    message += `🎯 ${skillLevel}\n\n`;
+    message += `Join me! ${url}`;
+    
+    return message;
+  };
+
+  // Generate URL with UTM parameters
+  const generateShareUrl = (shareMethod: string): string => {
+    return generateGameUrl(game.id, {
+      utm_source: shareMethod,
+      utm_medium: 'share',
+      utm_campaign: 'game_invitation',
+    });
+  };
+
+  // Track share event in analytics
+  const trackShare = (shareMethod: string) => {
+    const totalPlayers = game.totalPlayers ?? 0;
+    const maxPlayers = game.maxPlayers ?? 0;
+    const availableSpots = Math.max(0, maxPlayers - totalPlayers);
+    
+    analyticsService.trackEvent('game_shared', {
+      game_id: game.id,
+      sport: game.sport,
+      share_method: shareMethod,
+      has_players: totalPlayers > 0,
+      available_spots: availableSpots,
+      total_players: totalPlayers,
+      max_players: maxPlayers,
+    });
+  };
 
   const handleCopyLink = async () => {
+    const url = generateShareUrl('clipboard');
+    const shareMessage = generateShareMessage(url);
+    
     try {
-      await navigator.clipboard.writeText(gameDetailsUrl);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
+      trackShare('clipboard');
     } catch (error) {
       toast.error('Failed to copy link');
     }
   };
 
   const handleNativeShare = async () => {
+    const url = generateShareUrl('native_share');
+    const shareMessage = generateShareMessage(url);
+    const title = game.title || `${game.sport} at ${extractLocationName(game.location)}`;
+    
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Join ${game.title}`,
-          text: shareText,
-          url: gameDetailsUrl
+          title: `Join ${title}`,
+          text: shareMessage,
+          url: url
         });
-      } catch (error) {
-        // User cancelled share
+        trackShare('native_share');
+      } catch (error: any) {
+        // User cancelled share or error occurred
+        if (error.name !== 'AbortError') {
+          // If not a cancellation, fallback to clipboard
+          await handleCopyLink();
+        }
       }
     } else {
-      handleCopyLink();
+      // Fallback to clipboard if Web Share API not available
+      await handleCopyLink();
     }
   };
 
   const handleEmailShare = () => {
+    const url = generateShareUrl('email');
+    const shareMessage = generateShareMessage(url);
+    const title = game.title || `${game.sport} at ${extractLocationName(game.location)}`;
+    
     const subject = encodeURIComponent(`Join me for ${game.sport}!`);
-    const body = encodeURIComponent(`
-Hi!
-
-I'm organizing a ${game.sport} game and would love for you to join:
-
-📍 ${game.location}
-📅 ${game.date} at ${formatTimeString(game.time)}
-💰 ${game.cost || 'Free'}
-👥 ${game.totalPlayers ?? 0}/${game.maxPlayers ?? 0} players
-
-${game.description ? game.description + '\n\n' : ''}View game details: ${gameDetailsUrl}
-
-Hope to see you there!
-    `.trim());
+    const body = encodeURIComponent(`Hi!\n\nI'm organizing a ${game.sport} game and would love for you to join:\n\n${shareMessage}\n\nHope to see you there!`);
     
     window.open(`mailto:?subject=${subject}&body=${body}`);
+    trackShare('email');
   };
 
   const handleSMSShare = () => {
-    const message = encodeURIComponent(`${shareText} View details: ${gameDetailsUrl}`);
+    const url = generateShareUrl('sms');
+    const shareMessage = generateShareMessage(url);
+    const message = encodeURIComponent(shareMessage);
+    
     window.open(`sms:?body=${message}`);
+    trackShare('sms');
   };
 
   const handleWhatsAppShare = () => {
-    const message = encodeURIComponent(`${shareText} View details: ${gameDetailsUrl}`);
+    const url = generateShareUrl('whatsapp');
+    const shareMessage = generateShareMessage(url);
+    const message = encodeURIComponent(shareMessage);
+    
     window.open(`https://wa.me/?text=${message}`);
+    trackShare('whatsapp');
   };
+
+  // Generate URL for display (with UTM parameters)
+  const gameDetailsUrl = generateShareUrl('clipboard');
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -108,11 +221,11 @@ Hope to see you there!
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="w-4 h-4" />
-                <span>{game.location}</span>
+                <span>{extractLocationName(game.location)}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Calendar className="w-4 h-4" />
-                <span>{game.date}</span>
+                <span>{formatDateForShare(game.date)}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="w-4 h-4" />

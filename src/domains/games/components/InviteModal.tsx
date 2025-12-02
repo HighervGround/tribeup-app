@@ -34,6 +34,7 @@ export function InviteModal({
 
   const gameUrl = `${window.location.origin}/public/game/${gameId}`;
   const shareText = `🏃‍♂️ Join me for ${sport}!\n\n"${gameTitle}"\n📅 ${gameDate} at ${gameTime}\n📍 ${gameLocation}\n\nTap to RSVP: ${gameUrl}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(gameLocation)}`;
 
   const handleCopyLink = async () => {
     try {
@@ -141,7 +142,17 @@ export function InviteModal({
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
               <div>📅 {gameDate} at {gameTime}</div>
-              <div>📍 {gameLocation}</div>
+              <div>
+                📍{' '}
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {gameLocation}
+                </a>
+              </div>
             </div>
           </div>
 

@@ -1,10 +1,9 @@
 import { 
   Home, 
-  Search, 
   Plus, 
   Bell, 
   User,
-  Users,
+  Compass,
   LucideIcon
 } from 'lucide-react';
 
@@ -27,15 +26,9 @@ export const navigationItems: NavigationItem[] = [
   },
   { 
     path: '/app/search', 
-    icon: Search, 
-    label: 'Search', 
-    description: 'Find activities' 
-  },
-  { 
-    path: '/app/tribes', 
-    icon: Users, 
-    label: 'Tribes', 
-    description: 'Join communities' 
+    icon: Compass, 
+    label: 'Explore', 
+    description: 'Explore activities' 
   },
   { 
     path: '/app/profile', 
@@ -65,10 +58,10 @@ export const navigationItems: NavigationItem[] = [
 
 // Filter helpers
 export const getMobileNavItems = () => {
-  // Show Home, Create, Notifications, Tribes, Profile in mobile bottom nav (5 items)
+  // Show Home, Create, Notifications, Explore (search), Profile in mobile bottom nav (5 items)
   return navigationItems.filter(item => 
     !item.desktopOnly && 
-    ['/app', '/app/create', '/app/notifications', '/app/tribes', '/app/profile'].includes(item.path)
+    ['/app', '/app/create', '/app/notifications', '/app/search', '/app/profile'].includes(item.path)
   );
 };
 export const getDesktopNavItems = () => navigationItems.filter(item => !item.mobileOnly);
@@ -85,6 +78,7 @@ export const getRouteTitle = (pathname: string): string => {
   if (pathname.startsWith('/app/settings')) return 'Settings';
   if (pathname.startsWith('/app/tribe/')) return 'Tribe';
   if (pathname === '/app/tribe/create') return 'Create Tribe';
+  if (pathname === '/app/search') return 'Explore';
   
   return 'Page';
 };

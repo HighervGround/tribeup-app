@@ -24,3 +24,27 @@ docs/CONFIG_DOCUMENTATION.md
 
 # iOS starter project
 ios-starter/
+
+# Roadmap scripts and docs (temporary, don't commit)
+scripts/create-roadmap-*.sh
+scripts/reorganize-roadmap.sh
+scripts/reprioritize-issues.sh
+scripts/final-roadmap-cleanup.sh
+scripts/finalize-roadmap-reorg.sh
+scripts/fix-milestone-dates.sh
+scripts/add-issues-to-project-with-fields.sh
+scripts/setup-proper-roadmap.sh
+scripts/properly-add-to-project.sh
+scripts/set-all-estimate-fields.sh
+scripts/set-project-field-values.sh
+docs/ROADMAP_*.md
+docs/CURRENT_PRIORITY_RECOMMENDATION.md
+docs/ESSENTIAL_FOR_LAUNCH_ANALYSIS.md
+docs/FINAL_ROADMAP_*.md
+docs/LAUNCH_PRIORITY_ANALYSIS.md
+docs/PROPER_ROADMAP_SETUP.md
+docs/GITHUB_PROJECT_SETUP.md
+docs/ROADMAP_ISSUES_CSV.md
+docs/ROADMAP_REORGANIZATION_SUMMARY.md
+docs/ROADMAP_CLEANUP_SUMMARY.md
+docs/ROADMAP_DIFFERENTIATION_FEATURES.md

@@ -115,6 +115,7 @@ export function useLocation(options: UseLocationOptions = {}) {
 
   const watchIdRef = useRef<number | null>(null);
   const requestInProgressRef = useRef(false);
+  const permissionCheckInProgressRef = useRef(false);
 
   // Check if geolocation is supported
   const isSupported = 'geolocation' in navigator;
@@ -313,22 +314,64 @@ export function useLocation(options: UseLocationOptions = {}) {
     return distance !== null && distance <= radiusKm;
   }, [getDistanceTo]);
 
+  // Helper function to check if location is fresh
+  const isLocationFresh = useCallback((): boolean => {
+    if (!state.currentLocation || !state.lastUpdated) {
+      return false;
+    }
+    const age = Date.now() - state.lastUpdated.getTime();
+    return age < maximumAge;
+  }, [state.currentLocation, state.lastUpdated, maximumAge]);
+
   // Initialize
   useEffect(() => {
-    checkPermission();
-    
-    if (autoRequest) {
-      requestLocation();
-    }
-    
-    if (watchPosition) {
-      startWatching();
-    }
+    let isMounted = true;
+
+    const initializeLocation = async () => {
+      // Prevent multiple simultaneous permission checks
+      if (permissionCheckInProgressRef.current) {
+        return;
+      }
+
+      permissionCheckInProgressRef.current = true;
+
+      try {
+        // First, check permission status
+        const permissionStatus = await checkPermission();
+
+        if (!isMounted) {
+          return;
+        }
+
+        // Only request location if:
+        // 1. autoRequest is enabled
+        // 2. Permission is 'granted' or 'prompt' (not 'denied')
+        // 3. We don't have a fresh location already
+        if (autoRequest && (permissionStatus === 'granted' || permissionStatus === 'prompt')) {
+          // Check if we already have a fresh location
+          if (!isLocationFresh()) {
+            await requestLocation();
+          }
+        }
+
+        // Start watching if requested
+        if (watchPosition && permissionStatus === 'granted') {
+          startWatching();
+        }
+      } catch (error) {
+        console.error('Error initializing location:', error);
+      } finally {
+        permissionCheckInProgressRef.current = false;
+      }
+    };
+
+    initializeLocation();
 
     return () => {
+      isMounted = false;
       stopWatching();
     };
-  }, [checkPermission, requestLocation, startWatching, stopWatching, autoRequest, watchPosition]);
+  }, [checkPermission, requestLocation, startWatching, stopWatching, autoRequest, watchPosition, isLocationFresh]);
 
   return {
     // State

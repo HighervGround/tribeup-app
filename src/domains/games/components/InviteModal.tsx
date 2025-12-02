@@ -33,7 +33,8 @@ export function InviteModal({
   if (!isOpen) return null;
 
   const gameUrl = `${window.location.origin}/public/game/${gameId}`;
-  const shareText = `🏃‍♂️ Join me for ${sport}!\n\n"${gameTitle}"\n📅 ${gameDate} at ${gameTime}\n📍 ${gameLocation}\n\nTap to RSVP: ${gameUrl}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(gameLocation)}`;
+  const shareText = `🏃‍♂️ Join me for ${sport}!\n\n"${gameTitle}"\n📅 ${gameDate} at ${gameTime}\n📍 ${gameLocation}\n🗺️ Maps: ${mapsUrl}\n\nTap to RSVP: ${gameUrl}`;
 
   const handleCopyLink = async () => {
     try {
@@ -72,7 +73,7 @@ export function InviteModal({
 
   const handleEmail = () => {
     const subject = encodeURIComponent(`Join me for ${sport} - ${gameTitle}`);
-    const body = encodeURIComponent(`Hi!\n\nI'm organizing a ${sport} game and would love for you to join!\n\n${gameTitle}\n📅 ${gameDate} at ${gameTime}\n📍 ${gameLocation}\n\nClick here to RSVP: ${gameUrl}\n\nSee you there!\n`);
+    const body = encodeURIComponent(`Hi!\n\nI'm organizing a ${sport} game and would love for you to join!\n\n${gameTitle}\n📅 ${gameDate} at ${gameTime}\n📍 ${gameLocation}\n🗺️ Maps: ${mapsUrl}\n\nClick here to RSVP: ${gameUrl}\n\nSee you there!\n`);
     const emailUrl = `mailto:?subject=${subject}&body=${body}`;
     window.open(emailUrl, '_blank');
     toast.success('Email app opened!');
@@ -141,7 +142,17 @@ export function InviteModal({
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
               <div>📅 {gameDate} at {gameTime}</div>
-              <div>📍 {gameLocation}</div>
+              <div>
+                📍{' '}
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {gameLocation}
+                </a>
+              </div>
             </div>
           </div>
 

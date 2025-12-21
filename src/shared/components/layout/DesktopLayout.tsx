@@ -5,6 +5,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { useAppStore } from '@/store/appStore';
+import { useIsAdmin } from '@/shared/hooks/useAdmin';
 import { Plus, Menu } from 'lucide-react';
 import { ThemeToggle } from '@/shared/components/ui/theme-toggle';
 import { getDesktopNavItems } from '@/shared/config/navigation';
@@ -16,9 +17,16 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { unreadCount } = useNotifications();
   const { user } = useAppStore();
+  const { data: isAdmin } = useIsAdmin();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
-  const sidebarItems = getDesktopNavItems();
+  const sidebarItems = getDesktopNavItems().filter(item => {
+    // Hide admin link if user is not admin
+    if (item.path === '/app/admin' && !isAdmin) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="flex h-screen bg-background">

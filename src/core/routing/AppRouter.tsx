@@ -43,6 +43,7 @@ const TribeList = lazy(() => import('@/domains/tribes/components/TribeList'));
 const TribeDetail = lazy(() => import('@/domains/tribes/components/TribeDetail'));
 const CreateTribe = lazy(() => import('@/domains/tribes/components/CreateTribe'));
 const TribeEdit = lazy(() => import('@/domains/tribes/components/TribeEdit'));
+const InviteLanding = lazy(() => import('@/pages/InviteLanding'));
 
 // Simple loading component
 const RouteLoader = ({ text = "Loading..." }: { text?: string }) => (
@@ -73,6 +74,7 @@ export function AppRouter() {
               <Route path="/login" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding onComplete={() => {}} />} />
               <Route path="/public/game/:gameId" element={<PublicGamePage />} />
+              <Route path="/invite/:code" element={<InviteLanding />} />
               
               {/* Authenticated Routes - require authentication and onboarding */}
               <Route path="/app/*" element={

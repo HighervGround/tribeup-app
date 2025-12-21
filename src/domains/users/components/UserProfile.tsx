@@ -5,7 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Badge } from '@/shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
-import { Settings, Trophy, Calendar, MapPin, Users, UserPlus, Users2 } from 'lucide-react';
+import { Settings, Trophy, Calendar, MapPin, Users, UserPlus, Users2, BadgeCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/shared/components/ui/dialog';
+import { AmbassadorApplication } from '@/domains/users/components/AmbassadorApplication';
+import { AmbassadorDashboard } from '@/domains/users/components/AmbassadorDashboard';
+import { useAmbassador } from '@/domains/users/hooks/useAmbassador';
 import { useAppStore } from '@/store/appStore';
 import { useUserStats, useUserRecentGames, useUserAchievements } from '@/domains/users/hooks/useUserProfile';
 import { useUserFriends, useUserFollowers, useFriendSuggestions, useFollowUser } from '@/domains/users/hooks/useFriends';
@@ -73,6 +77,7 @@ function UserProfile() {
   const { data: recentGamesData = [], isLoading: recentGamesLoading } = useUserRecentGames(user?.id || '', 5);
   const { data: achievements = [], isLoading: achievementsLoading } = useUserAchievements(user?.id || '');
   const { data: userTribes = [], isLoading: tribesLoading } = useUserTribes(user?.id);
+  const { profile: ambassadorProfile, stats: ambassadorStats } = useAmbassador(user?.id);
   
   const loading = statsLoading || recentGamesLoading || achievementsLoading;
   
@@ -130,7 +135,14 @@ function UserProfile() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="text-xl font-semibold">{displayName}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-semibold">{displayName}</h2>
+                  {ambassadorProfile?.application_status === 'approved' && (
+                    <Badge variant="default" className="flex items-center gap-1">
+                      <BadgeCheck className="w-3 h-3" /> Ambassador
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-muted-foreground">{displayUsername}</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {displayBio}
@@ -141,6 +153,61 @@ function UserProfile() {
             <Button variant="outline" className="w-full" onClick={() => navigate('/app/profile/edit')}>
               Edit Profile
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Ambassador Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Campus Ambassador</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ambassadorProfile?.application_status === 'approved' ? (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                <div>
+                  <p className="text-sm font-medium">You are an official Campus Ambassador</p>
+                  <p className="text-xs text-muted-foreground">
+                    Referrals: {ambassadorStats?.signups ?? 0} signups, {ambassadorStats?.conversions ?? 0} conversions
+                  </p>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">Open Dashboard</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Ambassador Dashboard</DialogTitle>
+                      <DialogDescription>Manage referrals and view stats.</DialogDescription>
+                    </DialogHeader>
+                    <AmbassadorDashboard />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            ) : ambassadorProfile && ambassadorProfile.application_status === 'pending' ? (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                <p className="text-sm">Your application is under review.</p>
+                <Badge variant="secondary">Pending</Badge>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                <div>
+                  <p className="text-sm font-medium">Apply to be a Campus Ambassador</p>
+                  <p className="text-xs text-muted-foreground">Verified badge, exclusive events, and leadership experience.</p>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">Apply</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Campus Ambassador Application</DialogTitle>
+                      <DialogDescription>Tell us about your campus and motivation.</DialogDescription>
+                    </DialogHeader>
+                    <AmbassadorApplication />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </CardContent>
         </Card>
 

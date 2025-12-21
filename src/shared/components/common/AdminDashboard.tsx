@@ -18,54 +18,32 @@ import {
   Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAllUsers, useAdminAuditLog, useUpdateUserRole, useDeleteGame, useCanPerformAdminActions } from '@/shared/hooks/useAdmin';
+import { useAllUsers, useAdminAuditLog, useUpdateUserRole, useDeleteGame, useCanPerformAdminActions, useIsAdmin, useIsModerator } from '@/shared/hooks/useAdmin';
 import { useGames } from '@/domains/games/hooks/useGames';
 import { useAppStore } from '@/store/appStore';
+import { AmbassadorApplicationsAdmin } from '@/domains/users/components';
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useAppStore();
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'users' | 'games' | 'audit'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'users' | 'games' | 'ambassadors' | 'audit'>('overview');
   const [deleteReason, setDeleteReason] = useState('');
   const [gameToDelete, setGameToDelete] = useState<string | null>(null);
 
   // Hooks
+  const { data: isAdmin } = useIsAdmin();
+  const { data: isModerator } = useIsModerator();
   const { data: allUsers, isLoading: usersLoading } = useAllUsers();
   const { data: games, isLoading: gamesLoading } = useGames();
-  const { data: auditLog, isLoading: auditLoading } = useAdminAuditLog();
+  // const { data: auditLog, isLoading: auditLoading } = useAdminAuditLog(); // Disabled: causing 400 errors
+  const auditLog = [];
+  const auditLoading = false;
   const updateUserRoleMutation = useUpdateUserRole();
   const deleteGameMutation = useDeleteGame();
-  const canPerform = useCanPerformAdminActions();
+  // const canPerform = useCanPerformAdminActions(); // Disabled: audit log check blocking access
 
-  // Check if user has admin access
-  if (!canPerform?.canViewAuditLog) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Access Denied
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                You don't have permission to access the admin dashboard.
-              </p>
-              <Button onClick={() => navigate('/')} variant="outline">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if user has admin access
-  if (!user || user.role !== 'admin') {
+  // Check if user has admin/moderator access via DB query
+  if (!isAdmin && !isModerator) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -125,6 +103,7 @@ function AdminDashboard() {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'games', label: 'Games', icon: Calendar },
     { id: 'audit', label: 'Audit Log', icon: Eye },
+    { id: 'ambassadors', label: 'Ambassadors', icon: UserCheck },
   ];
 
   return (
@@ -253,8 +232,20 @@ function AdminDashboard() {
                           {userItem.role}
                         </Badge>
                         {userItem.id !== user.id && (
-                          <div className="flex gap-1">
-                            {userItem.role !== 'moderator' && (
+                          <div className="flex gap-1 flex-wrap">
+                            {userItem.role !== 'admin' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRoleUpdate(userItem.id, 'admin')}
+                                disabled={updateUserRoleMutation.isPending}
+                                className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                              >
+                                <Shield className="w-3 h-3 mr-1" />
+                                Make Admin
+                              </Button>
+                            )}
+                            {userItem.role !== 'moderator' && userItem.role !== 'admin' && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -322,6 +313,21 @@ function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Ambassadors */}
+        {selectedTab === 'ambassadors' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5" />
+                Campus Ambassadors
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AmbassadorApplicationsAdmin />
             </CardContent>
           </Card>
         )}

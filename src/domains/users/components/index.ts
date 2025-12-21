@@ -13,3 +13,9 @@ export { OnboardingGameCreate } from './OnboardingGameCreate';
 export { DataExportSection } from './DataExportSection';
 export { AccountDeletionSection } from './AccountDeletionSection';
 
+export { AmbassadorApplication } from './AmbassadorApplication';
+export type { AmbassadorApplicationProps } from './AmbassadorApplication';
+export { AmbassadorDashboard } from './AmbassadorDashboard';
+export type { AmbassadorDashboardProps } from './AmbassadorDashboard';
+export { AmbassadorApplicationsAdmin } from './AmbassadorApplicationsAdmin';
+

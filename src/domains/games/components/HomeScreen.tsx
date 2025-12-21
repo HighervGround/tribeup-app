@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
-import { RefreshCw, MapPin, Users as UsersIcon, Flame, Clock, UserPlus, Calendar as CalendarIcon, Plus, Bell } from 'lucide-react';
+import { RefreshCw, MapPin, Users as UsersIcon, Flame, Clock, UserPlus, Calendar as CalendarIcon, Plus, Bell, Shield } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useGamesWithCreators } from '@/domains/games/hooks/useGamesWithCreators';
 import { useLocation } from '@/domains/locations/hooks/useLocation';
@@ -16,6 +16,10 @@ import { useNotifications } from '@/domains/users/hooks/useNotifications';
 import { brandColors } from '@/shared/config/theme';
 import { useActivityGrouping } from '@/domains/games/hooks/useActivityGrouping';
 import { NoFriendsEmptyState } from '@/shared/components/common/EmptyState';
+import { AmbassadorApplication } from '@/domains/users/components/AmbassadorApplication';
+import { AmbassadorDashboard } from '@/domains/users/components/AmbassadorDashboard';
+import { useAmbassador } from '@/domains/users/hooks/useAmbassador';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/shared/components/ui/dialog';
 
 
 
@@ -36,6 +40,8 @@ function HomeScreen() {
   // Notifications for badge
   const notifications = useNotifications();
   const unreadCount = notifications?.unreadCount || 0;
+  const { profile, stats: ambassadorStats } = useAmbassador(user?.id);
+  const [openAmbassadorDialog, setOpenAmbassadorDialog] = useState(false);
   
   // Filter activities
   const { filteredGames, gamesFriendCounts } = useActivityFilters({
@@ -267,6 +273,17 @@ function HomeScreen() {
                   </Button>
                   
                   <FeedbackButton variant="outline" size="default" />
+                  {(user?.role === 'admin' || user?.role === 'moderator') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/app/admin')}
+                      className="gap-2"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span className="hidden sm:inline">Admin</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -323,6 +340,49 @@ function HomeScreen() {
                 >
                   Clear Filters
                 </Button>
+              )}
+            </div>
+
+            {/* Ambassador CTA / Dashboard */}
+            <div className="mb-4">
+              {profile?.application_status === 'approved' ? (
+                <div className="p-4 border rounded-lg bg-card flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Campus Ambassador Tools</p>
+                    <p className="text-xs text-muted-foreground">Referrals: {ambassadorStats?.signups ?? 0} signups, {ambassadorStats?.conversions ?? 0} conversions</p>
+                  </div>
+                  <Dialog open={openAmbassadorDialog} onOpenChange={setOpenAmbassadorDialog}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">Open Dashboard</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Ambassador Dashboard</DialogTitle>
+                        <DialogDescription>Manage referrals and view stats.</DialogDescription>
+                      </DialogHeader>
+                      <AmbassadorDashboard />
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              ) : (
+                <div className="p-4 border rounded-lg bg-card flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Become a Campus Ambassador</p>
+                    <p className="text-xs text-muted-foreground">Gain leadership experience and exclusive rewards.</p>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm">Apply</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Campus Ambassador Application</DialogTitle>
+                        <DialogDescription>Tell us about your campus and motivation.</DialogDescription>
+                      </DialogHeader>
+                      <AmbassadorApplication onSubmitted={() => setOpenAmbassadorDialog(false)} />
+                    </DialogContent>
+                  </Dialog>
+                </div>
               )}
             </div>
 

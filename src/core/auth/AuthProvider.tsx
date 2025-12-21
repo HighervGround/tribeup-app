@@ -283,6 +283,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Store in localStorage for after email confirmation
             localStorage.setItem('pendingGameJoin', userData.pendingGameId);
           }
+
+          // Record ambassador referral signup conversion if present
+          const referralCode = localStorage.getItem('ambassadorReferralCode');
+          if (referralCode) {
+            try {
+              await supabase.rpc('record_ambassador_referral', {
+                p_referral_code: referralCode,
+                p_status: 'signed_up',
+                p_referred_user_id: data.user.id,
+                p_referred_email: data.user.email,
+              });
+            } catch (e: any) {
+              console.warn('[AuthProvider] referral signup record failed:', e?.message);
+            }
+          }
         } catch (profileError) {
           console.error('Error creating user profile:', profileError);
           // Don't throw here, as the user account was created successfully

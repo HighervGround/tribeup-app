@@ -5,7 +5,8 @@ import {
   Bell, 
   User,
   Users,
-  LucideIcon
+  LucideIcon,
+  Shield
 } from 'lucide-react';
 
 export interface NavigationItem {
@@ -60,6 +61,13 @@ export const navigationItems: NavigationItem[] = [
     description: 'Stay updated',
     showBadge: true,
     desktopOnly: false // Show in mobile nav too
+  },
+  { 
+    path: '/app/admin', 
+    icon: Shield, 
+    label: 'Admin', 
+    description: 'Manage platform',
+    desktopOnly: true // Desktop only
   },
 ];
 

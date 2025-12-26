@@ -1,23 +1,46 @@
-# Security Guidelines
+# Security Policy
 
-## 🔐 Before Making This Repository Public
+## Reporting Security Vulnerabilities
 
-This document outlines important security considerations for the TribeUp Social Sports App.
+If you discover a security vulnerability, please email us directly rather than opening a public issue.
 
-## ⚠️ Never Commit Sensitive Information
+## Environment Variables
 
-The following should **NEVER** be committed to the repository:
+**Never commit sensitive data to the repository.**
 
-### 1. Environment Variables (`.env` files)
-- ❌ `.env` - Contains production API keys and secrets
-- ✅ `.env.example` - Template without real values (safe to commit)
+Required environment variables (use `.env.example` as template):
 
-### 2. API Keys and Secrets
-Never hardcode these in source files:
-- Supabase URL and anon keys
-- Google Maps API keys
-- Weather API keys (OpenWeather, WeatherAPI)
-- OAuth client secrets
+```bash
+# Supabase Configuration
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Google Maps
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
+
+# Weather API  
+VITE_OPENWEATHER_API_KEY=your_weather_api_key
+```
+
+## Security Best Practices
+
+1. **API Keys**: Store all sensitive keys in environment variables
+2. **Authentication**: Uses Supabase Auth with row-level security
+3. **Input Validation**: All user inputs are validated and sanitized
+4. **HTTPS**: All production traffic uses HTTPS
+5. **Dependencies**: Regularly updated to patch vulnerabilities
+
+## Database Security
+
+- Row Level Security (RLS) enabled on all tables
+- User data is isolated per authenticated user
+- Public endpoints have appropriate access controls
+
+## Deployment Security
+
+- Environment variables set in Vercel dashboard
+- No sensitive data in build artifacts
+- CORS properly configured for production domains
 - PostHog API keys
 - VAPID keys (private key only - public key is safe)
 

@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-green?logo=supabase)
 ![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License](https://img.shields.io/badge/License-BSL--1.1-blue.svg)
 
 **A modern React-based social sports platform that helps people organize and join local sports activities.**
 
@@ -82,7 +82,15 @@ The app is configured for Vercel deployment. Set environment variables in your V
 
 ## License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the [Business Source License 1.1](LICENSE).
+
+**What this means:**
+- ✅ **Free for development, learning, and non-commercial use**
+- ✅ **Perfect for portfolios, education, and contributing**
+- ❌ **Cannot be used to create competing commercial services**
+- 🔄 **Automatically becomes MIT licensed on January 1, 2028**
+
+For commercial use or questions, contact: business@tribeup.fit
 
 ---
 

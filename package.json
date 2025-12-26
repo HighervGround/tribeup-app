@@ -4,7 +4,7 @@
       "description": "A modern React-based social sports platform that helps people organize and join local sports activities",
       "keywords": ["react", "typescript", "supabase", "sports", "social", "mobile", "tailwind"],
       "author": "TribeUp Team",
-      "license": "MIT",
+      "license": "BSL-1.1",
       "repository": {
             "type": "git",
             "url": "https://github.com/HighervGround/tribeup-app.git"

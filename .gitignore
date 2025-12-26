@@ -7,8 +7,19 @@ node_modules
 # Local Netlify folder
 .netlify
 build/
+
+# Environment files - NEVER commit these
 .env
+.env.*
+!.env.example
+
+# Specifically ignore all env variations
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.new
+.env.oauth

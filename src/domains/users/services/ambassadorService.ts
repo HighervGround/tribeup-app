@@ -6,6 +6,11 @@ export interface CampusAmbassador {
   user_id: string;
   campus_name: string;
   university: string;
+  year?: string | null;
+  major?: string | null;
+  motivation?: string | null;
+  resume_url?: string | null;
+  social_links?: Record<string, string> | null;
   application_status: 'pending' | 'approved' | 'rejected';
   applied_at: string;
   approved_at?: string | null;
@@ -51,6 +56,11 @@ export const AmbassadorService = {
   async applyForAmbassador(userId: string, payload: {
     campus_name: string;
     university?: string;
+    year?: string;
+    major?: string;
+    motivation?: string;
+    resume_url?: string;
+    social_links?: Record<string, string>;
     application_data?: Record<string, any>;
   }): Promise<CampusAmbassador> {
     const { data, error } = await supabase
@@ -59,6 +69,11 @@ export const AmbassadorService = {
         user_id: userId,
         campus_name: payload.campus_name,
         university: payload.university || 'University of Florida',
+        year: payload.year,
+        major: payload.major,
+        motivation: payload.motivation,
+        resume_url: payload.resume_url,
+        social_links: payload.social_links,
         application_data: payload.application_data || {},
       })
       .select('*')

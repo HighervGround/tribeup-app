@@ -78,9 +78,7 @@ src/
 **Completed:**
 - ✅ Updated `src/main.tsx`
 - ✅ Updated `src/App.tsx`
-- ✅ Created `update-imports.js` automation script
-
-**Remaining:** ~207 TypeScript files need import updates
+- ✅ Import migration completed (all files have been updated to use @/ path aliases)
 
 **Import Pattern Examples:**
 
@@ -113,23 +111,8 @@ import { useGameActions } from '@/domains/games/hooks/useGameActions';
 
 ## 📝 Next Steps
 
-### Option 1: Automated Migration (Recommended)
-Run the provided script to update all imports:
-
-```bash
-cd "/Users/cole.guyton/Downloads/React TribeUp Social Sports App"
-node update-imports.js
-```
-
-⚠️ **Before running:**
-1. Commit current changes to git
-2. Review the script (update-imports.js)
-3. Test on a few files first
-4. Run the full script
-5. Fix any remaining issues manually
-
-### Option 2: Manual Migration
-Update imports file by file:
+### Manual Migration
+Update any remaining imports file by file if needed:
 1. Start with core files (App.tsx, main.tsx) ✅
 2. Update domain files (games, weather, locations, users)
 3. Update shared components

@@ -1,6 +1,18 @@
 # TribeUp Social Sports App
 
-A modern React-based social sports platform that helps people organize and join local sports activities.
+<div align="center">
+
+![React](https://img.shields.io/badge/React-18-blue?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![Supabase](https://img.shields.io/badge/Supabase-Backend-green?logo=supabase)
+![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+**A modern React-based social sports platform that helps people organize and join local sports activities.**
+
+[Live Demo](#) • [Features](#features) • [Getting Started](#quick-start) • [Contributing](#contributing)
+
+</div>
 
 ## Features
 
@@ -64,4 +76,11 @@ The app is configured for Vercel deployment. Set environment variables in your V
 
 ## License
 
-This project is open source and available under the MIT License.
+This project is open source and available under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+  <p>Built with ❤️ using React, TypeScript, and Supabase</p>
+  <p>⭐ Star this repo if you find it helpful!</p>
+</div>

@@ -39,16 +39,30 @@ export const AmbassadorApplication = ({ onSubmitted }: AmbassadorApplicationProp
       toast.error('Please sign in to apply.');
       return;
     }
+    
+    // Parse social links
+    let parsedSocialLinks: Record<string, string> = {};
+    if (socialLinks.trim()) {
+      try {
+        // Try parsing as JSON first
+        parsedSocialLinks = JSON.parse(socialLinks);
+      } catch {
+        // If not JSON, treat as comma-separated list
+        const links = socialLinks.split(',').map(l => l.trim()).filter(Boolean);
+        links.forEach((link, i) => {
+          parsedSocialLinks[`link${i + 1}`] = link;
+        });
+      }
+    }
+    
     await submitApplication({
       campus_name: campusName.trim(),
       university: university.trim(),
-      application_data: {
-        year: year.trim(),
-        major: major.trim(),
-        motivation: motivation.trim(),
-        resumeUrl: resumeUrl.trim(),
-        socialLinks: socialLinks.trim(),
-      },
+      year: year.trim(),
+      major: major.trim(),
+      motivation: motivation.trim(),
+      resume_url: resumeUrl.trim() || undefined,
+      social_links: Object.keys(parsedSocialLinks).length > 0 ? parsedSocialLinks : undefined,
     });
     onSubmitted?.();
   };

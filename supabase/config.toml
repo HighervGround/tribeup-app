@@ -280,8 +280,9 @@ skip_nonce_check = false
 
 [auth.external.google]
 enabled = true
-client_id = "743211578484-v2l513uo9f0mq9ekp3jn318jvkaufjq3.apps.googleusercontent.com"
-secret = "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"
+client_id = "env(GOOGLE_CLIENT_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = ""
 url = ""
 skip_nonce_check = true

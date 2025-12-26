@@ -122,12 +122,12 @@ The repository contains duplicate service workers, dev-only test artifacts with 
 
 ### A. Duplicates / Redundancies
 - `public/sw.js` vs `src/public/sw.js`: Keep `public/sw.js` (actively registered in `main.tsx`), remove the duplicate in `src/public/` once confirmed unused.
-- `React TribeUp Social Sports App/` directory: Stray copy of a portion of `src/` (contains only `QueryProvider.tsx`); no imports reference it. Candidate for deletion.
+- ✅ `React TribeUp Social Sports App/` directory: Removed (stray copy of a portion of `src/`)
 
 ### B. Dev/Test Artifacts (Move or Delete)
 - `src/test-weather.html`: Standalone test page with hard-coded OpenWeather key. Move to `scripts/samples/` and scrub secrets or delete.
-- `test-openweather.js`: API key test harness; move to `scripts/samples/` and replace hard-coded keys with `process.env` access.
-- Shell scripts (`move-back.sh`, `upload-to-icloud.sh`, `setup-icloud-sync.sh`): If still needed, move under `scripts/ops/`; otherwise delete.
+- ✅ `test-openweather.js`: Removed (deprecated stub redirecting to `scripts/samples/test-openweather.js`)
+- ✅ Shell scripts (`move-back.sh`, `upload-to-icloud.sh`, `setup-icloud-sync.sh`): Removed (personal iCloud sync scripts)
 - Multiple `.env.*` variants: Merge into a single `/.env.example` with commented sections.
 
 ### C. Styling
@@ -155,14 +155,16 @@ root/
 ```
 
 ### F. Removal / Move Candidates (validate before deletion)
-| Item | Action | Reason | Validation |
-|------|--------|--------|------------|
-| `src/public/sw.js` | Delete | Duplicate SW | Build & run; ensure registration unaffected |
-| `React TribeUp Social Sports App/` | Delete | Orphan copy | Grep for path (none) |
-| `src/test-weather.html` | Move/Delete | Dev-only + key | Confirm no doc reference |
-| `test-openweather.js` | Move/Scrub | Keys in source | Replace with env usage |
-| `light-mode-fix.css` | Delete/Merge | Unused override | Visual regression check |
-| Legacy shell scripts | Move/Delete | Local ops convenience | Confirm team usage |
+| Item | Action | Reason | Status |
+|------|--------|--------|--------|
+| `src/public/sw.js` | Delete | Duplicate SW | Pending validation |
+| ✅ `React TribeUp Social Sports App/` | Delete | Orphan copy | Removed |
+| `src/test-weather.html` | Move/Delete | Dev-only + key | Pending validation |
+| ✅ `test-openweather.js` | Delete | Deprecated stub | Removed |
+| `light-mode-fix.css` | Delete/Merge | Unused override | Pending validation |
+| ✅ Legacy shell scripts | Delete | Personal scripts | Removed |
+| ✅ `update-imports.js` | Delete | One-time migration | Removed |
+| ✅ `.cursor/`, `.windsurf/`, `.giga/` | Delete | Editor-specific duplicates | Removed |
 
 ### G. Immediate Hardening Tasks
 1. Remove or sanitize exposed API keys (weather tests).  
@@ -175,7 +177,12 @@ root/
 ### H. Actionable TODO (First Pass)
 - [ ] Create `docs/` and move audit/reference markdown.  
 - [ ] Remove `src/public/sw.js`.  
-- [ ] Delete `React TribeUp Social Sports App/` duplicate folder.  
+- [x] Delete `React TribeUp Social Sports App/` duplicate folder - DONE  
+- [x] Delete deprecated `test-openweather.js` stub - DONE  
+- [x] Remove personal iCloud sync scripts - DONE  
+- [x] Remove `update-imports.js` migration script - DONE  
+- [x] Remove editor-specific config directories (`.cursor/`, `.windsurf/`, `.giga/`) - DONE  
+- [x] Remove temporary/empty files (`.vercel-deploy`, `urls.txt`) - DONE  
 - [ ] Scrub/move weather test artifacts.  
 - [ ] Merge or remove `fix-colors.css` / delete `light-mode-fix.css`.  
 - [ ] Add secret scanning hook.  

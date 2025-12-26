@@ -34,22 +34,14 @@ Every domain now has:
 
 ## 🚀 To Complete the Reorganization
 
-### Step 1: Update All Imports (Required)
-```bash
-cd "/Users/cole.guyton/Downloads/React TribeUp Social Sports App"
-node update-imports.js
-```
-
-This script will update ~207 files to use the new structure.
-
-### Step 2: Test the Build
+### Step 1: Test the Build
 ```bash
 npm run build
 ```
 
 Fix any compilation errors (there will likely be a few).
 
-### Step 3: Test in Development
+### Step 2: Test in Development
 ```bash
 npm run dev
 ```

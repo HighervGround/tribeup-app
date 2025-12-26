@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussion
+    url: https://github.com/HighervGround/React-TribeUp-Social-Sports-App/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔒 Security Issue
+    url: https://github.com/HighervGround/React-TribeUp-Social-Sports-App/security/advisories/new
+    about: Report security vulnerabilities privately
+  - name: 📖 Documentation
+    url: https://github.com/HighervGround/React-TribeUp-Social-Sports-App/wiki
+    about: Read the documentation

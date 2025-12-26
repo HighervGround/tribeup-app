@@ -7,6 +7,7 @@ node_modules
 # Local Netlify folder
 .netlify
 build/
+dist/
 
 # Environment files - NEVER commit these
 .env
@@ -23,3 +24,26 @@ build/
 .env.production.local
 .env.new
 .env.oauth
+
+# API Keys and secrets
+*.key
+*.pem
+*.p12
+*secret*
+*credentials*.json
+!**/credentials.example.json
+
+# Local configuration
+config.local.*
+*.local.json
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db

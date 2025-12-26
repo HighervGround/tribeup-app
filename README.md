@@ -5,6 +5,16 @@ A production-ready build of the TribeUp social sports experience. The app is dep
 
 ---
 
+## 🔐 Security Notice
+
+**Important:** This repository contains example configuration files only. Never commit real API keys or secrets.
+
+- Read **[SECURITY.md](./SECURITY.md)** for security guidelines before contributing
+- Always use `.env.example` as a template and create your own `.env` with real credentials
+- See the security checklist in SECURITY.md before making any repository public
+
+---
+
 ## Deployment Model
 - **Production**: Vercel builds the app with `npm run build`, publishing the optimized assets in the `build/` directory as defined in `vercel.json`. Configure environment variables (Supabase keys, third-party APIs, etc.) through the Vercel dashboard before deploying.
 - **Local development**: Run the app with Vite’s dev server to iterate quickly, while still pointing at the shared Supabase project (or your own fork).
@@ -21,9 +31,15 @@ A production-ready build of the TribeUp social sports experience. The app is dep
    ```
 3. **Create the `.env` file**
    ```bash
-   npm run setup:env
+   cp .env.example .env
    ```
-   Update the generated `.env` with your actual `VITE_SUPABASE_ANON_KEY`. The default project URL is pre-filled.
+   Then update the `.env` file with your actual API keys:
+   - Get your Supabase URL and anon key from https://supabase.com/dashboard
+   - Get Google Maps API key from https://console.cloud.google.com/
+   - Get Weather API key from https://www.weatherapi.com/
+   
+   See **[SECURITY.md](./SECURITY.md)** for detailed setup instructions.
+
 4. **Start the dev server**
    ```bash
    npm run dev
@@ -53,12 +69,16 @@ Use the preview command to mimic Vercel’s static hosting locally.
 The app reads environment variables prefixed with `VITE_`. At minimum configure:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_GOOGLE_MAPS_API_KEY`
+- `VITE_WEATHERAPI_KEY`
 
 **Optional but recommended:**
 - `VITE_POSTHOG_API_KEY` - PostHog API key for analytics and error tracking
 - `VITE_POSTHOG_HOST` - PostHog host URL (defaults to https://app.posthog.com)
 
 When deploying to Vercel, add these under **Project Settings → Environment Variables**. For local development, store them in `.env` (never commit secrets).
+
+**⚠️ Never commit your `.env` file!** It's already in `.gitignore` for your protection.
 
 ---
 
@@ -84,6 +104,7 @@ See `src/shared/components/COMPONENT_LIBRARY.md` for full documentation.
 Visit `/design-system` route (when authenticated) to see interactive demos.
 
 ## Additional Documentation
+- **[SECURITY.md](./SECURITY.md)** – **Security guidelines and best practices**
 - `AUTH_SETUP.md` – Authentication configuration.
 - `GOOGLE_OAUTH_SETUP.md` – Google OAuth provider instructions.
 - `SUPABASE_SETUP.md` – Supabase project bootstrap steps.
@@ -95,9 +116,10 @@ Visit `/design-system` route (when authenticated) to see interactive demos.
 ---
 
 ## Troubleshooting
-- **Supabase errors**: Re-run `npm run setup:env` to regenerate the `.env`, then paste a valid anon key from the Supabase dashboard.
+- **Supabase errors**: Make sure your `.env` file has valid credentials from the Supabase dashboard.
 - **Port conflicts**: Update `server.port` in `vite.config.ts` or run `npm run dev -- --port <custom-port>`.
 - **Slow builds on Vercel**: Ensure the Node version matches the local environment and that cache-busting console statements are minimized (already handled via Terser config).
+- **API key issues**: See [SECURITY.md](./SECURITY.md) for API key setup and troubleshooting.
 
 ---
 

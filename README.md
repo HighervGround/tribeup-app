@@ -10,7 +10,9 @@
 
 **A modern React-based social sports platform that helps people organize and join local sports activities.**
 
-[Live Demo](#) • [Features](#features) • [Getting Started](#quick-start) • [Contributing](#contributing)
+🌐 **Live at [tribeup.fit](https://tribeup.fit)** | 📱 **App at [app.tribeup.fit](https://app.tribeup.fit)**
+
+[🚀 Live Demo](https://app.tribeup.fit) • [🌐 Website](https://tribeup.fit) • [Features](#features) • [Getting Started](#quick-start) • [Contributing](#contributing)
 
 </div>
 
@@ -60,6 +62,10 @@ See `.env.example` for required environment variables. You'll need:
 - WeatherAPI key
 
 ## Deployment
+
+This app is deployed at:
+- **Production**: [app.tribeup.fit](https://app.tribeup.fit)
+- **Website**: [tribeup.fit](https://tribeup.fit)
 
 The app is configured for Vercel deployment. Set environment variables in your Vercel dashboard.
 

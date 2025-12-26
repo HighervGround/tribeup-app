@@ -1,5 +1,5 @@
 {
-      "name": "tribeup-social-sports-app",
+      "name": "tribeup-app",
       "version": "1.0.0",
       "description": "A modern React-based social sports platform that helps people organize and join local sports activities",
       "keywords": ["react", "typescript", "supabase", "sports", "social", "mobile", "tailwind"],
@@ -7,11 +7,11 @@
       "license": "MIT",
       "repository": {
             "type": "git",
-            "url": "https://github.com/HighervGround/React-TribeUp-Social-Sports-App.git"
+            "url": "https://github.com/HighervGround/tribeup-app.git"
       },
-      "homepage": "https://github.com/HighervGround/React-TribeUp-Social-Sports-App#readme",
+      "homepage": "https://tribeup.fit",
       "bugs": {
-            "url": "https://github.com/HighervGround/React-TribeUp-Social-Sports-App/issues"
+            "url": "https://github.com/HighervGround/tribeup-app/issues"
       },
       "dependencies": {
             "@googlemaps/js-api-loader": "^1.16.10",

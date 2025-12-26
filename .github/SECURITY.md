@@ -13,7 +13,7 @@ To report a security vulnerability:
 
 1. **Do NOT** open a public GitHub issue
 2. Use GitHub's security advisories feature
-3. Or email: security@tribeup.app
+3. Or email: security@tribeup.fit
 
 We will respond within 48 hours and provide updates on our investigation.
 
